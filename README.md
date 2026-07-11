@@ -202,6 +202,9 @@ Minecraft-Servers-Data/
 | 친구가 접속하지 못함 | 포트포워딩, Windows 방화벽, 서버 포트, 공인 IP를 확인하세요. |
 | 같은 집에서는 접속되는데 외부에서 안 됨 | 공유기 포트포워딩과 통신사 공유기/이중 NAT 여부를 확인하세요. |
 | 서버가 바로 종료됨 | 콘솔을 열어 오류 로그를 확인하세요. |
+| 구버전 Paper가 도움말만 출력하고 종료됨 | `26.2.45.16` 이상을 사용하세요. 구버전 Paper에는 지원되지 않는 `--nogui` 인수를 전달하지 않습니다. |
+| 구버전을 골랐는데 최신 버전으로 저장됨 | `26.2.45.16` 이상에서 수정됐습니다. 백그라운드 버전 목록 갱신이 사용자의 선택을 덮어쓰지 않습니다. |
+| 최신 버전에서 만든 월드를 구버전으로 바꾸려 함 | 월드 손상을 막기 위해 차단됩니다. 새 서버 프로필을 만든 뒤 구버전을 선택하세요. |
 | 월드 유형을 바꿨는데 적용되지 않음 | 이미 생성된 월드에는 월드 유형 변경이 적용되지 않습니다. 새 월드 생성 시 적용됩니다. |
 | 서버 종류나 버전을 바꾼 뒤 오류가 남 | 플러그인/모드 호환성을 확인하고, 필요한 경우 백업에서 복원하세요. |
 | 자동 업데이트가 실패함 | 인터넷 연결과 선택한 서버 프로젝트 API 접속 가능 여부를 확인하세요. |
@@ -209,7 +212,7 @@ Minecraft-Servers-Data/
 
 ## 현재 로컬 빌드
 
-- 버전: `26.2.45.15`
+- 버전: `26.2.45.16`
 - 파일명: `Paper-26.2-Server.exe`
 
 ---
@@ -325,6 +328,9 @@ Only mappings created by the current launcher session and still matching the rec
 | Friends cannot connect | Check port forwarding, Windows Firewall, server port, and public IP. |
 | LAN works but external access fails | Check router port forwarding and double NAT. |
 | Server exits immediately | Open the console and check the error log. |
+| Legacy Paper prints help and exits | Use `26.2.45.16` or newer. Unsupported `--nogui` is no longer passed to legacy Paper. |
+| An older version selection is saved as the latest version | Fixed in `26.2.45.16`; background list refresh now preserves the user selection. |
+| Trying to use a newer world on an older server | The downgrade is blocked to prevent world damage. Create a new server profile for the older version. |
 | World type change does not apply | Existing worlds keep their generated type. Create a new world to apply it. |
 | Errors after changing server type/version | Check plugin/mod compatibility and restore from backup if needed. |
 | Auto update fails | Check internet access and selected server project API availability. |
@@ -332,5 +338,5 @@ Only mappings created by the current launcher session and still matching the rec
 
 ## Current local build
 
-- Version: `26.2.45.15`
+- Version: `26.2.45.16`
 - File name: `Paper-26.2-Server.exe`
