@@ -204,6 +204,9 @@ Minecraft-Servers-Data/
 | 서버가 바로 종료됨 | 콘솔을 열어 오류 로그를 확인하세요. |
 | 구버전 Paper가 도움말만 출력하고 종료됨 | `26.2.45.16` 이상을 사용하세요. 구버전 Paper에는 지원되지 않는 `--nogui` 인수를 전달하지 않습니다. |
 | 구버전을 골랐는데 최신 버전으로 저장됨 | `26.2.45.16` 이상에서 수정됐습니다. 백그라운드 버전 목록 갱신이 사용자의 선택을 덮어쓰지 않습니다. |
+| 프로필 이름 변경 뒤 월드가 사라진 것처럼 보임 | `26.2.45.17` 이상에서는 프로필 폴더 전체를 안전하게 이동하며, 같은 이름의 기존 프로필을 덮어쓰지 않습니다. |
+| Forge/NeoForge 서버 메모리 설정이 적용되지 않음 | `26.2.45.17` 이상에서는 `user_jvm_args.txt`의 활성 메모리 인수를 런처 설정과 동기화합니다. |
+| 검색·설치·백업 중 창을 닫은 뒤 런처가 종료됨 | `26.2.45.17` 이상에서는 닫힌 창으로 향하는 비동기 UI 갱신을 안전하게 생략합니다. |
 | 최신 버전에서 만든 월드를 구버전으로 바꾸려 함 | 월드 손상을 막기 위해 차단됩니다. 새 서버 프로필을 만든 뒤 구버전을 선택하세요. |
 | 월드 유형을 바꿨는데 적용되지 않음 | 이미 생성된 월드에는 월드 유형 변경이 적용되지 않습니다. 새 월드 생성 시 적용됩니다. |
 | 서버 종류나 버전을 바꾼 뒤 오류가 남 | 플러그인/모드 호환성을 확인하고, 필요한 경우 백업에서 복원하세요. |
@@ -212,7 +215,7 @@ Minecraft-Servers-Data/
 
 ## 현재 로컬 빌드
 
-- 버전: `26.2.45.16`
+- 버전: `26.2.45.17`
 - 파일명: `Paper-26.2-Server.exe`
 
 ---
@@ -330,6 +333,9 @@ Only mappings created by the current launcher session and still matching the rec
 | Server exits immediately | Open the console and check the error log. |
 | Legacy Paper prints help and exits | Use `26.2.45.16` or newer. Unsupported `--nogui` is no longer passed to legacy Paper. |
 | An older version selection is saved as the latest version | Fixed in `26.2.45.16`; background list refresh now preserves the user selection. |
+| A world seems missing after renaming a profile | Version `26.2.45.17` and newer move the complete profile directory and never overwrite an existing profile with the same name. |
+| Forge/NeoForge ignores the configured memory | Version `26.2.45.17` and newer synchronize active memory arguments in `user_jvm_args.txt`. |
+| The launcher exits after closing a search, install, or backup window | Version `26.2.45.17` and newer safely discard asynchronous UI updates targeting a closed window. |
 | Trying to use a newer world on an older server | The downgrade is blocked to prevent world damage. Create a new server profile for the older version. |
 | World type change does not apply | Existing worlds keep their generated type. Create a new world to apply it. |
 | Errors after changing server type/version | Check plugin/mod compatibility and restore from backup if needed. |
@@ -338,5 +344,5 @@ Only mappings created by the current launcher session and still matching the rec
 
 ## Current local build
 
-- Version: `26.2.45.16`
+- Version: `26.2.45.17`
 - File name: `Paper-26.2-Server.exe`
