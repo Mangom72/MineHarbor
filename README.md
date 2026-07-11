@@ -203,6 +203,7 @@ Minecraft-Servers-Data/
 | 같은 집에서는 접속되는데 외부에서 안 됨 | 공유기 포트포워딩과 통신사 공유기/이중 NAT 여부를 확인하세요. |
 | 서버가 바로 종료됨 | 콘솔을 열어 오류 로그를 확인하세요. |
 | 구버전 Paper가 도움말만 출력하고 종료됨 | `26.2.45.16` 이상을 사용하세요. 구버전 Paper에는 지원되지 않는 `--nogui` 인수를 전달하지 않습니다. |
+| 한글 경로에서 구버전 Paper가 Java 에이전트 오류로 종료됨 | `26.2.45.18` 이상을 사용하세요. 서버 폴더 내부 JAR은 구형 Paperclip과 호환되는 상대 경로로 실행합니다. |
 | 구버전을 골랐는데 최신 버전으로 저장됨 | `26.2.45.16` 이상에서 수정됐습니다. 백그라운드 버전 목록 갱신이 사용자의 선택을 덮어쓰지 않습니다. |
 | 프로필 이름 변경 뒤 월드가 사라진 것처럼 보임 | `26.2.45.17` 이상에서는 프로필 폴더 전체를 안전하게 이동하며, 같은 이름의 기존 프로필을 덮어쓰지 않습니다. |
 | Forge/NeoForge 서버 메모리 설정이 적용되지 않음 | `26.2.45.17` 이상에서는 `user_jvm_args.txt`의 활성 메모리 인수를 런처 설정과 동기화합니다. |
@@ -215,7 +216,7 @@ Minecraft-Servers-Data/
 
 ## 현재 로컬 빌드
 
-- 버전: `26.2.45.17`
+- 버전: `26.2.45.18`
 - 파일명: `Paper-26.2-Server.exe`
 
 ---
@@ -332,6 +333,7 @@ Only mappings created by the current launcher session and still matching the rec
 | LAN works but external access fails | Check router port forwarding and double NAT. |
 | Server exits immediately | Open the console and check the error log. |
 | Legacy Paper prints help and exits | Use `26.2.45.16` or newer. Unsupported `--nogui` is no longer passed to legacy Paper. |
+| Legacy Paper exits with a Java agent error in a non-ASCII path | Use `26.2.45.18` or newer. JARs inside the server directory are launched with a legacy Paperclip-compatible relative path. |
 | An older version selection is saved as the latest version | Fixed in `26.2.45.16`; background list refresh now preserves the user selection. |
 | A world seems missing after renaming a profile | Version `26.2.45.17` and newer move the complete profile directory and never overwrite an existing profile with the same name. |
 | Forge/NeoForge ignores the configured memory | Version `26.2.45.17` and newer synchronize active memory arguments in `user_jvm_args.txt`. |
@@ -344,5 +346,5 @@ Only mappings created by the current launcher session and still matching the rec
 
 ## Current local build
 
-- Version: `26.2.45.17`
+- Version: `26.2.45.18`
 - File name: `Paper-26.2-Server.exe`
