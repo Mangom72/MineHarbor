@@ -1,0 +1,132 @@
+name: Build and release
+
+on:
+  workflow_dispatch:
+    inputs:
+      publish_release:
+        description: Publish a GitHub Release
+        required: true
+        default: false
+        type: boolean
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  windows-build:
+    runs-on: windows-2022
+    timeout-minutes: 60
+    env:
+      ARTIFACTS: ${{ github.workspace }}\artifacts\release
+      INNO_DIR: ${{ runner.temp }}\InnoSetup
+      INNO_URL: https://github.com/jrsoftware/issrc/releases/download/is-6_7_3/innosetup-6.7.3.exe
+      INNO_SHA256: 9c73c3bae7ed48d44112a0f48e66742c00090bdb5bef71d9d3c056c66e97b732
+      SIGNING_CERTIFICATE: ${{ secrets.WINDOWS_CERTIFICATE_BASE64 }}
+
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v7
+
+      - name: Read version
+        id: version
+        shell: pwsh
+        run: |
+          $version = Get-Content version.json -Raw | ConvertFrom-Json
+          "product=$($version.productVersion)" >> $env:GITHUB_OUTPUT
+          "build=$($version.buildNumber)" >> $env:GITHUB_OUTPUT
+          $expectedTag = "v$($version.productVersion)"
+          if ($env:GITHUB_REF_TYPE -eq 'tag' -and $env:GITHUB_REF_NAME -ne $expectedTag) {
+            throw "Release tag must be $expectedTag"
+          }
+
+      - name: Prepare pinned build dependencies
+        shell: pwsh
+        run: .\scripts\Prepare-BuildResources.ps1
+
+      - name: Build Portable EXE
+        shell: pwsh
+        run: .\build.ps1 -OutputDirectory $env:ARTIFACTS -SkipDependencyDownload
+
+      - name: Run tests
+        shell: pwsh
+        run: .\test.ps1 -LauncherPath (Join-Path $env:ARTIFACTS 'Minecraft-Server-Launcher.exe')
+
+      - name: Optionally sign Portable EXE
+        if: ${{ env.SIGNING_CERTIFICATE != '' }}
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE_BASE64: ${{ env.SIGNING_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP 'codesign.pfx'
+          [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64))
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe | Where-Object FullName -Match '\\x64\\' | Select-Object -First 1 -ExpandProperty FullName
+          & $signtool sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /f $pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD (Join-Path $env:ARTIFACTS 'Minecraft-Server-Launcher.exe')
+          if ($LASTEXITCODE -ne 0) { throw 'Portable signing failed.' }
+
+      - name: Install pinned Inno Setup
+        shell: pwsh
+        run: |
+          $installer = Join-Path $env:RUNNER_TEMP 'innosetup-6.7.3.exe'
+          Invoke-WebRequest $env:INNO_URL -OutFile $installer
+          $hash = (Get-FileHash $installer -Algorithm SHA256).Hash
+          if (!$hash.Equals($env:INNO_SHA256, [StringComparison]::OrdinalIgnoreCase)) { throw 'Inno Setup hash verification failed.' }
+          if ((Get-AuthenticodeSignature $installer).Status -ne 'Valid') { throw 'Inno Setup signature verification failed.' }
+          $process = Start-Process $installer -Wait -PassThru -ArgumentList '/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART','/SP-',("/DIR=`"$env:INNO_DIR`"")
+          if ($process.ExitCode -ne 0) { throw "Inno Setup install failed: $($process.ExitCode)" }
+
+      - name: Package signed Portable and build installer
+        shell: pwsh
+        run: .\build.ps1 -OutputDirectory $env:ARTIFACTS -SkipCompile -BuildInstaller -InnoCompiler (Join-Path $env:INNO_DIR 'ISCC.exe')
+
+      - name: Optionally sign installer
+        if: ${{ env.SIGNING_CERTIFICATE != '' }}
+        shell: pwsh
+        env:
+          WINDOWS_CERTIFICATE_BASE64: ${{ env.SIGNING_CERTIFICATE }}
+          WINDOWS_CERTIFICATE_PASSWORD: ${{ secrets.WINDOWS_CERTIFICATE_PASSWORD }}
+        run: |
+          $pfx = Join-Path $env:RUNNER_TEMP 'codesign.pfx'
+          if (!(Test-Path $pfx)) { [IO.File]::WriteAllBytes($pfx, [Convert]::FromBase64String($env:WINDOWS_CERTIFICATE_BASE64)) }
+          $signtool = Get-ChildItem "${env:ProgramFiles(x86)}\Windows Kits\10\bin" -Recurse -Filter signtool.exe | Where-Object FullName -Match '\\x64\\' | Select-Object -First 1 -ExpandProperty FullName
+          $setup = Join-Path $env:ARTIFACTS 'Minecraft-Server-Launcher-Setup-v${{ steps.version.outputs.product }}.exe'
+          & $signtool sign /fd SHA256 /td SHA256 /tr http://timestamp.digicert.com /f $pfx /p $env:WINDOWS_CERTIFICATE_PASSWORD $setup
+          if ($LASTEXITCODE -ne 0) { throw 'Installer signing failed.' }
+
+      - name: Generate hashes and update metadata
+        id: release
+        shell: pwsh
+        run: |
+          $tag = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { 'v${{ steps.version.outputs.product }}' }
+          .\scripts\New-ReleaseArtifacts.ps1 -ArtifactsDirectory $env:ARTIFACTS -ReleaseTag $tag
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: minecraft-server-launcher-v${{ steps.version.outputs.product }}
+          path: |
+            ${{ env.ARTIFACTS }}\Minecraft-Server-Launcher.exe
+            ${{ env.ARTIFACTS }}\Minecraft-Server-Launcher-Portable-v${{ steps.version.outputs.product }}.zip
+            ${{ env.ARTIFACTS }}\Minecraft-Server-Launcher-Setup-v${{ steps.version.outputs.product }}.exe
+            ${{ env.ARTIFACTS }}\SHA256SUMS.txt
+            ${{ env.ARTIFACTS }}\update.json
+
+      - name: Publish GitHub Release
+        if: ${{ github.ref_type == 'tag' || inputs.publish_release == true }}
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = if ($env:GITHUB_REF_TYPE -eq 'tag') { $env:GITHUB_REF_NAME } else { 'v${{ steps.version.outputs.product }}' }
+          gh release create $tag `
+            (Join-Path $env:ARTIFACTS 'Minecraft-Server-Launcher.exe') `
+            (Join-Path $env:ARTIFACTS 'Minecraft-Server-Launcher-Portable-v${{ steps.version.outputs.product }}.zip') `
+            (Join-Path $env:ARTIFACTS 'Minecraft-Server-Launcher-Setup-v${{ steps.version.outputs.product }}.exe') `
+            (Join-Path $env:ARTIFACTS 'SHA256SUMS.txt') `
+            (Join-Path $env:ARTIFACTS 'update.json') `
+            --title 'Minecraft Server Launcher v${{ steps.version.outputs.product }} (build ${{ steps.version.outputs.build }})' `
+            --notes-file (Join-Path $env:ARTIFACTS 'release-notes.md') `
+            --latest
