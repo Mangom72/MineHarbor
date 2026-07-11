@@ -18,6 +18,15 @@ New-Item -ItemType Directory -Force -Path (Split-Path -Parent $testOutput) | Out
 if ($LASTEXITCODE -ne 0) { throw "Test compilation failed with exit code $LASTEXITCODE." }
 & $testOutput $launcher
 if ($LASTEXITCODE -ne 0) { throw "Tests failed with exit code $LASTEXITCODE." }
+$version = Get-Content -LiteralPath (Join-Path $projectRoot 'version.json') -Raw | ConvertFrom-Json
+$versionInfo = (Get-Item -LiteralPath $launcher).VersionInfo
+if ($versionInfo.ProductVersion.Trim() -ne [string]$version.productVersion) {
+    throw "Portable EXE 제품 버전이 일치하지 않습니다: $($versionInfo.ProductVersion)"
+}
+if ($versionInfo.FileVersion.Trim() -ne [string]$version.buildNumber) {
+    throw "Portable EXE 내부 빌드 번호가 일치하지 않습니다: $($versionInfo.FileVersion)"
+}
+Write-Host 'PORTABLE_VERSION_OK'
 $smoke = Start-Process -FilePath $launcher -ArgumentList '--version' -Wait -PassThru -WindowStyle Hidden
 if ($smoke.ExitCode -ne 0) { throw "Portable EXE smoke test failed with exit code $($smoke.ExitCode)." }
 Write-Host 'PORTABLE_SMOKE_OK'

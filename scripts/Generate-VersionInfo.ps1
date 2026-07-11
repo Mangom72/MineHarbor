@@ -17,7 +17,7 @@ using System.Reflection;
 
 [assembly: AssemblyVersion("$($version.buildNumber)")]
 [assembly: AssemblyFileVersion("$($version.buildNumber)")]
-[assembly: AssemblyInformationalVersion("$($version.productVersion)+build.$($version.buildNumber)")]
+[assembly: AssemblyInformationalVersion("$($version.productVersion)")]
 
 internal static class BuildVersionInfo
 {
