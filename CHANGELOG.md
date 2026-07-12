@@ -2,6 +2,23 @@
 
 이 프로젝트는 제품 버전에 [Semantic Versioning](https://semver.org/)을 사용합니다. `26.2.45.xx` 값은 별도의 내부 빌드 번호입니다.
 
+## [0.3.2] - 2026-07-12
+
+내부 빌드: `26.2.45.26`
+
+### Changed
+
+- 메인 화면을 서버 제어와 관리 도구 영역으로 나누고 시각적 위계를 강화
+- 주요 동작, 서버 관리, 백업과 콘텐츠 화면에 동일한 선 굵기의 코드 드로잉 벡터 아이콘 적용
+- 보조 버튼에 얇은 테두리를 추가해 카드와 버튼의 경계를 라이트·다크 모드에서 명확하게 표시
+- 설정 화면의 기본 흰색 콤보박스를 테마 대응형 오너 드로우 컨트롤로 교체
+- 빠른 설정, 기본 정보, 서버 규칙 섹션을 명확히 구분하고 프리셋에 따라 불필요한 공간 자동 축소
+- 선택한 프리셋에 색상 외 체크 표시를 추가하고 스냅샷·Java 문구를 간결하게 정리
+
+### Added
+
+- DPI 배율과 테마에 맞춰 직접 렌더링되는 21종 버튼 아이콘 체계
+
 ## [0.3.1] - 2026-07-12
 
 내부 빌드: `26.2.45.25`
@@ -47,6 +64,8 @@
 - 기존 `Minecraft-Servers-Data` 자동 감지 및 비파괴 사용
 
 ## English
+
+Version `0.3.2` introduces a consistent vector icon system, clearer server-control and management hierarchy, bordered secondary actions, fully themed owner-drawn combo boxes, denser setup sections, and non-color preset selection indicators.
 
 Version `0.3.1` improves responsive action layouts, light/dark/high-contrast readability, keyboard and screen-reader accessibility, inline setup validation, loading and disabled states, content error recovery, and stable server-list updates without selection flicker.
 

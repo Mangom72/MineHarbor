@@ -111,21 +111,27 @@ internal static partial class Launcher
 			actions.Padding = new Padding(0, 7, 0, 0);
 			root.Controls.Add(actions, 0, 3);
 			createButton = NewBackupButton(korean ? "새 백업" : "Create backup", 112, "primary");
+			ApplyButtonIcon(createButton, ButtonIcon.Add);
 			createButton.Click += delegate { BeginCreateBackup(); };
 			actions.Controls.Add(createButton);
 			verifyButton = NewBackupButton(korean ? "무결성 검사" : "Verify", 112, "secondary");
+			ApplyButtonIcon(verifyButton, ButtonIcon.Check);
 			verifyButton.Click += delegate { BeginVerifySelected(); };
 			actions.Controls.Add(verifyButton);
 			restoreButton = NewBackupButton(korean ? "복원" : "Restore", 96, "danger");
+			ApplyButtonIcon(restoreButton, ButtonIcon.Refresh);
 			restoreButton.Click += delegate { BeginRestoreSelected(); };
 			actions.Controls.Add(restoreButton);
 			importButton = NewBackupButton(korean ? "외부 백업 복원" : "Restore external", 132, "secondary");
+			ApplyButtonIcon(importButton, ButtonIcon.Download);
 			importButton.Click += delegate { SelectExternalBackup(); };
 			actions.Controls.Add(importButton);
 			exportButton = NewBackupButton(korean ? "내보내기" : "Export", 104, "secondary");
+			ApplyButtonIcon(exportButton, ButtonIcon.Upgrade);
 			exportButton.Click += delegate { ExportSelected(); };
 			actions.Controls.Add(exportButton);
 			Button openFolder = NewBackupButton(korean ? "폴더 열기" : "Open folder", 104, "secondary");
+			ApplyButtonIcon(openFolder, ButtonIcon.Folder);
 			openFolder.Click += delegate
 			{
 				string directory = GetServerBackupDirectory(serverDirectory);
@@ -384,21 +390,27 @@ internal static partial class Launcher
 			actions.Padding = new Padding(0, 7, 0, 0);
 			root.Controls.Add(actions, 0, 3);
 			Button create = NewProfileButton(korean ? "새 서버" : "New", 96, "primary");
+			ApplyButtonIcon(create, ButtonIcon.Add);
 			create.Click += delegate { RunProfileAction(CreateProfile); };
 			actions.Controls.Add(create);
 			Button clone = NewProfileButton(korean ? "복제" : "Clone", 96, "secondary");
+			ApplyButtonIcon(clone, ButtonIcon.Copy);
 			clone.Click += delegate { RunProfileAction(CloneProfile); };
 			actions.Controls.Add(clone);
 			Button import = NewProfileButton(korean ? "기존 서버 가져오기" : "Import server", 132, "secondary");
+			ApplyButtonIcon(import, ButtonIcon.Download);
 			import.Click += delegate { RunProfileAction(ImportProfile); };
 			actions.Controls.Add(import);
 			Button rename = NewProfileButton(korean ? "이름 변경" : "Rename", 104, "secondary");
+			ApplyButtonIcon(rename, ButtonIcon.Edit);
 			rename.Click += delegate { RunProfileAction(RenameProfile); };
 			actions.Controls.Add(rename);
 			Button archive = NewProfileButton(korean ? "보관" : "Archive", 96, "danger");
+			ApplyButtonIcon(archive, ButtonIcon.Archive);
 			archive.Click += delegate { RunProfileAction(ArchiveProfile); };
 			actions.Controls.Add(archive);
 			Button activate = NewProfileButton(korean ? "이 서버 선택" : "Set active", 116, "primary");
+			ApplyButtonIcon(activate, ButtonIcon.Check);
 			activate.Click += delegate { RunProfileAction(ActivateProfile); };
 			actions.Controls.Add(activate);
 

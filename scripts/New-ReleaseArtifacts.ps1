@@ -19,7 +19,7 @@ foreach ($path in @($portable, $zip, $setup)) {
 
 $portableInfo = Get-Item -LiteralPath $portable
 $portableHash = (Get-FileHash -LiteralPath $portable -Algorithm SHA256).Hash.ToLowerInvariant()
-$notes = "Responsive launcher UX, accessible themes and keyboard focus, inline setup validation, stable server lists, and SHA-256 verified updates."
+$notes = "Refined launcher UI with a consistent vector icon system, themed controls, clearer visual hierarchy, compact setup sections, and SHA-256 verified updates."
 $metadata = [ordered]@{
     version = [string]$version.productVersion
     build = [string]$version.buildNumber
@@ -62,6 +62,14 @@ $releaseNotes = @"
 - 설정 입력 오류를 관련 필드에서 바로 안내하고 불필요한 가로 스크롤과 중복 팝업을 제거했습니다.
 - 서버 관리 목록의 깜빡임과 선택 위치 이동을 줄이고 로딩·비활성 상태를 더 명확하게 표시합니다.
 - F5, Shift+F5, Ctrl+쉼표, Ctrl+K 단축키를 추가했습니다.
+
+### UI 디자인 개선
+
+- 서버 제어와 관리 도구를 시각적으로 구분하고 주요 동작의 우선순위를 명확하게 정리했습니다.
+- 메인, 서버 관리, 백업, 콘텐츠 화면에 동일한 선형 벡터 아이콘 체계를 적용했습니다.
+- 다크 모드에서 흰색으로 보이던 콤보박스를 테마 대응형 컨트롤로 교체했습니다.
+- 설정 화면을 빠른 설정, 기본 정보, 서버 규칙으로 나누고 선택하지 않은 영역의 빈 공간을 줄였습니다.
+- 선택된 프리셋에 체크 표시를 추가해 색상에만 의존하지 않도록 개선했습니다.
 
 ### 데이터와 설치 주의 사항
 

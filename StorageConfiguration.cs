@@ -309,6 +309,7 @@ internal static partial class Launcher
 			customPathBox.Anchor = AnchorStyles.Left | AnchorStyles.Top | AnchorStyles.Right;
 			customPanel.Controls.Add(customPathBox);
 			Button browse = new RoundedButton();
+			ApplyButtonIcon(browse, ButtonIcon.Folder);
 			browse.Text = korean ? "찾기" : "Browse";
 			browse.Tag = "secondary";
 			browse.Size = new Size(92, 38);
@@ -333,6 +334,7 @@ internal static partial class Launcher
 			Panel actions = new Panel();
 			actions.Dock = DockStyle.Fill;
 			Button save = new RoundedButton();
+			ApplyButtonIcon(save, ButtonIcon.Check);
 			save.Text = korean ? "이 위치 사용" : "Use this location";
 			save.Tag = "primary";
 			save.Size = new Size(150, 42);

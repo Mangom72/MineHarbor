@@ -114,6 +114,7 @@ internal static partial class Launcher
 			};
 			searchPanel.Controls.Add(searchBox);
 			searchButton = NewContentButton(korean ? "검색" : "Search", 96);
+			ApplyButtonIcon(searchButton, ButtonIcon.Search);
 			searchButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 			searchButton.Location = new Point(searchPanel.Width - 96, 4);
 			searchButton.Click += delegate { BeginSearch(); };
@@ -192,10 +193,12 @@ internal static partial class Launcher
 			actions.Dock = DockStyle.Fill;
 			root.Controls.Add(actions, 0, 4);
 			openFolderButton = NewContentButton(korean ? "설치 폴더 열기" : "Open content folder", 148);
+			ApplyButtonIcon(openFolderButton, ButtonIcon.Folder);
 			openFolderButton.Location = new Point(0, 5);
 			openFolderButton.Click += delegate { OpenContentFolder(); };
 			actions.Controls.Add(openFolderButton);
 			installButton = NewContentButton(korean ? "선택 항목 설치" : "Install selected", 148);
+			ApplyButtonIcon(installButton, ButtonIcon.Download);
 			installButton.Tag = "primary";
 			installButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 			installButton.Enabled = false;
@@ -987,11 +990,20 @@ internal static partial class Launcher
 			{
 				control.BackColor = palette.CardSecondary;
 				control.ForeColor = palette.Text;
+				Button button = control as Button;
+				if (button != null) button.FlatAppearance.BorderColor = palette.Border;
 			}
 			else if (control is TextBox || control is ListView || control is DataGridView || control is NumericUpDown || control is ComboBox)
 			{
 				control.BackColor = palette.Card;
 				control.ForeColor = palette.Text;
+				ModernComboBox comboBox = control as ModernComboBox;
+				if (comboBox != null)
+				{
+					comboBox.SelectionBackColor = palette.AccentSoft;
+					comboBox.SelectionForeColor = palette.Text;
+					comboBox.Invalidate();
+				}
 			}
 			else
 			{

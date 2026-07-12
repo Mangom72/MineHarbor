@@ -84,12 +84,12 @@ internal static class LauncherTests
 	private static void TestUpdateMetadataParsing()
 	{
 		string hash = new string('a', 64);
-		string json = "{\"version\":\"0.3.2\",\"build\":\"26.2.45.26\",\"download_url\":\"https://github.com/Mangom72/mc-server-launcher/releases/download/v0.3.2/Minecraft-Server-Launcher.exe\",\"sha256\":\"" + hash + "\",\"size\":2097152,\"release_notes\":\"test\",\"minimum_supported_version\":\"0.1.0\"}";
+		string json = "{\"version\":\"0.3.3\",\"build\":\"26.2.45.27\",\"download_url\":\"https://github.com/Mangom72/mc-server-launcher/releases/download/v0.3.3/Minecraft-Server-Launcher.exe\",\"sha256\":\"" + hash + "\",\"size\":2097152,\"release_notes\":\"test\",\"minimum_supported_version\":\"0.1.0\"}";
 		object metadata = Invoke("ParseLauncherUpdateMetadata", new object[] { json });
-		Equal("0.3.2", Convert.ToString(GetField(metadata, "ProductVersion")), "업데이트 제품 버전");
-		Equal("26.2.45.26", Convert.ToString(GetField(metadata, "BuildNumber")), "업데이트 빌드");
-		Equal(true, Invoke("IsLauncherUpdateNewer", new object[] { metadata, "0.3.1", "26.2.45.25" }), "새 제품 버전 판별");
-		Equal(false, Invoke("IsLauncherUpdateNewer", new object[] { metadata, "0.3.2", "26.2.45.26" }), "최신 버전 판별");
+		Equal("0.3.3", Convert.ToString(GetField(metadata, "ProductVersion")), "업데이트 제품 버전");
+		Equal("26.2.45.27", Convert.ToString(GetField(metadata, "BuildNumber")), "업데이트 빌드");
+		Equal(true, Invoke("IsLauncherUpdateNewer", new object[] { metadata, "0.3.2", "26.2.45.26" }), "새 제품 버전 판별");
+		Equal(false, Invoke("IsLauncherUpdateNewer", new object[] { metadata, "0.3.3", "26.2.45.27" }), "최신 버전 판별");
 		ExpectFailure(delegate { Invoke("ParseLauncherUpdateMetadata", new object[] { "{}" }); }, "누락된 업데이트 메타데이터");
 		ExpectFailure(delegate { Invoke("ParseLauncherUpdateMetadata", new object[] { json.Replace(hash, "bad") }); }, "잘못된 업데이트 해시");
 		ExpectFailure(delegate { Invoke("ParseLauncherUpdateMetadata", new object[] { json.Replace("https://github.com/Mangom72/", "http://example.com/") }); }, "허용되지 않은 업데이트 주소");
@@ -229,7 +229,7 @@ internal static class LauncherTests
 		{
 			Panel body = null;
 			foreach (Control control in form.Controls) if (control is Panel && ((Panel)control).AutoScroll) body = (Panel)control;
-			if (body == null || body.AutoScrollMinSize.Height < 700) throw new InvalidOperationException("작은 화면 스크롤 영역이 없습니다.");
+			if (body == null || body.AutoScrollMinSize.Height < 650) throw new InvalidOperationException("작은 화면 스크롤 영역이 없습니다.");
 			Equal(0, body.AutoScrollMinSize.Width, "설정 화면 가로 스크롤 방지");
 			NumericUpDown port = (NumericUpDown)GetPrivateField(formType, form, "portBox");
 			NumericUpDown memory = (NumericUpDown)GetPrivateField(formType, form, "memoryBox");
@@ -241,6 +241,10 @@ internal static class LauncherTests
 			Equal(AccessibleRole.Alert, validation.AccessibleRole, "설정 오류 접근성 역할");
 
 			ComboBox serverType = (ComboBox)GetPrivateField(formType, form, "serverTypeBox");
+			Equal("ModernComboBox", serverType.GetType().Name, "테마 대응 서버 종류 선택 상자");
+			Equal(DrawMode.OwnerDrawFixed, serverType.DrawMode, "서버 종류 선택 상자 오너 드로우");
+			Label rules = (Label)GetPrivateField(formType, form, "rulesLabel");
+			Equal(548, rules.Top, "기본 프리셋 서버 규칙 위치");
 			serverType.SelectedIndex = serverType.Items.Count - 1;
 			CheckBox manual = (CheckBox)GetPrivateField(formType, form, "manualJarBox");
 			ComboBox version = (ComboBox)GetPrivateField(formType, form, "versionBox");
@@ -272,6 +276,11 @@ internal static class LauncherTests
 		{
 			button.Enabled = false;
 			Equal(Cursors.Default, button.Cursor, "비활성 버튼 커서");
+			Type iconType = launcher.GetNestedType("ButtonIcon", BindingFlags.NonPublic);
+			PropertyInfo iconProperty = buttonType.GetProperty("IconKind", BindingFlags.Instance | BindingFlags.Public);
+			object play = Enum.Parse(iconType, "Play");
+			iconProperty.SetValue(button, play, null);
+			Equal("Play", Convert.ToString(iconProperty.GetValue(button, null)), "버튼 벡터 아이콘 상태");
 		}
 		string startDescription = Convert.ToString(Invoke("GetCommonButtonDescription", new object[] { "서버 시작하기" }));
 		if (startDescription.IndexOf("F5", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("시작 단축키 안내가 없습니다.");

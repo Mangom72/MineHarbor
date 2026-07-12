@@ -161,6 +161,15 @@ internal static partial class Launcher
 		return SystemInformation.IsMenuAnimationEnabled || SystemInformation.IsMinimizeRestoreAnimationEnabled ? 28 : 0;
 	}
 
+	private static void ApplyButtonIcon(Button button, ButtonIcon icon)
+	{
+		RoundedButton roundedButton = button as RoundedButton;
+		if (roundedButton != null)
+		{
+			roundedButton.IconKind = icon;
+		}
+	}
+
 	private static string GetCommonButtonDescription(string text)
 	{
 		string value = (text ?? string.Empty).Replace("&", string.Empty).Trim().ToLowerInvariant();
@@ -168,7 +177,7 @@ internal static partial class Launcher
 		if (value.Contains("서버 시작") || value == "start server") return korean ? "선택한 프로필의 서버를 시작합니다. 단축키: F5" : "Start the selected server profile. Shortcut: F5";
 		if (value.Contains("안전하게 종료") || value == "stop" || value == "stop safely") return korean ? "월드를 저장하고 서버를 종료합니다. 단축키: Shift+F5" : "Save the world and stop the server. Shortcut: Shift+F5";
 		if (value == "설정" || value == "settings") return korean ? "서버 종류와 게임 설정을 변경합니다. 단축키: Ctrl+," : "Change the server type and game settings. Shortcut: Ctrl+,";
-		if (value.Contains("업글") || value.Contains("upgrade")) return korean ? "서버 실행 파일을 최신 호환 빌드로 갱신합니다." : "Update the server file to the latest compatible build.";
+		if (value.Contains("업글") || value.Contains("업데이트") || value.Contains("upgrade") || value.Contains("update")) return korean ? "서버 실행 파일을 최신 호환 빌드로 갱신합니다." : "Update the server file to the latest compatible build.";
 		if (value.Contains("콘솔") || value.Contains("console")) return korean ? "서버 로그와 명령 입력창을 열거나 닫습니다. 단축키: Ctrl+K" : "Open or close server logs and command input. Shortcut: Ctrl+K";
 		if (value.Contains("서버 관리") || value.Contains("server management")) return korean ? "프로필 관리와 멀티 서버 기능을 엽니다." : "Open profiles and multi-server tools.";
 		if (value.Contains("백업") || value.Contains("backup")) return korean ? "서버 전체를 백업하거나 복원합니다." : "Back up or restore the complete server.";
@@ -309,7 +318,7 @@ internal static partial class Launcher
 			{ "Button.Start", "서버 시작하기" },
 			{ "Button.Stop", "안전하게 종료" },
 			{ "Button.Settings", "설정" },
-			{ "Button.Upgrade", "서버 업글" },
+			{ "Button.Upgrade", "서버 업데이트" },
 			{ "Button.ConsoleOpen", "콘솔 열기" },
 			{ "Button.ConsoleClose", "콘솔 닫기" },
 			{ "Button.Send", "전송" },
@@ -320,7 +329,9 @@ internal static partial class Launcher
 			{ "Button.Content", "콘텐츠" },
 			{ "Button.Players", "플레이어" },
 			{ "Button.Network", "네트워크" },
-			{ "Button.Diagnostics", "진단 묶음" },
+			{ "Button.Diagnostics", "문제 진단" },
+			{ "Main.ControlSection", "서버 제어" },
+			{ "Main.ToolSection", "관리 도구" },
 			{ "Console.Search", "콘솔 검색" },
 			{ "Console.All", "전체" },
 			{ "Console.Wrap", "줄 바꿈" },
@@ -362,11 +373,13 @@ internal static partial class Launcher
 			{ "Setup.ProfileName", "서버 프로필 이름" },
 			{ "Setup.ServerType", "서버 종류" },
 			{ "Setup.MinecraftVersion", "Minecraft 버전" },
-			{ "Setup.IncludeSnapshots", "스냅샷/프리릴리즈 표시" },
+			{ "Setup.IncludeSnapshots", "스냅샷·프리릴리즈" },
 			{ "Setup.UseManualJar", "서버 JAR 직접 지정" },
 			{ "Setup.BrowseJar", "찾기" },
-			{ "Setup.JavaVersion", "JAR 요구 Java" },
+			{ "Setup.JavaVersion", "JAR용 Java" },
+			{ "Setup.Quick", "빠른 설정" },
 			{ "Setup.Basic", "기본 정보" },
+			{ "Setup.Rules", "서버 규칙" },
 			{ "Setup.ServerName", "서버 이름을 알려주세요" },
 			{ "Setup.MaxPlayers", "최대 인원" },
 			{ "Setup.Port", "서버 포트" },
@@ -446,7 +459,7 @@ internal static partial class Launcher
 			{ "Button.Start", "Start server" },
 			{ "Button.Stop", "Stop safely" },
 			{ "Button.Settings", "Settings" },
-			{ "Button.Upgrade", "Upgrade server" },
+			{ "Button.Upgrade", "Update server" },
 			{ "Button.ConsoleOpen", "Open console" },
 			{ "Button.ConsoleClose", "Close console" },
 			{ "Button.Send", "Send" },
@@ -458,6 +471,8 @@ internal static partial class Launcher
 			{ "Button.Players", "Players" },
 			{ "Button.Network", "Network" },
 			{ "Button.Diagnostics", "Diagnostics" },
+			{ "Main.ControlSection", "Server controls" },
+			{ "Main.ToolSection", "Management tools" },
 			{ "Console.Search", "Search console" },
 			{ "Console.All", "All" },
 			{ "Console.Wrap", "Word wrap" },
@@ -499,11 +514,13 @@ internal static partial class Launcher
 			{ "Setup.ProfileName", "Server profile name" },
 			{ "Setup.ServerType", "Server type" },
 			{ "Setup.MinecraftVersion", "Minecraft version" },
-			{ "Setup.IncludeSnapshots", "Show snapshots/pre-releases" },
+			{ "Setup.IncludeSnapshots", "Snapshots/pre-releases" },
 			{ "Setup.UseManualJar", "Use a custom server JAR" },
 			{ "Setup.BrowseJar", "Browse" },
 			{ "Setup.JavaVersion", "JAR Java" },
+			{ "Setup.Quick", "Quick setup" },
 			{ "Setup.Basic", "Basic info" },
+			{ "Setup.Rules", "Server rules" },
 			{ "Setup.ServerName", "Server name" },
 			{ "Setup.MaxPlayers", "Max players" },
 			{ "Setup.Port", "Server port" },
@@ -1184,6 +1201,7 @@ internal static partial class Launcher
 			Localize(subtitle, "App.Subtitle");
 			subtitle.AutoSize = true;
 			subtitle.Location = new Point(2, 44);
+			subtitle.Tag = "muted";
 			header.Controls.Add(subtitle);
 			languageButton = CreateButton(Localization.LanguageButtonText(), 86);
 			languageButton.Tag = "ghost";
@@ -1249,6 +1267,7 @@ internal static partial class Launcher
 			addressTitle.Font = new Font("Segoe UI Variable Text Semib", 8.5F);
 			addressTitle.AutoSize = true;
 			addressTitle.Location = new Point(18, 12);
+			addressTitle.Tag = "muted";
 			addressSurface.Controls.Add(addressTitle);
 			addressBox = new TextBox();
 			addressBox.ReadOnly = true;
@@ -1260,6 +1279,7 @@ internal static partial class Launcher
 			addressBox.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 			addressSurface.Controls.Add(addressBox);
 			copyButton = CreateButton(Localization.T("Address.Copy"), 104);
+			SetButtonIcon(copyButton, ButtonIcon.Copy);
 			Localize(copyButton, "Address.Copy");
 			copyButton.Tag = "secondary";
 			copyButton.Enabled = false;
@@ -1282,8 +1302,16 @@ internal static partial class Launcher
 			};
 			addressSurface.Controls.Add(copyButton);
 
+			Label controlSectionLabel = new Label();
+			Localize(controlSectionLabel, "Main.ControlSection");
+			controlSectionLabel.Font = new Font("Segoe UI Variable Text Semib", 8.5F);
+			controlSectionLabel.AutoSize = true;
+			controlSectionLabel.Location = new Point(24, 148);
+			controlSectionLabel.Tag = "muted";
+			card.Controls.Add(controlSectionLabel);
+
 			TableLayoutPanel primaryActions = new TableLayoutPanel();
-			primaryActions.Location = new Point(18, 152);
+			primaryActions.Location = new Point(18, 164);
 			primaryActions.Size = new Size(card.ClientSize.Width - 36, 54);
 			primaryActions.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 			primaryActions.ColumnCount = 5;
@@ -1293,6 +1321,7 @@ internal static partial class Launcher
 			card.Controls.Add(primaryActions);
 
 			startButton = CreateButton(Localization.T("Button.Start"), 152);
+			SetButtonIcon(startButton, ButtonIcon.Play);
 			Localize(startButton, "Button.Start");
 			startButton.Tag = "primary";
 			startButton.Dock = DockStyle.Fill;
@@ -1300,6 +1329,7 @@ internal static partial class Launcher
 			startButton.Click += delegate { StartWorkflow(); };
 			primaryActions.Controls.Add(startButton, 0, 0);
 			stopButton = CreateButton(Localization.T("Button.Stop"), 136);
+			SetButtonIcon(stopButton, ButtonIcon.Stop);
 			Localize(stopButton, "Button.Stop");
 			stopButton.Tag = "danger";
 			stopButton.Dock = DockStyle.Fill;
@@ -1308,6 +1338,7 @@ internal static partial class Launcher
 			stopButton.Click += delegate { StopServer(); };
 			primaryActions.Controls.Add(stopButton, 1, 0);
 			settingsButton = CreateButton(Localization.T("Button.Settings"), 92);
+			SetButtonIcon(settingsButton, ButtonIcon.Settings);
 			Localize(settingsButton, "Button.Settings");
 			settingsButton.Tag = "secondary";
 			settingsButton.Dock = DockStyle.Fill;
@@ -1315,6 +1346,7 @@ internal static partial class Launcher
 			settingsButton.Click += delegate { OpenSettings(); };
 			primaryActions.Controls.Add(settingsButton, 2, 0);
 			upgradeButton = CreateButton(Localization.T("Button.Upgrade"), 118);
+			SetButtonIcon(upgradeButton, ButtonIcon.Upgrade);
 			Localize(upgradeButton, "Button.Upgrade");
 			upgradeButton.Tag = "secondary";
 			upgradeButton.Dock = DockStyle.Fill;
@@ -1322,14 +1354,23 @@ internal static partial class Launcher
 			upgradeButton.Click += delegate { UpgradeServerFiles(); };
 			primaryActions.Controls.Add(upgradeButton, 3, 0);
 			consoleButton = CreateButton(Localization.T("Button.ConsoleOpen"), 126);
+			SetButtonIcon(consoleButton, ButtonIcon.Console);
 			consoleButton.Tag = "secondary";
 			consoleButton.Dock = DockStyle.Fill;
 			consoleButton.Margin = new Padding(6, 5, 6, 5);
 			consoleButton.Click += delegate { ToggleConsole(); };
 			primaryActions.Controls.Add(consoleButton, 4, 0);
 
+			Label toolSectionLabel = new Label();
+			Localize(toolSectionLabel, "Main.ToolSection");
+			toolSectionLabel.Font = new Font("Segoe UI Variable Text Semib", 8.5F);
+			toolSectionLabel.AutoSize = true;
+			toolSectionLabel.Location = new Point(24, 222);
+			toolSectionLabel.Tag = "muted";
+			card.Controls.Add(toolSectionLabel);
+
 			TableLayoutPanel toolActions = new TableLayoutPanel();
-			toolActions.Location = new Point(18, 208);
+			toolActions.Location = new Point(18, 238);
 			toolActions.Size = new Size(card.ClientSize.Width - 36, 54);
 			toolActions.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 			toolActions.ColumnCount = 6;
@@ -1339,6 +1380,7 @@ internal static partial class Launcher
 			card.Controls.Add(toolActions);
 
 			profilesButton = CreateButton(Localization.T("Button.ServerManagement"), 134);
+			SetButtonIcon(profilesButton, ButtonIcon.Server);
 			Localize(profilesButton, "Button.ServerManagement");
 			profilesButton.Tag = "secondary";
 			profilesButton.Dock = DockStyle.Fill;
@@ -1349,6 +1391,7 @@ internal static partial class Launcher
 			multiServerButton.Tag = "secondary";
 			multiServerButton.Visible = false;
 			backupButton = CreateButton(Localization.T("Button.Backup"), 110);
+			SetButtonIcon(backupButton, ButtonIcon.Backup);
 			Localize(backupButton, "Button.Backup");
 			backupButton.Tag = "secondary";
 			backupButton.Dock = DockStyle.Fill;
@@ -1356,6 +1399,7 @@ internal static partial class Launcher
 			backupButton.Click += delegate { RunUiAction(OpenBackupManager); };
 			toolActions.Controls.Add(backupButton, 1, 0);
 			contentButton = CreateButton(Localization.T("Button.Content"), 100);
+			SetButtonIcon(contentButton, ButtonIcon.Content);
 			Localize(contentButton, "Button.Content");
 			contentButton.Tag = "secondary";
 			contentButton.Dock = DockStyle.Fill;
@@ -1363,6 +1407,7 @@ internal static partial class Launcher
 			contentButton.Click += delegate { RunUiAction(OpenContentManager); };
 			toolActions.Controls.Add(contentButton, 2, 0);
 			playersButton = CreateButton(Localization.T("Button.Players"), 100);
+			SetButtonIcon(playersButton, ButtonIcon.Players);
 			Localize(playersButton, "Button.Players");
 			playersButton.Tag = "secondary";
 			playersButton.Dock = DockStyle.Fill;
@@ -1370,6 +1415,7 @@ internal static partial class Launcher
 			playersButton.Click += delegate { RunUiAction(OpenPlayerManager); };
 			toolActions.Controls.Add(playersButton, 3, 0);
 			networkButton = CreateButton(Localization.T("Button.Network"), 110);
+			SetButtonIcon(networkButton, ButtonIcon.Network);
 			Localize(networkButton, "Button.Network");
 			networkButton.Tag = "secondary";
 			networkButton.Dock = DockStyle.Fill;
@@ -1377,6 +1423,7 @@ internal static partial class Launcher
 			networkButton.Click += delegate { RunUiAction(OpenNetworkTools); };
 			toolActions.Controls.Add(networkButton, 4, 0);
 			diagnosticsButton = CreateButton(Localization.T("Button.Diagnostics"), 110);
+			SetButtonIcon(diagnosticsButton, ButtonIcon.Diagnostics);
 			Localize(diagnosticsButton, "Button.Diagnostics");
 			diagnosticsButton.Tag = "secondary";
 			diagnosticsButton.Dock = DockStyle.Fill;
@@ -1453,7 +1500,7 @@ internal static partial class Launcher
 			consoleSearchBox.Dock = DockStyle.Left;
 			consoleSearchBox.TextChanged += delegate { RebuildConsoleView(); };
 			consoleToolbar.Controls.Add(consoleSearchBox);
-			consoleFilterBox = new ComboBox();
+			consoleFilterBox = new ModernComboBox();
 			consoleFilterBox.DropDownStyle = ComboBoxStyle.DropDownList;
 			consoleFilterBox.Width = 110;
 			consoleFilterBox.Dock = DockStyle.Left;
@@ -1486,6 +1533,7 @@ internal static partial class Launcher
 			};
 			commandPanel.Controls.Add(commandBox);
 			sendButton = CreateButton(Localization.T("Button.Send"), 86);
+			SetButtonIcon(sendButton, ButtonIcon.Send);
 			Localize(sendButton, "Button.Send");
 			sendButton.Tag = "primary";
 			sendButton.Dock = DockStyle.Right;
@@ -1551,6 +1599,15 @@ internal static partial class Launcher
 			button.FlatAppearance.BorderSize = 0;
 			button.Cursor = Cursors.Hand;
 			return button;
+		}
+
+		private static void SetButtonIcon(Button button, ButtonIcon icon)
+		{
+			RoundedButton roundedButton = button as RoundedButton;
+			if (roundedButton != null)
+			{
+				roundedButton.IconKind = icon;
+			}
 		}
 
 		private void Localize(Control control, string key)
@@ -2448,6 +2505,13 @@ internal static partial class Launcher
 			consoleSearchBox.ForeColor = palette.Text;
 			consoleFilterBox.BackColor = palette.CardSecondary;
 			consoleFilterBox.ForeColor = palette.Text;
+			ModernComboBox consoleFilter = consoleFilterBox as ModernComboBox;
+			if (consoleFilter != null)
+			{
+				consoleFilter.SelectionBackColor = palette.AccentSoft;
+				consoleFilter.SelectionForeColor = palette.Text;
+				consoleFilter.Invalidate();
+			}
 			themeButton.Text = darkTheme ? Localization.T("Theme.Light") : Localization.T("Theme.Dark");
 			SetStatusText(statusLabel.Text, statusWarning);
 			Invalidate(true);
@@ -2468,6 +2532,7 @@ internal static partial class Launcher
 				{
 					Button button = (Button)control;
 					string role = Convert.ToString(button.Tag);
+					button.FlatAppearance.BorderColor = palette.Border;
 					if (string.Equals(role, "primary", StringComparison.Ordinal))
 					{
 						button.BackColor = palette.Accent;
@@ -2486,6 +2551,11 @@ internal static partial class Launcher
 						button.ForeColor = palette.Text;
 						button.FlatAppearance.MouseOverBackColor = palette.AccentSoft;
 					}
+				}
+				else if (control is Label && string.Equals(Convert.ToString(control.Tag), "muted", StringComparison.Ordinal))
+				{
+					control.BackColor = control.Parent == null ? palette.Window : control.Parent.BackColor;
+					control.ForeColor = palette.Muted;
 				}
 				else if (!(control is TextBox) && !(control is RichTextBox))
 				{
@@ -2561,10 +2631,75 @@ internal static partial class Launcher
 		}
 	}
 
+	private sealed class ModernComboBox : ComboBox
+	{
+		public Color SelectionBackColor { get; set; }
+		public Color SelectionForeColor { get; set; }
+
+		public ModernComboBox()
+		{
+			DrawMode = DrawMode.OwnerDrawFixed;
+			DropDownStyle = ComboBoxStyle.DropDownList;
+			FlatStyle = FlatStyle.Flat;
+			ItemHeight = 24;
+			SelectionBackColor = Color.FromArgb(232, 240, 254);
+			SelectionForeColor = Color.FromArgb(25, 31, 40);
+		}
+
+		protected override void OnDrawItem(DrawItemEventArgs eventArgs)
+		{
+			if (eventArgs.Index < 0)
+			{
+				return;
+			}
+			bool selected = (eventArgs.State & DrawItemState.Selected) == DrawItemState.Selected;
+			Color back = selected ? SelectionBackColor : BackColor;
+			Color fore = selected ? SelectionForeColor : ForeColor;
+			using (SolidBrush brush = new SolidBrush(back))
+			{
+				eventArgs.Graphics.FillRectangle(brush, eventArgs.Bounds);
+			}
+			Rectangle textBounds = new Rectangle(eventArgs.Bounds.X + 8, eventArgs.Bounds.Y, Math.Max(1, eventArgs.Bounds.Width - 12), eventArgs.Bounds.Height);
+			TextRenderer.DrawText(eventArgs.Graphics, GetItemText(Items[eventArgs.Index]), Font, textBounds, fore, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
+			if ((eventArgs.State & DrawItemState.Focus) == DrawItemState.Focus)
+			{
+				eventArgs.DrawFocusRectangle();
+			}
+			base.OnDrawItem(eventArgs);
+		}
+	}
+
+	private enum ButtonIcon
+	{
+		None,
+		Play,
+		Stop,
+		Settings,
+		Upgrade,
+		Console,
+		Server,
+		Backup,
+		Content,
+		Players,
+		Network,
+		Diagnostics,
+		Copy,
+		Send,
+		Search,
+		Folder,
+		Download,
+		Add,
+		Edit,
+		Archive,
+		Check,
+		Refresh
+	}
+
 	private sealed class RoundedButton : Button
 	{
 		private bool mouseOver;
 		private bool mouseDown;
+		public ButtonIcon IconKind { get; set; }
 
 		public RoundedButton()
 		{
@@ -2573,6 +2708,7 @@ internal static partial class Launcher
 			FlatAppearance.BorderSize = 0;
 			Cursor = Cursors.Hand;
 			ResizeRedraw = true;
+			IconKind = ButtonIcon.None;
 		}
 
 		protected override void OnPaintBackground(PaintEventArgs eventArgs)
@@ -2648,15 +2784,17 @@ internal static partial class Launcher
 			Rectangle bounds = new Rectangle(0, 0, Width - 1, Height - 1);
 			using (GraphicsPath path = RoundedPanel.CreateRoundedRectangle(bounds, Math.Min(14, Height / 2)))
 			using (SolidBrush brush = new SolidBrush(fill))
-			using (SolidBrush textBrush = new SolidBrush(Enabled ? ForeColor : Color.FromArgb(135, ForeColor)))
 			{
 				eventArgs.Graphics.FillPath(brush, path);
-				StringFormat format = new StringFormat();
-				format.Alignment = StringAlignment.Center;
-				format.LineAlignment = StringAlignment.Center;
-				eventArgs.Graphics.DrawString(Text, Font, textBrush, bounds, format);
-				format.Dispose();
+				string role = Convert.ToString(Tag);
+				if (string.Equals(role, "secondary", StringComparison.Ordinal) || string.Equals(role, "ghost", StringComparison.Ordinal))
+				{
+					Color border = FlatAppearance.BorderColor.IsEmpty ? Color.FromArgb(45, ForeColor) : FlatAppearance.BorderColor;
+					using (Pen borderPen = new Pen(border, 1F)) eventArgs.Graphics.DrawPath(borderPen, path);
+				}
 			}
+			Color contentColor = Enabled ? ForeColor : Color.FromArgb(135, ForeColor);
+			DrawButtonContent(eventArgs.Graphics, bounds, contentColor);
 			if (Focused && ShowFocusCues)
 			{
 				Rectangle focusBounds = new Rectangle(3, 3, Math.Max(1, Width - 7), Math.Max(1, Height - 7));
@@ -2665,6 +2803,143 @@ internal static partial class Launcher
 				{
 					focusPen.DashStyle = DashStyle.Dot;
 					eventArgs.Graphics.DrawPath(focusPen, focusPath);
+				}
+			}
+		}
+
+		private void DrawButtonContent(Graphics graphics, Rectangle bounds, Color color)
+		{
+			if (IconKind == ButtonIcon.None)
+			{
+				TextRenderer.DrawText(graphics, Text, Font, bounds, color, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
+				return;
+			}
+			Size textSize = TextRenderer.MeasureText(Text, Font, new Size(Math.Max(1, bounds.Width - 34), bounds.Height), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+			int iconSize = 16;
+			int gap = 7;
+			int groupWidth = Math.Min(bounds.Width - 16, iconSize + gap + textSize.Width);
+			int start = bounds.Left + Math.Max(8, (bounds.Width - groupWidth) / 2);
+			Rectangle iconBounds = new Rectangle(start, bounds.Top + (bounds.Height - iconSize) / 2, iconSize, iconSize);
+			Rectangle textBounds = new Rectangle(iconBounds.Right + gap, bounds.Top, Math.Max(1, bounds.Right - iconBounds.Right - gap - 6), bounds.Height);
+			DrawVectorIcon(graphics, IconKind, iconBounds, color);
+			TextRenderer.DrawText(graphics, Text, Font, textBounds, color, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
+		}
+
+		private static void DrawVectorIcon(Graphics graphics, ButtonIcon icon, Rectangle bounds, Color color)
+		{
+			graphics.SmoothingMode = SmoothingMode.AntiAlias;
+			float left = bounds.Left + 1.5F;
+			float top = bounds.Top + 1.5F;
+			float right = bounds.Right - 1.5F;
+			float bottom = bounds.Bottom - 1.5F;
+			float centerX = (left + right) / 2F;
+			float centerY = (top + bottom) / 2F;
+			using (Pen pen = new Pen(color, 1.7F))
+			using (SolidBrush brush = new SolidBrush(color))
+			{
+				pen.StartCap = LineCap.Round;
+				pen.EndCap = LineCap.Round;
+				pen.LineJoin = LineJoin.Round;
+				switch (icon)
+				{
+					case ButtonIcon.Play:
+						graphics.FillPolygon(brush, new PointF[] { new PointF(left + 3, top + 1), new PointF(right - 1, centerY), new PointF(left + 3, bottom - 1) });
+						break;
+					case ButtonIcon.Stop:
+						graphics.DrawRectangle(pen, left + 2, top + 2, right - left - 4, bottom - top - 4);
+						break;
+					case ButtonIcon.Settings:
+						for (int row = 0; row < 3; row++)
+						{
+							float y = top + 3 + row * 4.5F;
+							float knob = row == 1 ? centerX + 2 : centerX - 2;
+							graphics.DrawLine(pen, left, y, right, y);
+							graphics.FillEllipse(brush, knob - 1.8F, y - 1.8F, 3.6F, 3.6F);
+						}
+						break;
+					case ButtonIcon.Upgrade:
+						graphics.DrawLine(pen, centerX, top + 1, centerX, bottom - 3);
+						graphics.DrawLines(pen, new PointF[] { new PointF(left + 3, top + 5), new PointF(centerX, top + 1), new PointF(right - 3, top + 5) });
+						graphics.DrawLine(pen, left + 1, bottom - 1, right - 1, bottom - 1);
+						break;
+					case ButtonIcon.Console:
+						graphics.DrawRectangle(pen, left, top + 1, right - left, bottom - top - 2);
+						graphics.DrawLines(pen, new PointF[] { new PointF(left + 3, top + 5), new PointF(left + 6, centerY), new PointF(left + 3, bottom - 5) });
+						graphics.DrawLine(pen, left + 8, bottom - 4, right - 3, bottom - 4);
+						break;
+					case ButtonIcon.Server:
+						for (int row = 0; row < 2; row++)
+						{
+							float y = top + row * 7;
+							graphics.DrawRectangle(pen, left, y, right - left, 5.5F);
+							graphics.FillEllipse(brush, left + 2, y + 1.7F, 2.2F, 2.2F);
+						}
+						break;
+					case ButtonIcon.Backup:
+						graphics.DrawArc(pen, left + 1, top + 1, right - left - 2, bottom - top - 2, 35, 285);
+						graphics.DrawLines(pen, new PointF[] { new PointF(left, top + 3), new PointF(left + 1, top + 8), new PointF(left + 5, top + 5) });
+						break;
+					case ButtonIcon.Content:
+						graphics.DrawPolygon(pen, new PointF[] { new PointF(centerX, top), new PointF(right, top + 4), new PointF(right, bottom - 3), new PointF(centerX, bottom), new PointF(left, bottom - 3), new PointF(left, top + 4) });
+						graphics.DrawLine(pen, left, top + 4, centerX, top + 8);
+						graphics.DrawLine(pen, right, top + 4, centerX, top + 8);
+						graphics.DrawLine(pen, centerX, top + 8, centerX, bottom);
+						break;
+					case ButtonIcon.Players:
+						graphics.DrawEllipse(pen, left + 2, top, 5.5F, 5.5F);
+						graphics.DrawEllipse(pen, right - 7, top + 2, 5, 5);
+						graphics.DrawArc(pen, left, top + 6, 10, 8, 190, 160);
+						graphics.DrawArc(pen, right - 9, top + 7, 8, 7, 195, 150);
+						break;
+					case ButtonIcon.Network:
+						graphics.DrawEllipse(pen, left, top, right - left, bottom - top);
+						graphics.DrawEllipse(pen, centerX - 3.5F, top, 7, bottom - top);
+						graphics.DrawLine(pen, left + 1, centerY, right - 1, centerY);
+						break;
+					case ButtonIcon.Diagnostics:
+						graphics.DrawLines(pen, new PointF[] { new PointF(left, centerY), new PointF(left + 3, centerY), new PointF(left + 5, top + 3), new PointF(left + 8, bottom - 3), new PointF(left + 10, centerY), new PointF(right, centerY) });
+						break;
+					case ButtonIcon.Copy:
+						graphics.DrawRectangle(pen, left + 4, top, right - left - 4, bottom - top - 4);
+						graphics.DrawRectangle(pen, left, top + 4, right - left - 4, bottom - top - 4);
+						break;
+					case ButtonIcon.Send:
+						graphics.DrawPolygon(pen, new PointF[] { new PointF(left, top + 2), new PointF(right, centerY), new PointF(left, bottom - 2), new PointF(left + 3, centerY), new PointF(left, top + 2) });
+						graphics.DrawLine(pen, left + 3, centerY, right - 2, centerY);
+						break;
+					case ButtonIcon.Search:
+						graphics.DrawEllipse(pen, left, top, 9.5F, 9.5F);
+						graphics.DrawLine(pen, left + 8, top + 8, right, bottom);
+						break;
+					case ButtonIcon.Folder:
+						graphics.DrawPolygon(pen, new PointF[] { new PointF(left, top + 4), new PointF(left + 5, top + 4), new PointF(left + 7, top + 1), new PointF(right, top + 1), new PointF(right, bottom - 1), new PointF(left, bottom - 1) });
+						break;
+					case ButtonIcon.Download:
+						graphics.DrawLine(pen, centerX, top, centerX, bottom - 4);
+						graphics.DrawLines(pen, new PointF[] { new PointF(left + 3, centerY), new PointF(centerX, bottom - 4), new PointF(right - 3, centerY) });
+						graphics.DrawLine(pen, left + 1, bottom, right - 1, bottom);
+						break;
+					case ButtonIcon.Add:
+						graphics.DrawEllipse(pen, left, top, right - left, bottom - top);
+						graphics.DrawLine(pen, centerX, top + 3, centerX, bottom - 3);
+						graphics.DrawLine(pen, left + 3, centerY, right - 3, centerY);
+						break;
+					case ButtonIcon.Edit:
+						graphics.DrawLine(pen, left + 2, bottom - 2, right - 2, top + 2);
+						graphics.DrawLines(pen, new PointF[] { new PointF(left + 1, bottom), new PointF(left + 5, bottom - 1), new PointF(left + 2, bottom - 4), new PointF(left + 1, bottom) });
+						break;
+					case ButtonIcon.Archive:
+						graphics.DrawRectangle(pen, left, top + 3, right - left, bottom - top - 3);
+						graphics.DrawLine(pen, left, top, right, top);
+						graphics.DrawLine(pen, centerX - 2, top + 7, centerX + 2, top + 7);
+						break;
+					case ButtonIcon.Check:
+						graphics.DrawLines(pen, new PointF[] { new PointF(left + 1, centerY), new PointF(centerX - 1, bottom - 2), new PointF(right, top + 2) });
+						break;
+					case ButtonIcon.Refresh:
+						graphics.DrawArc(pen, left + 1, top + 1, right - left - 2, bottom - top - 2, 35, 285);
+						graphics.DrawLines(pen, new PointF[] { new PointF(right - 1, top + 1), new PointF(right - 1, top + 6), new PointF(right - 6, top + 3) });
+						break;
 				}
 			}
 		}
@@ -2756,6 +3031,23 @@ internal static partial class Launcher
 				eventArgs.Graphics.DrawString(Text, Font, textBrush, bounds, format);
 				format.Dispose();
 			}
+			if (Checked)
+			{
+				Rectangle indicator = new Rectangle(Math.Max(4, Width - 24), 7, 16, 16);
+				using (SolidBrush indicatorBrush = new SolidBrush(SelectedBorderColor))
+				using (Pen checkPen = new Pen(Color.White, 1.8F))
+				{
+					checkPen.StartCap = LineCap.Round;
+					checkPen.EndCap = LineCap.Round;
+					eventArgs.Graphics.FillEllipse(indicatorBrush, indicator);
+					eventArgs.Graphics.DrawLines(checkPen, new PointF[]
+					{
+						new PointF(indicator.Left + 4, indicator.Top + 8),
+						new PointF(indicator.Left + 7, indicator.Top + 11),
+						new PointF(indicator.Left + 12, indicator.Top + 5)
+					});
+				}
+			}
 			if (Focused && ShowFocusCues)
 			{
 				Rectangle focusBounds = new Rectangle(4, 4, Math.Max(1, Width - 9), Math.Max(1, Height - 9));
@@ -2805,6 +3097,7 @@ internal static partial class Launcher
 		private readonly Panel body;
 		private readonly Label validationLabel;
 		private readonly ThemePalette setupPalette;
+		private readonly Label rulesLabel;
 		private readonly bool worldExists;
 		private string selectedPreset;
 		private int versionLoadRequest;
@@ -2831,7 +3124,7 @@ internal static partial class Launcher
 			StartPosition = FormStartPosition.CenterParent;
 			Rectangle workingArea = Screen.PrimaryScreen.WorkingArea;
 			int setupWidth = Math.Min(790, Math.Max(520, workingArea.Width - 30));
-			int setupHeight = Math.Min(840, Math.Max(600, workingArea.Height - 30));
+			int setupHeight = Math.Min(860, Math.Max(600, workingArea.Height - 30));
 			Size = new Size(setupWidth, setupHeight);
 			MinimumSize = new Size(Math.Min(640, setupWidth), Math.Min(600, setupHeight));
 			AutoScroll = false;
@@ -2850,7 +3143,7 @@ internal static partial class Launcher
 			body.Size = new Size(Math.Max(320, ClientSize.Width - 52), Math.Max(400, ClientSize.Height - 92));
 			body.Anchor = AnchorStyles.Top | AnchorStyles.Bottom | AnchorStyles.Left | AnchorStyles.Right;
 			body.AutoScroll = true;
-			body.AutoScrollMinSize = new Size(0, 700);
+			body.AutoScrollMinSize = new Size(0, 704);
 			Controls.Add(body);
 
 			Label title = NewLabel(Localization.T(editing ? "Setup.Heading.Edit" : "Setup.Heading.New"), 21F, true);
@@ -2892,7 +3185,7 @@ internal static partial class Launcher
 			body.Controls.Add(versionBox);
 			includeSnapshotsBox = NewCheckBox(Localization.T("Setup.IncludeSnapshots"), current.IncludeSnapshots);
 			includeSnapshotsBox.AutoSize = false;
-			includeSnapshotsBox.Size = new Size(150, 38);
+			includeSnapshotsBox.Size = new Size(170, 38);
 			includeSnapshotsBox.Location = new Point(558, 120);
 			includeSnapshotsBox.TabIndex = 3;
 			body.Controls.Add(includeSnapshotsBox);
@@ -2907,6 +3200,7 @@ internal static partial class Launcher
 			manualJarPathBox.TabIndex = 5;
 			body.Controls.Add(manualJarPathBox);
 			Button browseJar = NewFlatButton(Localization.T("Setup.BrowseJar"), 92);
+			ApplyButtonIcon(browseJar, ButtonIcon.Folder);
 			browseJar.Tag = "secondary";
 			browseJar.Location = new Point(442, 170);
 			browseJar.TabIndex = 6;
@@ -2948,9 +3242,13 @@ internal static partial class Launcher
 			versionStatusLabel.ForeColor = setupPalette.Muted;
 			body.Controls.Add(versionStatusLabel);
 
+			Label quickSetup = NewLabel(Localization.T("Setup.Quick"), 12F, true);
+			quickSetup.Location = new Point(0, 214);
+			body.Controls.Add(quickSetup);
+
 			TableLayoutPanel presetGrid = new TableLayoutPanel();
-			presetGrid.Location = new Point(0, 216);
-			presetGrid.Size = new Size(700, 156);
+			presetGrid.Location = new Point(0, 238);
+			presetGrid.Size = new Size(700, 136);
 			presetGrid.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 			presetGrid.ColumnCount = 4;
 			presetGrid.RowCount = 2;
@@ -2968,13 +3266,13 @@ internal static partial class Launcher
 			AddPreset(presetGrid, "custom", Localization.T("Preset.Custom"), 7);
 
 			Label basics = NewLabel(Localization.T("Setup.Basic"), 12F, true);
-			basics.Location = new Point(0, 390);
+			basics.Location = new Point(0, 386);
 			body.Controls.Add(basics);
 			Label motdLabel = NewLabel(Localization.T("Setup.ServerName"), 9F, true);
-			motdLabel.Location = new Point(0, 424);
+			motdLabel.Location = new Point(0, 416);
 			body.Controls.Add(motdLabel);
 			motdBox = NewTextBox();
-			motdBox.Location = new Point(0, 446);
+			motdBox.Location = new Point(0, 438);
 			motdBox.Size = new Size(340, 28);
 			motdBox.MaxLength = 200;
 			motdBox.Text = current.Motd;
@@ -2982,33 +3280,33 @@ internal static partial class Launcher
 			body.Controls.Add(motdBox);
 
 			Label playersLabel = NewLabel(Localization.T("Setup.MaxPlayers"), 9F, true);
-			playersLabel.Location = new Point(360, 424);
+			playersLabel.Location = new Point(360, 416);
 			body.Controls.Add(playersLabel);
 			playersBox = NewNumber(1, 1000, current.MaxPlayers);
-			playersBox.Location = new Point(360, 446);
+			playersBox.Location = new Point(360, 438);
 			playersBox.TabIndex = 17;
 			body.Controls.Add(playersBox);
 			Label portLabel = NewLabel(Localization.T("Setup.Port"), 9F, true);
-			portLabel.Location = new Point(490, 424);
+			portLabel.Location = new Point(490, 416);
 			body.Controls.Add(portLabel);
 			portBox = NewNumber(1, 65535, current.ServerPort);
-			portBox.Location = new Point(490, 446);
+			portBox.Location = new Point(490, 438);
 			portBox.TabIndex = 18;
 			body.Controls.Add(portBox);
 			Label memoryLabel = NewLabel(Localization.T("Setup.Memory"), 9F, true);
-			memoryLabel.Location = new Point(0, 488);
+			memoryLabel.Location = new Point(0, 478);
 			body.Controls.Add(memoryLabel);
 			memoryBox = NewNumber(2, safeMaximumMemory, Math.Min(Math.Max(current.MemoryGb, 2), safeMaximumMemory));
-			memoryBox.Location = new Point(0, 510);
+			memoryBox.Location = new Point(0, 500);
 			memoryBox.TabIndex = 19;
 			body.Controls.Add(memoryBox);
 			Label memoryHint = NewLabel(Localization.F("Setup.MemoryHint", recommendedMemory, GetTotalPhysicalMemoryGb()), 9F, false);
 			memoryHint.ForeColor = setupPalette.Muted;
-			memoryHint.Location = new Point(112, 514);
+			memoryHint.Location = new Point(112, 504);
 			body.Controls.Add(memoryHint);
 
 			customPanel = new Panel();
-			customPanel.Location = new Point(0, 552);
+			customPanel.Location = new Point(0, 538);
 			customPanel.Size = new Size(700, 54);
 			customPanel.Visible = false;
 			body.Controls.Add(customPanel);
@@ -3034,9 +3332,12 @@ internal static partial class Launcher
 			advancedButton = NewFlatButton(Localization.T("Setup.More"), 188);
 			advancedButton.Tag = "secondary";
 			advancedButton.Visible = false;
+			rulesLabel = NewLabel(Localization.T("Setup.Rules"), 12F, true);
+			rulesLabel.Location = new Point(0, 596);
+			body.Controls.Add(rulesLabel);
 			advancedPanel = new Panel();
-			advancedPanel.Location = new Point(0, 610);
-			advancedPanel.Size = new Size(700, 90);
+			advancedPanel.Location = new Point(0, 618);
+			advancedPanel.Size = new Size(700, 84);
 			advancedPanel.Visible = true;
 			body.Controls.Add(advancedPanel);
 			pvpBox = NewCheckBox(Localization.T("Setup.Pvp"), current.Pvp);
@@ -3109,6 +3410,7 @@ internal static partial class Launcher
 			cancel.TabIndex = 40;
 			Controls.Add(cancel);
 			Button save = NewFlatButton(Localization.T(editing ? "Setup.SaveEdit" : "Setup.Save"), 132);
+			ApplyButtonIcon(save, ButtonIcon.Check);
 			save.Tag = "primary";
 			save.Location = new Point(ClientSize.Width - 132, ClientSize.Height - 54);
 			save.Anchor = AnchorStyles.Bottom | AnchorStyles.Right;
@@ -3393,6 +3695,9 @@ internal static partial class Launcher
 			bool custom = selectedPreset == "custom";
 			bool creative = selectedPreset == "creative-normal" || selectedPreset == "creative-flat";
 			customPanel.Visible = custom;
+			rulesLabel.Top = custom ? 596 : 548;
+			advancedPanel.Top = custom ? 618 : 570;
+			body.AutoScrollMinSize = new Size(0, custom ? 704 : 656);
 			commandBlockBox.Checked = creative || (custom && gameModeBox != null && gameModeBox.SelectedIndex == 1) || source.CommandBlock;
 			commandBlockBox.Enabled = !creative;
 		}
@@ -3521,8 +3826,7 @@ internal static partial class Launcher
 
 		private static ComboBox NewCombo(string[] values)
 		{
-			ComboBox box = new ComboBox();
-			box.DropDownStyle = ComboBoxStyle.DropDownList;
+			ComboBox box = new ModernComboBox();
 			box.Items.AddRange(values);
 			box.Width = 160;
 			box.SelectedIndex = 0;
@@ -3564,6 +3868,7 @@ internal static partial class Launcher
 				else if (control is Button)
 				{
 					Button button = (Button)control;
+					button.FlatAppearance.BorderColor = palette.Border;
 					if (string.Equals(Convert.ToString(button.Tag), "primary", StringComparison.Ordinal))
 					{
 						button.BackColor = palette.Accent;
@@ -3581,6 +3886,13 @@ internal static partial class Launcher
 				{
 					control.BackColor = palette.Card;
 					control.ForeColor = palette.Text;
+					ModernComboBox comboBox = control as ModernComboBox;
+					if (comboBox != null)
+					{
+						comboBox.SelectionBackColor = palette.AccentSoft;
+						comboBox.SelectionForeColor = palette.Text;
+						comboBox.Invalidate();
+					}
 				}
 				else if (control is CheckBox)
 				{
