@@ -16,7 +16,6 @@ $dependencyDirectory = Join-Path $projectRoot '.build\dependencies'
 if (!$SkipCompile -and !$SkipDependencyDownload) {
     & (Join-Path $projectRoot 'scripts\Prepare-BuildResources.ps1') -DestinationDirectory $dependencyDirectory | Out-Null
 }
-$paperJar = Join-Path $dependencyDirectory 'Paper26_2.paper.jar'
 $javaZip = Join-Path $dependencyDirectory 'Paper26_2.java25.zip'
 New-Item -ItemType Directory -Force -Path $output | Out-Null
 $portableExe = Join-Path $output 'Minecraft-Server-Launcher.exe'
@@ -41,12 +40,11 @@ $arguments = @(
     '/reference:System.dll', '/reference:System.Core.dll', '/reference:System.Drawing.dll',
     '/reference:System.Windows.Forms.dll', '/reference:System.Web.Extensions.dll',
     '/reference:System.IO.Compression.dll', '/reference:System.IO.Compression.FileSystem.dll',
-    "/resource:$paperJar,Paper26_2.paper.jar",
     "/resource:$javaZip,Paper26_2.java25.zip",
     "/out:$portableExe"
 ) + $sources
 if (!$SkipCompile) {
-    foreach ($dependency in @($paperJar, $javaZip)) {
+    foreach ($dependency in @($javaZip)) {
         if (!(Test-Path -LiteralPath $dependency)) { throw "Missing build dependency: $dependency" }
     }
     $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'

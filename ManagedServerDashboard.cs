@@ -947,9 +947,9 @@ internal static partial class Launcher
 			toolbar.Controls.Add(searchBox);
 			filterBox = new ModernComboBox();
 			filterBox.DropDownStyle = ComboBoxStyle.DropDownList;
-			filterBox.Width = 120;
+			filterBox.Width = 144;
 			filterBox.Dock = DockStyle.Right;
-			filterBox.Items.AddRange(new object[3] { ManagedText("전체", "All"), "WARN", "ERROR" });
+			filterBox.Items.AddRange(new object[4] { ManagedText("전체", "All"), ManagedText("일반 경고", "Warnings"), ManagedText("호환성", "Compatibility"), ManagedText("오류", "Errors") });
 			filterBox.SelectedIndex = 0;
 			filterBox.SelectedIndexChanged += delegate { RenderConsole(); };
 			toolbar.Controls.Add(filterBox);
@@ -1015,12 +1015,12 @@ internal static partial class Launcher
 		private void RenderConsole(string[] lines)
 		{
 			string search = searchBox.Text.Trim();
-			string filter = filterBox.SelectedIndex == 1 ? "WARN" : filterBox.SelectedIndex == 2 ? "ERROR" : string.Empty;
-			StringBuilder builder = new StringBuilder();
+			int filterIndex = filterBox.SelectedIndex;
+			List<string> visibleLines = new List<string>();
 			for (int i = 0; i < lines.Length; i++)
 			{
 				string line = lines[i] ?? string.Empty;
-				if (!string.IsNullOrEmpty(filter) && line.IndexOf(filter, StringComparison.OrdinalIgnoreCase) < 0 && !(filter == "ERROR" && (line.IndexOf("Exception", StringComparison.OrdinalIgnoreCase) >= 0 || line.IndexOf("Caused by", StringComparison.OrdinalIgnoreCase) >= 0)))
+				if (!ConsoleLineMatchesFilter(line, filterIndex))
 				{
 					continue;
 				}
@@ -1028,18 +1028,33 @@ internal static partial class Launcher
 				{
 					continue;
 				}
-				builder.AppendLine(line);
+				visibleLines.Add(line);
 			}
 			RichTextUpdateState state = BeginStableRichTextUpdate(outputBox);
 			try
 			{
-				outputBox.Text = builder.ToString();
+				outputBox.Clear();
+				for (int i = 0; i < visibleLines.Count; i++)
+				{
+					AppendManagedConsoleLine(visibleLines[i]);
+				}
 			}
 			finally
 			{
 				EndStableRichTextUpdate(outputBox, state);
 			}
 			renderedHash = lines.Length == 0 ? 0 : lines.Length * 397 ^ lines[lines.Length - 1].GetHashCode();
+		}
+
+		private void AppendManagedConsoleLine(string line)
+		{
+			ConsoleLineKind kind = ClassifyConsoleLine(line);
+			Color color = Color.FromArgb(215, 225, 235);
+			if (kind == ConsoleLineKind.Error) color = Color.FromArgb(255, 117, 117);
+			else if (kind == ConsoleLineKind.Warning) color = Color.FromArgb(255, 190, 92);
+			else if (kind == ConsoleLineKind.Compatibility) color = Color.FromArgb(112, 184, 255);
+			outputBox.SelectionColor = color;
+			outputBox.AppendText(line + Environment.NewLine);
 		}
 
 		private void SendManagedCommand()

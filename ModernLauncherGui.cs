@@ -38,6 +38,48 @@ internal static partial class Launcher
 		public RichTextScrollPoint Scroll;
 	}
 
+	private enum ConsoleLineKind
+	{
+		Information,
+		Warning,
+		Compatibility,
+		Error
+	}
+
+	private static ConsoleLineKind ClassifyConsoleLine(string line)
+	{
+		string value = line ?? string.Empty;
+		if (value.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0 || value.IndexOf("Exception", StringComparison.OrdinalIgnoreCase) >= 0 || value.IndexOf("Caused by", StringComparison.OrdinalIgnoreCase) >= 0)
+		{
+			return ConsoleLineKind.Error;
+		}
+		if (value.IndexOf("Advanced terminal features are not available", StringComparison.OrdinalIgnoreCase) >= 0 ||
+			value.IndexOf("terminally deprecated method in sun.misc.Unsafe", StringComparison.OrdinalIgnoreCase) >= 0 ||
+			value.IndexOf("sun.misc.Unsafe::", StringComparison.OrdinalIgnoreCase) >= 0 ||
+			value.IndexOf("Please consider reporting this to the maintainers", StringComparison.OrdinalIgnoreCase) >= 0 ||
+			value.IndexOf("will be removed in a future release", StringComparison.OrdinalIgnoreCase) >= 0)
+		{
+			return ConsoleLineKind.Compatibility;
+		}
+		if (value.IndexOf("WARN", StringComparison.OrdinalIgnoreCase) >= 0 || value.TrimStart().StartsWith("WARNING:", StringComparison.OrdinalIgnoreCase))
+		{
+			return ConsoleLineKind.Warning;
+		}
+		return ConsoleLineKind.Information;
+	}
+
+	private static bool ConsoleLineMatchesFilter(string line, int filterIndex)
+	{
+		if (filterIndex <= 0)
+		{
+			return true;
+		}
+		ConsoleLineKind kind = ClassifyConsoleLine(line);
+		return (filterIndex == 1 && kind == ConsoleLineKind.Warning) ||
+			(filterIndex == 2 && kind == ConsoleLineKind.Compatibility) ||
+			(filterIndex == 3 && kind == ConsoleLineKind.Error);
+	}
+
 	[System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "SendMessageW")]
 	private static extern IntPtr SendRichTextMessage(IntPtr window, int message, IntPtr wParam, IntPtr lParam);
 
@@ -174,17 +216,17 @@ internal static partial class Launcher
 	{
 		string value = (text ?? string.Empty).Replace("&", string.Empty).Trim().ToLowerInvariant();
 		bool korean = string.Equals(Localization.CurrentLanguage, Localization.Korean, StringComparison.OrdinalIgnoreCase);
-		if (value.Contains("서버 시작") || value == "start server") return korean ? "선택한 프로필의 서버를 시작합니다. 단축키: F5" : "Start the selected server profile. Shortcut: F5";
-		if (value.Contains("안전하게 종료") || value == "stop" || value == "stop safely") return korean ? "월드를 저장하고 서버를 종료합니다. 단축키: Shift+F5" : "Save the world and stop the server. Shortcut: Shift+F5";
+		if (value.Contains("서버 시작") || value == "start" || value == "start server") return korean ? "선택한 프로필의 서버를 시작합니다. 단축키: F5" : "Start the selected server profile. Shortcut: F5";
+		if (value.Contains("서버 종료") || value.Contains("안전하게 종료") || value == "stop" || value == "stop safely") return korean ? "월드를 저장하고 서버를 종료합니다. 단축키: Shift+F5" : "Save the world and stop the server. Shortcut: Shift+F5";
 		if (value == "설정" || value == "settings") return korean ? "서버 종류와 게임 설정을 변경합니다. 단축키: Ctrl+," : "Change the server type and game settings. Shortcut: Ctrl+,";
 		if (value.Contains("업글") || value.Contains("업데이트") || value.Contains("upgrade") || value.Contains("update")) return korean ? "서버 실행 파일을 최신 호환 빌드로 갱신합니다." : "Update the server file to the latest compatible build.";
 		if (value.Contains("콘솔") || value.Contains("console")) return korean ? "서버 로그와 명령 입력창을 열거나 닫습니다. 단축키: Ctrl+K" : "Open or close server logs and command input. Shortcut: Ctrl+K";
-		if (value.Contains("서버 관리") || value.Contains("server management")) return korean ? "프로필 관리와 멀티 서버 기능을 엽니다." : "Open profiles and multi-server tools.";
+		if (value.Contains("서버 관리") || value == "servers" || value.Contains("server management")) return korean ? "프로필 관리와 멀티 서버 기능을 엽니다." : "Open profiles and multi-server tools.";
 		if (value.Contains("백업") || value.Contains("backup")) return korean ? "서버 전체를 백업하거나 복원합니다." : "Back up or restore the complete server.";
 		if (value == "콘텐츠" || value.Contains("content")) return korean ? "호환 플러그인과 모드를 찾아 설치합니다." : "Find and install compatible plugins or mods.";
 		if (value.Contains("플레이어") || value.Contains("player")) return korean ? "접속자와 권한·차단 목록을 관리합니다." : "Manage players, permissions, and bans.";
 		if (value.Contains("네트워크") || value.Contains("network")) return korean ? "접속 주소와 포트포워딩 상태를 확인합니다." : "Check addresses and port forwarding.";
-		if (value.Contains("진단") || value.Contains("diagnostic")) return korean ? "개인정보를 가린 문제 진단 파일을 만듭니다." : "Create a privacy-redacted diagnostic bundle.";
+		if (value.Contains("진단") || value.Contains("diagnostic") || value == "diagnose") return korean ? "개인정보를 가린 문제 진단 파일을 만듭니다." : "Create a privacy-redacted diagnostic bundle.";
 		if (value == "새 서버" || value == "new") return korean ? "새 서버 프로필을 만듭니다." : "Create a new server profile.";
 		if (value == "복제" || value == "clone") return korean ? "선택한 서버를 새 프로필로 복사합니다." : "Copy the selected server into a new profile.";
 		if (value.Contains("가져오기") || value.Contains("import")) return korean ? "기존 서버 폴더나 백업을 가져옵니다." : "Import an existing server folder or backup.";
@@ -313,27 +355,30 @@ internal static partial class Launcher
 			{ "Status.Stopping", "서버 종료 중" },
 			{ "Address.Title", "친구에게 이 주소를 보내세요" },
 			{ "Address.Empty", "서버를 시작하면 표시됩니다" },
-			{ "Address.Copy", "주소 복사" },
+			{ "Address.Copy", "복사" },
 			{ "Address.Copied", "접속 주소를 복사했습니다." },
-			{ "Button.Start", "서버 시작하기" },
-			{ "Button.Stop", "안전하게 종료" },
+			{ "Button.Start", "서버 시작" },
+			{ "Button.Stop", "서버 종료" },
 			{ "Button.Settings", "설정" },
-			{ "Button.Upgrade", "서버 업데이트" },
-			{ "Button.ConsoleOpen", "콘솔 열기" },
+			{ "Button.Upgrade", "업데이트" },
+			{ "Button.ConsoleOpen", "콘솔" },
 			{ "Button.ConsoleClose", "콘솔 닫기" },
 			{ "Button.Send", "전송" },
 			{ "Button.Profiles", "서버 프로필" },
 			{ "Button.MultiServer", "멀티 서버" },
 			{ "Button.ServerManagement", "서버 관리" },
-			{ "Button.Backup", "백업·복원" },
+			{ "Button.Backup", "백업" },
 			{ "Button.Content", "콘텐츠" },
 			{ "Button.Players", "플레이어" },
 			{ "Button.Network", "네트워크" },
-			{ "Button.Diagnostics", "문제 진단" },
+			{ "Button.Diagnostics", "진단" },
 			{ "Main.ControlSection", "서버 제어" },
 			{ "Main.ToolSection", "관리 도구" },
 			{ "Console.Search", "콘솔 검색" },
 			{ "Console.All", "전체" },
+			{ "Console.Warning", "일반 경고" },
+			{ "Console.Compatibility", "호환성" },
+			{ "Console.Error", "오류" },
 			{ "Console.Wrap", "줄 바꿈" },
 			{ "Features", "호환 Java · 멀티 서버 · 전체 백업/복원 · Modrinth 콘텐츠 · UPnP 외부 접속 · 안전한 자동 OP" },
 			{ "Notice.Ready", "서버를 열 준비가 되었어요." },
@@ -373,7 +418,7 @@ internal static partial class Launcher
 			{ "Setup.ProfileName", "서버 프로필 이름" },
 			{ "Setup.ServerType", "서버 종류" },
 			{ "Setup.MinecraftVersion", "Minecraft 버전" },
-			{ "Setup.IncludeSnapshots", "스냅샷·프리릴리즈" },
+			{ "Setup.IncludeSnapshots", "스냅샷 포함" },
 			{ "Setup.UseManualJar", "서버 JAR 직접 지정" },
 			{ "Setup.BrowseJar", "찾기" },
 			{ "Setup.JavaVersion", "JAR용 Java" },
@@ -393,7 +438,7 @@ internal static partial class Launcher
 			{ "Setup.Whitelist", "화이트리스트 사용" },
 			{ "Setup.CommandBlock", "명령 블록 허용" },
 			{ "Setup.OnlineMode", "정품 계정 인증" },
-			{ "Setup.PaperUpdate", "서버 파일 자동 업데이트" },
+			{ "Setup.PaperUpdate", "자동 업데이트" },
 			{ "Setup.ViewDistance", "시야 거리" },
 			{ "Setup.SimulationDistance", "시뮬레이션 거리" },
 			{ "Setup.Owner", "서버 소유자" },
@@ -454,27 +499,30 @@ internal static partial class Launcher
 			{ "Status.Stopping", "Stopping server" },
 			{ "Address.Title", "Send this address to your friends" },
 			{ "Address.Empty", "Shown after the server starts" },
-			{ "Address.Copy", "Copy address" },
+			{ "Address.Copy", "Copy" },
 			{ "Address.Copied", "Connection address copied." },
-			{ "Button.Start", "Start server" },
-			{ "Button.Stop", "Stop safely" },
+			{ "Button.Start", "Start" },
+			{ "Button.Stop", "Stop" },
 			{ "Button.Settings", "Settings" },
-			{ "Button.Upgrade", "Update server" },
-			{ "Button.ConsoleOpen", "Open console" },
+			{ "Button.Upgrade", "Update" },
+			{ "Button.ConsoleOpen", "Console" },
 			{ "Button.ConsoleClose", "Close console" },
 			{ "Button.Send", "Send" },
 			{ "Button.Profiles", "Profiles" },
 			{ "Button.MultiServer", "Multi-server" },
-			{ "Button.ServerManagement", "Server management" },
-			{ "Button.Backup", "Backup/restore" },
+			{ "Button.ServerManagement", "Servers" },
+			{ "Button.Backup", "Backups" },
 			{ "Button.Content", "Content" },
 			{ "Button.Players", "Players" },
 			{ "Button.Network", "Network" },
-			{ "Button.Diagnostics", "Diagnostics" },
+			{ "Button.Diagnostics", "Diagnose" },
 			{ "Main.ControlSection", "Server controls" },
 			{ "Main.ToolSection", "Management tools" },
 			{ "Console.Search", "Search console" },
 			{ "Console.All", "All" },
+			{ "Console.Warning", "Warnings" },
+			{ "Console.Compatibility", "Compatibility" },
+			{ "Console.Error", "Errors" },
 			{ "Console.Wrap", "Word wrap" },
 			{ "Features", "Compatible Java · multi-server · full backup/restore · Modrinth content · UPnP external access · safe owner auto-OP" },
 			{ "Notice.Ready", "Ready to open your server." },
@@ -514,7 +562,7 @@ internal static partial class Launcher
 			{ "Setup.ProfileName", "Server profile name" },
 			{ "Setup.ServerType", "Server type" },
 			{ "Setup.MinecraftVersion", "Minecraft version" },
-			{ "Setup.IncludeSnapshots", "Snapshots/pre-releases" },
+			{ "Setup.IncludeSnapshots", "Snapshots" },
 			{ "Setup.UseManualJar", "Use a custom server JAR" },
 			{ "Setup.BrowseJar", "Browse" },
 			{ "Setup.JavaVersion", "JAR Java" },
@@ -534,7 +582,7 @@ internal static partial class Launcher
 			{ "Setup.Whitelist", "Use whitelist" },
 			{ "Setup.CommandBlock", "Allow command blocks" },
 			{ "Setup.OnlineMode", "Online authentication" },
-			{ "Setup.PaperUpdate", "Server file auto update" },
+			{ "Setup.PaperUpdate", "Auto update" },
 			{ "Setup.ViewDistance", "View distance" },
 			{ "Setup.SimulationDistance", "Simulation distance" },
 			{ "Setup.Owner", "Server owner" },
@@ -810,7 +858,7 @@ internal static partial class Launcher
 			currentOptions.ManualJarPath = string.Empty;
 			currentOptions.CustomJavaMajor = 25;
 			currentOptions.MemoryGb = recommendedMemory;
-			currentOptions.AutoUpdate = false;
+			currentOptions.AutoUpdate = true;
 			currentOptions.OwnerName = GetDefaultOwnerName();
 		}
 		bool validOptions = currentOptions.MemoryGb >= 2
@@ -1502,9 +1550,9 @@ internal static partial class Launcher
 			consoleToolbar.Controls.Add(consoleSearchBox);
 			consoleFilterBox = new ModernComboBox();
 			consoleFilterBox.DropDownStyle = ComboBoxStyle.DropDownList;
-			consoleFilterBox.Width = 110;
+			consoleFilterBox.Width = 136;
 			consoleFilterBox.Dock = DockStyle.Left;
-			consoleFilterBox.Items.AddRange(new object[] { Localization.T("Console.All"), "WARN", "ERROR" });
+			consoleFilterBox.Items.AddRange(new object[] { Localization.T("Console.All"), Localization.T("Console.Warning"), Localization.T("Console.Compatibility"), Localization.T("Console.Error") });
 			consoleFilterBox.SelectedIndex = 0;
 			consoleFilterBox.SelectedIndexChanged += delegate { RebuildConsoleView(); };
 			consoleToolbar.Controls.Add(consoleFilterBox);
@@ -1548,7 +1596,7 @@ internal static partial class Launcher
 			playersButton.Enabled = false;
 			ConfigureAccessibleField(addressBox, Localization.T("Address.Title"), Localization.CurrentLanguage == Localization.Korean ? "친구가 서버에 접속할 때 사용하는 주소입니다." : "The address friends use to join the server.");
 			ConfigureAccessibleField(consoleSearchBox, Localization.T("Console.Search"), Localization.CurrentLanguage == Localization.Korean ? "표시된 콘솔 로그를 검색합니다." : "Search the visible console log.");
-			ConfigureAccessibleField(consoleFilterBox, Localization.T("Console.All"), Localization.CurrentLanguage == Localization.Korean ? "콘솔 로그 수준을 필터링합니다." : "Filter console messages by level.");
+			ConfigureAccessibleField(consoleFilterBox, Localization.T("Console.All"), Localization.CurrentLanguage == Localization.Korean ? "일반 경고, 호환성 안내와 오류를 구분해 표시합니다." : "Separate actionable warnings, compatibility notices, and errors.");
 			ConfigureAccessibleField(commandBox, Localization.CurrentLanguage == Localization.Korean ? "서버 명령" : "Server command", Localization.CurrentLanguage == Localization.Korean ? "실행 중인 서버에 보낼 명령을 입력합니다." : "Enter a command to send to the running server.");
 			ApplyTheme();
 			ApplyLocalization();
@@ -1679,8 +1727,16 @@ internal static partial class Launcher
 				addressBox.Text = Localization.T("Address.Empty");
 				copyButton.Enabled = false;
 			}
+			if (consoleFilterBox != null)
+			{
+				int selectedFilter = Math.Max(0, consoleFilterBox.SelectedIndex);
+				consoleFilterBox.Items.Clear();
+				consoleFilterBox.Items.AddRange(new object[] { Localization.T("Console.All"), Localization.T("Console.Warning"), Localization.T("Console.Compatibility"), Localization.T("Console.Error") });
+				consoleFilterBox.SelectedIndex = Math.Min(selectedFilter, consoleFilterBox.Items.Count - 1);
+			}
 			ConfigureAccessibleField(addressBox, Localization.T("Address.Title"), Localization.CurrentLanguage == Localization.Korean ? "친구가 서버에 접속할 때 사용하는 주소입니다." : "The address friends use to join the server.");
 			ConfigureAccessibleField(consoleSearchBox, Localization.T("Console.Search"), Localization.CurrentLanguage == Localization.Korean ? "표시된 콘솔 로그를 검색합니다." : "Search the visible console log.");
+			ConfigureAccessibleField(consoleFilterBox, Localization.T("Console.All"), Localization.CurrentLanguage == Localization.Korean ? "일반 경고, 호환성 안내와 오류를 구분해 표시합니다." : "Separate actionable warnings, compatibility notices, and errors.");
 			ApplyCommonButtonToolTips(this);
 		}
 
@@ -2349,7 +2405,7 @@ internal static partial class Launcher
 				return;
 			}
 			string search = consoleSearchBox == null ? string.Empty : consoleSearchBox.Text.Trim();
-			string filter = consoleFilterBox == null || consoleFilterBox.SelectedIndex <= 0 ? string.Empty : Convert.ToString(consoleFilterBox.SelectedItem, CultureInfo.InvariantCulture);
+			int filterIndex = consoleFilterBox == null ? 0 : consoleFilterBox.SelectedIndex;
 			RichTextUpdateState state = BeginStableRichTextUpdate(consoleBox);
 			try
 			{
@@ -2361,7 +2417,7 @@ internal static partial class Launcher
 					{
 						continue;
 					}
-					if (!string.IsNullOrEmpty(filter) && line.IndexOf(filter, StringComparison.OrdinalIgnoreCase) < 0)
+					if (!ConsoleLineMatchesFilter(line, filterIndex))
 					{
 						continue;
 					}
@@ -2378,13 +2434,18 @@ internal static partial class Launcher
 		{
 			Color normal = Color.FromArgb(215, 225, 235);
 			Color color = normal;
-			if (line.IndexOf("ERROR", StringComparison.OrdinalIgnoreCase) >= 0 || line.IndexOf("Exception", StringComparison.OrdinalIgnoreCase) >= 0)
+			ConsoleLineKind kind = ClassifyConsoleLine(line);
+			if (kind == ConsoleLineKind.Error)
 			{
 				color = Color.FromArgb(255, 117, 117);
 			}
-			else if (line.IndexOf("WARN", StringComparison.OrdinalIgnoreCase) >= 0)
+			else if (kind == ConsoleLineKind.Warning)
 			{
 				color = Color.FromArgb(255, 190, 92);
+			}
+			else if (kind == ConsoleLineKind.Compatibility)
+			{
+				color = Color.FromArgb(112, 184, 255);
 			}
 			consoleBox.SelectionColor = color;
 			consoleBox.AppendText(line + Environment.NewLine);
@@ -3126,7 +3187,7 @@ internal static partial class Launcher
 			int setupWidth = Math.Min(790, Math.Max(520, workingArea.Width - 30));
 			int setupHeight = Math.Min(860, Math.Max(600, workingArea.Height - 30));
 			Size = new Size(setupWidth, setupHeight);
-			MinimumSize = new Size(Math.Min(640, setupWidth), Math.Min(600, setupHeight));
+			MinimumSize = new Size(Math.Min(790, setupWidth), Math.Min(600, setupHeight));
 			AutoScroll = false;
 			validationErrors = new ErrorProvider();
 			validationErrors.ContainerControl = this;
@@ -3185,8 +3246,8 @@ internal static partial class Launcher
 			body.Controls.Add(versionBox);
 			includeSnapshotsBox = NewCheckBox(Localization.T("Setup.IncludeSnapshots"), current.IncludeSnapshots);
 			includeSnapshotsBox.AutoSize = false;
-			includeSnapshotsBox.Size = new Size(170, 38);
-			includeSnapshotsBox.Location = new Point(558, 120);
+			includeSnapshotsBox.Size = new Size(148, 38);
+			includeSnapshotsBox.Location = new Point(552, 120);
 			includeSnapshotsBox.TabIndex = 3;
 			body.Controls.Add(includeSnapshotsBox);
 			manualJarBox = NewCheckBox(Localization.T("Setup.UseManualJar"), current.UseManualJar);
@@ -3451,8 +3512,10 @@ internal static partial class Launcher
 			ConfigureAccessibleField(profileBox, Localization.T("Setup.ProfileName"), korean ? "서버 목록과 데이터 폴더를 구분하는 이름입니다." : "Name used to identify this server profile and its data folder.");
 			ConfigureAccessibleField(serverTypeBox, Localization.T("Setup.ServerType"), korean ? "Paper, Purpur, Fabric, Vanilla 또는 직접 JAR을 선택합니다." : "Choose Paper, Purpur, Fabric, Vanilla, or a custom JAR.");
 			ConfigureAccessibleField(versionBox, Localization.T("Setup.MinecraftVersion"), korean ? "새 서버에서 사용할 Minecraft 버전입니다." : "Minecraft version used by the server.");
+			ConfigureAccessibleField(includeSnapshotsBox, Localization.T("Setup.IncludeSnapshots"), korean ? "정식 버전 외에 스냅샷과 프리릴리즈도 버전 목록에 표시합니다." : "Also show snapshots and pre-releases in the version list.");
 			ConfigureAccessibleField(manualJarPathBox, Localization.T("Setup.UseManualJar"), korean ? "직접 실행할 서버 JAR 파일 경로입니다." : "Path to the custom server JAR.");
 			ConfigureAccessibleField(customJavaBox, Localization.T("Setup.JavaVersion"), korean ? "직접 JAR 제작자가 요구한 Java 버전입니다." : "Java version required by the custom JAR author.");
+			ConfigureAccessibleField(autoUpdateBox, Localization.T("Setup.PaperUpdate"), korean ? "서버 시작 전에 선택한 종류와 버전의 최신 빌드를 확인합니다." : "Check for the latest build of the selected server type and version before start.");
 			ConfigureAccessibleField(motdBox, Localization.T("Setup.ServerName"), korean ? "서버 목록에 표시되는 소개 문구입니다." : "Description shown in the Minecraft server list.");
 			ConfigureAccessibleField(playersBox, Localization.T("Setup.MaxPlayers"), korean ? "동시에 접속할 수 있는 최대 인원입니다." : "Maximum number of simultaneous players.");
 			ConfigureAccessibleField(portBox, Localization.T("Setup.Port"), korean ? "서버가 사용할 TCP 포트입니다." : "TCP port used by the server.");

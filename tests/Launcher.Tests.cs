@@ -33,6 +33,7 @@ internal static class LauncherTests
 			TestSetupLayoutAndValidation();
 			TestUxAccessibility();
 			TestJavaSelection();
+			TestConsoleClassificationAndLaunchArguments();
 			TestBackupRestoreAndProfileCopy(temporary);
 			TestUpnpOwnershipRules();
 			TestModrinthHash(temporary);
@@ -65,6 +66,10 @@ internal static class LauncherTests
 		Equal(true, Version.TryParse(build, out buildVersion), "빌드 번호 형식");
 		if (string.Equals(product, build, StringComparison.Ordinal)) throw new InvalidOperationException("제품 버전과 빌드 번호가 분리되지 않았습니다.");
 		Equal(buildVersion, assembly.GetName().Version, "어셈블리 빌드 번호");
+		foreach (string resourceName in assembly.GetManifestResourceNames())
+		{
+			if (resourceName.IndexOf("paper.jar", StringComparison.OrdinalIgnoreCase) >= 0) throw new InvalidOperationException("Paper 서버 JAR이 실행 파일에 남아 있습니다.");
+		}
 		Pass();
 	}
 
@@ -84,12 +89,12 @@ internal static class LauncherTests
 	private static void TestUpdateMetadataParsing()
 	{
 		string hash = new string('a', 64);
-		string json = "{\"version\":\"0.3.3\",\"build\":\"26.2.45.27\",\"download_url\":\"https://github.com/Mangom72/mc-server-launcher/releases/download/v0.3.3/Minecraft-Server-Launcher.exe\",\"sha256\":\"" + hash + "\",\"size\":2097152,\"release_notes\":\"test\",\"minimum_supported_version\":\"0.1.0\"}";
+		string json = "{\"version\":\"0.3.4\",\"build\":\"26.2.45.28\",\"download_url\":\"https://github.com/Mangom72/mc-server-launcher/releases/download/v0.3.4/Minecraft-Server-Launcher.exe\",\"sha256\":\"" + hash + "\",\"size\":2097152,\"release_notes\":\"test\",\"minimum_supported_version\":\"0.1.0\"}";
 		object metadata = Invoke("ParseLauncherUpdateMetadata", new object[] { json });
-		Equal("0.3.3", Convert.ToString(GetField(metadata, "ProductVersion")), "업데이트 제품 버전");
-		Equal("26.2.45.27", Convert.ToString(GetField(metadata, "BuildNumber")), "업데이트 빌드");
-		Equal(true, Invoke("IsLauncherUpdateNewer", new object[] { metadata, "0.3.2", "26.2.45.26" }), "새 제품 버전 판별");
-		Equal(false, Invoke("IsLauncherUpdateNewer", new object[] { metadata, "0.3.3", "26.2.45.27" }), "최신 버전 판별");
+		Equal("0.3.4", Convert.ToString(GetField(metadata, "ProductVersion")), "업데이트 제품 버전");
+		Equal("26.2.45.28", Convert.ToString(GetField(metadata, "BuildNumber")), "업데이트 빌드");
+		Equal(true, Invoke("IsLauncherUpdateNewer", new object[] { metadata, "0.3.3", "26.2.45.27" }), "새 제품 버전 판별");
+		Equal(false, Invoke("IsLauncherUpdateNewer", new object[] { metadata, "0.3.4", "26.2.45.28" }), "최신 버전 판별");
 		ExpectFailure(delegate { Invoke("ParseLauncherUpdateMetadata", new object[] { "{}" }); }, "누락된 업데이트 메타데이터");
 		ExpectFailure(delegate { Invoke("ParseLauncherUpdateMetadata", new object[] { json.Replace(hash, "bad") }); }, "잘못된 업데이트 해시");
 		ExpectFailure(delegate { Invoke("ParseLauncherUpdateMetadata", new object[] { json.Replace("https://github.com/Mangom72/", "http://example.com/") }); }, "허용되지 않은 업데이트 주소");
@@ -231,6 +236,9 @@ internal static class LauncherTests
 			foreach (Control control in form.Controls) if (control is Panel && ((Panel)control).AutoScroll) body = (Panel)control;
 			if (body == null || body.AutoScrollMinSize.Height < 650) throw new InvalidOperationException("작은 화면 스크롤 영역이 없습니다.");
 			Equal(0, body.AutoScrollMinSize.Width, "설정 화면 가로 스크롤 방지");
+			if (form.MinimumSize.Width < 790) throw new InvalidOperationException("설정 화면 최소 폭이 콘텐츠보다 작습니다.");
+			CheckBox snapshots = (CheckBox)GetPrivateField(formType, form, "includeSnapshotsBox");
+			if (snapshots.Right > 700) throw new InvalidOperationException("스냅샷 옵션이 설정 콘텐츠 폭을 벗어납니다.");
 			NumericUpDown port = (NumericUpDown)GetPrivateField(formType, form, "portBox");
 			NumericUpDown memory = (NumericUpDown)GetPrivateField(formType, form, "memoryBox");
 			Equal(1m, port.Minimum, "포트 최소값");
@@ -282,8 +290,30 @@ internal static class LauncherTests
 			iconProperty.SetValue(button, play, null);
 			Equal("Play", Convert.ToString(iconProperty.GetValue(button, null)), "버튼 벡터 아이콘 상태");
 		}
-		string startDescription = Convert.ToString(Invoke("GetCommonButtonDescription", new object[] { "서버 시작하기" }));
+		string startDescription = Convert.ToString(Invoke("GetCommonButtonDescription", new object[] { "서버 시작" }));
 		if (startDescription.IndexOf("F5", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("시작 단축키 안내가 없습니다.");
+
+		Type localizationType = launcher.GetNestedType("Localization", BindingFlags.NonPublic);
+		FieldInfo languageField = localizationType.GetField("CurrentLanguage", BindingFlags.Static | BindingFlags.Public);
+		object originalLanguage = languageField.GetValue(null);
+		Type formType = launcher.GetNestedType("LauncherForm", BindingFlags.NonPublic);
+		using (Form form = (Form)Activator.CreateInstance(formType, true))
+		{
+			MethodInfo applyLocalization = formType.GetMethod("ApplyLocalization", BindingFlags.Instance | BindingFlags.NonPublic);
+			foreach (string language in new string[] { "ko", "en" })
+			{
+				languageField.SetValue(null, language);
+				applyLocalization.Invoke(form, null);
+				form.PerformLayout();
+				foreach (string fieldName in new string[] { "startButton", "stopButton", "settingsButton", "upgradeButton", "consoleButton", "profilesButton", "backupButton", "contentButton", "playersButton", "networkButton", "diagnosticsButton" })
+				{
+					Button action = (Button)GetPrivateField(formType, form, fieldName);
+					Size measured = TextRenderer.MeasureText(action.Text, action.Font, new Size(Math.Max(1, action.Width - 45), action.Height), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+					if (measured.Width > action.Width - 45) throw new InvalidOperationException(language + " 버튼 문구가 표시 폭을 넘습니다: " + action.Text);
+				}
+			}
+		}
+		languageField.SetValue(null, originalLanguage);
 		Pass();
 	}
 
@@ -313,6 +343,21 @@ internal static class LauncherTests
 		Equal(17, Invoke("ResolvePaperFamilyJavaMajor", new object[] { "1.19.4" }), "1.19 Paper Java");
 		Equal(21, Invoke("ResolvePaperFamilyJavaMajor", new object[] { "1.21.11" }), "1.21 Paper Java");
 		Equal(25, Invoke("ResolvePaperFamilyJavaMajor", new object[] { "26.2" }), "26.2 Paper Java");
+		Pass();
+	}
+
+	private static void TestConsoleClassificationAndLaunchArguments()
+	{
+		string terminal = "ServerMain WARN Advanced terminal features are not available in this environment";
+		string unsafeWarning = "WARNING: sun.misc.Unsafe::objectFieldOffset will be removed in a future release";
+		Equal("Compatibility", Convert.ToString(Invoke("ClassifyConsoleLine", new object[] { terminal })), "터미널 호환성 경고 분류");
+		Equal("Compatibility", Convert.ToString(Invoke("ClassifyConsoleLine", new object[] { unsafeWarning })), "Unsafe 호환성 경고 분류");
+		Equal("Warning", Convert.ToString(Invoke("ClassifyConsoleLine", new object[] { "Server thread WARN Plugin warning" })), "일반 경고 분류");
+		Equal("Error", Convert.ToString(Invoke("ClassifyConsoleLine", new object[] { "Caused by: java.lang.IllegalStateException" })), "오류 분류");
+		Equal(true, Invoke("ConsoleLineMatchesFilter", new object[] { terminal, 2 }), "호환성 필터 포함");
+		Equal(false, Invoke("ConsoleLineMatchesFilter", new object[] { terminal, 1 }), "일반 경고에서 호환성 경고 제외");
+		Equal(" --nojline --nogui", Convert.ToString(Invoke("GetServerConsoleArgument", new object[] { "paper", "26.2" })), "최신 Paper GUI 콘솔 인수");
+		Equal(string.Empty, Convert.ToString(Invoke("GetServerConsoleArgument", new object[] { "paper", "1.12.2" })), "구버전 Paper 콘솔 인수 보존");
 		Pass();
 	}
 

@@ -2,6 +2,23 @@
 
 이 프로젝트는 제품 버전에 [Semantic Versioning](https://semver.org/)을 사용합니다. `26.2.45.xx` 값은 별도의 내부 빌드 번호입니다.
 
+## [0.3.3] - 2026-07-12
+
+내부 빌드: `26.2.45.27`
+
+### Changed
+
+- Paper 서버 JAR 내장과 최초 실행 전용 고정 빌드 경로를 제거하고 공식 API 최신 빌드 다운로드와 SHA-256 검증 경로로 통합
+- 새 서버의 자동 업데이트 기본값을 활성화하고 최초 다운로드 직후 같은 파일을 다시 확인하던 중복 다운로드 제거
+- 설정 화면 콘텐츠 폭과 최소 창 너비를 맞춰 DPI 배율에 따라 나타나던 가로 스크롤 제거
+- 한국어·영어 작업 버튼을 짧고 안정적인 문구로 통일하고 전체 동작 설명은 도움말과 접근성 설명으로 유지
+- 최신 Paper/Purpur에서 GUI 콘솔에 맞는 `--nojline --nogui` 인수를 사용하도록 개선
+
+### Added
+
+- 콘솔의 일반 경고, Java·터미널 호환성 경고, 오류를 구분하는 필터와 색상
+- 내장 Paper 리소스 부재, 호환성 경고 분류, 버전별 콘솔 인수와 설정 화면 폭을 확인하는 자동 회귀 테스트
+
 ## [0.3.2] - 2026-07-12
 
 내부 빌드: `26.2.45.26`
@@ -64,6 +81,8 @@
 - 기존 `Minecraft-Servers-Data` 자동 감지 및 비파괴 사용
 
 ## English
+
+Version `0.3.3` removes the bundled Paper server JAR, unifies first-run preparation with the verified official latest-build path, prevents duplicate downloads, fixes setup horizontal scrolling, shortens bilingual action labels, and separates compatibility notices from actionable warnings and errors.
 
 Version `0.3.2` introduces a consistent vector icon system, clearer server-control and management hierarchy, bordered secondary actions, fully themed owner-drawn combo boxes, denser setup sections, and non-color preset selection indicators.
 

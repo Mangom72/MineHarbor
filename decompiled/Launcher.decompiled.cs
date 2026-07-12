@@ -124,6 +124,8 @@ internal static partial class Launcher
 		public string JarPath;
 
 		public string BatchPath;
+
+		public bool PreparedLatest;
 	}
 
 	private sealed class PaperBuildInfo
@@ -199,21 +201,11 @@ internal static partial class Launcher
 		public string MacAddress;
 	}
 
-	private const string PaperResourceName = "Paper26_2.paper.jar";
-
 	private const string JavaResourceName = "Paper26_2.java25.zip";
 
 	private const long AdminPluginJarSize = 3873L;
 
 	private const string AdminPluginJarSha256 = "627bba2a51ae1e7e77acde106d06ff4293a67a5811ddf25f9b072500dd649b67";
-
-	private const long PaperJarSize = 61728192L;
-
-	private const string PaperJarSha256 = "2ccf928fd842a19c90a2ee66b0fea4d8f90deb35e641fe5e5038c7012ed55956";
-
-	private const long LegacyPaperJarSize = 61727227L;
-
-	private const string LegacyPaperJarSha256 = "825bbfce055d22f2e10eb108d5cfd2f554f60d80bc1e0615861e84f278f978d9";
 
 	private const string JavaZipSha256 = "709312cd0420296d9b9de917fe6e28a5b979e875ee5ab91783fb79bcd5857235";
 
@@ -979,7 +971,7 @@ internal static partial class Launcher
 		RemoveLegacyBundledOwnerPlugin(serverDirectory);
 		ReportLauncherLoading(LauncherUiText("서버 실행 파일을 준비하고 있습니다…", "Preparing the server executable…"), 60);
 		ServerRuntime serverRuntime = PrepareServerRuntime(serverDirectory, launcherOptions, text4, false);
-		if (launcherOptions.AutoUpdate)
+		if (launcherOptions.AutoUpdate && !serverRuntime.PreparedLatest)
 		{
 			ReportLauncherLoading(LauncherUiText("서버 파일 업데이트를 확인하고 있습니다…", "Checking server file updates…"), 75);
 			UpgradeServerRuntime(serverDirectory, launcherOptions, text4, serverRuntime, false);
@@ -1002,7 +994,7 @@ internal static partial class Launcher
 		try
 		{
 			ReportLauncherLoading(LauncherUiText("서버 프로세스를 시작하고 있습니다…", "Starting the server process…"), 90);
-			num = LaunchServer(text4, serverRuntime.JarPath, serverRuntime.BatchPath, serverDirectory, memoryGb, serverPort, launcherOptions.OwnerName, onlineMode, launcherOptions.ServerType);
+			num = LaunchServer(text4, serverRuntime.JarPath, serverRuntime.BatchPath, serverDirectory, memoryGb, serverPort, launcherOptions.OwnerName, onlineMode, launcherOptions.ServerType, launcherOptions.MinecraftVersion);
 		}
 		finally
 		{
@@ -2038,24 +2030,14 @@ internal static partial class Launcher
 			return PrepareNeoForgeRuntime(serverDirectory, options, javaPath, forceDownload);
 		}
 		string jarPath = GetManagedServerJarPath(serverDirectory, options);
-		if (forceDownload || !IsLikelyPaperJar(jarPath))
+		bool preparedLatest = forceDownload || !IsLikelyPaperJar(jarPath);
+		if (preparedLatest)
 		{
-			if (string.Equals(serverType, "paper", StringComparison.Ordinal) && string.Equals(options.MinecraftVersion, "26.2", StringComparison.OrdinalIgnoreCase) && !forceDownload)
-			{
-				Console.WriteLine("내장 Paper 26.2 서버 파일을 준비하는 중...");
-				ExtractResource("Paper26_2.paper.jar", jarPath);
-				if (!PaperJarIsValid(jarPath))
-				{
-					throw new InvalidDataException("내장 Paper 서버 파일의 무결성 검증에 실패했습니다.");
-				}
-			}
-			else
-			{
-				DownloadManagedServerJar(serverDirectory, options, jarPath);
-			}
+			DownloadManagedServerJar(serverDirectory, options, jarPath);
 		}
 		ServerRuntime runtime = new ServerRuntime();
 		runtime.JarPath = jarPath;
+		runtime.PreparedLatest = preparedLatest;
 		return runtime;
 	}
 
@@ -2628,29 +2610,6 @@ internal static partial class Launcher
 		}
 	}
 
-	private static string PreparePaperJar(string serverDirectory)
-	{
-		string text = Path.Combine(serverDirectory, "paper-26.2-server.jar");
-		if (IsLikelyPaperJar(text))
-		{
-			return text;
-		}
-		string text2 = Path.Combine(serverDirectory, "paper-26.2-43.jar");
-		if (LegacyPaperJarIsValid(text2))
-		{
-			Console.WriteLine("기존 Paper 26.2 서버 파일을 새 고정 파일명으로 옮기는 중...");
-			File.Copy(text2, text, true);
-			return text;
-		}
-		Console.WriteLine("Paper 26.2 기본 서버 파일을 준비하는 중...");
-		ExtractResource("Paper26_2.paper.jar", text);
-		if (!PaperJarIsValid(text))
-		{
-			throw new InvalidDataException("내장 Paper 서버 파일의 무결성 검증에 실패했습니다.");
-		}
-		return text;
-	}
-
 	private static bool IsLikelyPaperJar(string path)
 	{
 		try
@@ -2669,74 +2628,6 @@ internal static partial class Launcher
 		{
 			return false;
 		}
-	}
-
-	private static void CheckAndUpdatePaper(string serverDirectory, string jarPath, bool autoUpdate)
-	{
-		try
-		{
-			Console.WriteLine("Paper 26.2 최신 빌드를 확인하는 중...");
-			PaperBuildInfo latestPaperBuild = GetLatestPaperBuild();
-			string fileSha = GetFileSha256(jarPath);
-			int num = ReadCurrentPaperBuild(serverDirectory, fileSha);
-			if (string.Equals(fileSha, latestPaperBuild.Sha256, StringComparison.OrdinalIgnoreCase))
-			{
-				WritePaperBuildMetadata(serverDirectory, latestPaperBuild);
-				Console.WriteLine("Paper 26.2 빌드 " + latestPaperBuild.Build + "가 최신입니다.");
-				return;
-			}
-			string text = ((num > 0) ? ("빌드 " + num) : "현재 빌드");
-			if (!autoUpdate)
-			{
-				Console.WriteLine(text + "보다 새로운 Paper 26.2 빌드 " + latestPaperBuild.Build + "(" + latestPaperBuild.Channel + ")가 있습니다.");
-				PrintManualPaperUpdateGuide(jarPath);
-				return;
-			}
-			Console.WriteLine(text + "에서 빌드 " + latestPaperBuild.Build + "(" + latestPaperBuild.Channel + ")로 업데이트합니다.");
-			if (!string.Equals(latestPaperBuild.Channel, "STABLE", StringComparison.OrdinalIgnoreCase))
-			{
-				Console.WriteLine("주의: 최신 빌드의 채널은 " + latestPaperBuild.Channel + "입니다. 업데이트 후 플러그인과 서버 로그를 확인하세요.");
-			}
-			if (Directory.Exists(Path.Combine(serverDirectory, "plugins")) && Directory.GetFiles(Path.Combine(serverDirectory, "plugins"), "*.jar").Length > 0)
-			{
-				Console.WriteLine("플러그인이 감지됐습니다. 업데이트 뒤 호환성 오류가 없는지 확인하세요.");
-			}
-			string text2 = jarPath + ".업데이트중";
-			DeleteFileIfPresent(text2);
-			try
-			{
-				DownloadPaperBuild(latestPaperBuild, text2);
-				FileInfo fileInfo = new FileInfo(text2);
-				if (latestPaperBuild.Size > 0 && fileInfo.Length != latestPaperBuild.Size)
-				{
-					throw new InvalidDataException("다운로드 크기가 PaperMC 공식 정보와 다릅니다.");
-				}
-				if (!HashMatches(text2, latestPaperBuild.Sha256))
-				{
-					throw new InvalidDataException("다운로드한 Paper JAR의 SHA-256 검증에 실패했습니다.");
-				}
-				CreateServerBackup(serverDirectory);
-				BackupCurrentPaperJar(serverDirectory, jarPath, num);
-				ReplaceFile(text2, jarPath);
-				WritePaperBuildMetadata(serverDirectory, latestPaperBuild);
-				Console.WriteLine("Paper 26.2 빌드 " + latestPaperBuild.Build + " 업데이트와 무결성 검증을 완료했습니다.");
-			}
-			finally
-			{
-				DeleteFileIfPresent(text2);
-			}
-		}
-		catch (Exception ex)
-		{
-			Console.WriteLine("Paper 자동 업데이트를 완료하지 못했습니다: " + ex.Message);
-			Console.WriteLine("기존 서버 파일로 계속 실행합니다.");
-			PrintManualPaperUpdateGuide(jarPath);
-		}
-	}
-
-	private static PaperBuildInfo GetLatestPaperBuild()
-	{
-		return GetLatestPaperBuild("26.2");
 	}
 
 	private static PaperBuildInfo GetLatestPaperBuild(string minecraftVersion)
@@ -2811,52 +2702,6 @@ internal static partial class Launcher
 			return true;
 		}
 		return false;
-	}
-
-	private static void DownloadPaperBuild(PaperBuildInfo build, string destinationPath)
-	{
-		HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(build.Url);
-		httpWebRequest.Method = "GET";
-		httpWebRequest.UserAgent = GetLauncherIntegrationUserAgent();
-		httpWebRequest.Timeout = 60000;
-		httpWebRequest.ReadWriteTimeout = 60000;
-		httpWebRequest.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
-		using (HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse())
-		{
-			using (Stream stream = httpWebResponse.GetResponseStream())
-			{
-				using (FileStream fileStream = new FileStream(destinationPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
-				{
-					if (httpWebResponse.StatusCode != HttpStatusCode.OK)
-					{
-						throw new WebException("HTTP " + (int)httpWebResponse.StatusCode);
-					}
-					stream.CopyTo(fileStream, 1048576);
-					fileStream.Flush(true);
-				}
-			}
-		}
-	}
-
-	private static void BackupCurrentPaperJar(string serverDirectory, string jarPath, int currentBuild)
-	{
-		if (File.Exists(jarPath))
-		{
-			string text = Path.Combine(serverDirectory, "paper-backups");
-			Directory.CreateDirectory(text);
-			string text2 = ((currentBuild > 0) ? ("build-" + currentBuild) : DateTime.Now.ToString("yyyyMMdd-HHmmss"));
-			string text3 = Path.Combine(text, "paper-26.2-" + text2 + ".jar");
-			if (!File.Exists(text3))
-			{
-				File.Copy(jarPath, text3);
-			}
-			FileInfo[] files = new DirectoryInfo(text).GetFiles("paper-26.2-*.jar");
-			Array.Sort(files, (FileInfo left, FileInfo right) => right.LastWriteTimeUtc.CompareTo(left.LastWriteTimeUtc));
-			for (int num = 3; num < files.Length; num = checked(num + 1))
-			{
-				files[num].Delete();
-			}
-		}
 	}
 
 	private static void CreateServerBackup(string serverDirectory)
@@ -3053,27 +2898,6 @@ internal static partial class Launcher
 		File.Move(sourcePath, destinationPath);
 	}
 
-	private static int ReadCurrentPaperBuild(string serverDirectory, string currentHash)
-	{
-		Dictionary<string, string> dictionary = ReadSimpleProperties(Path.Combine(serverDirectory, ".paper-launcher-build"));
-		int result;
-		if (dictionary.ContainsKey("build") && dictionary.ContainsKey("sha256") && int.TryParse(dictionary["build"], out result) && string.Equals(dictionary["sha256"], currentHash, StringComparison.OrdinalIgnoreCase))
-		{
-			return result;
-		}
-		if (string.Equals(currentHash, "2ccf928fd842a19c90a2ee66b0fea4d8f90deb35e641fe5e5038c7012ed55956", StringComparison.OrdinalIgnoreCase))
-		{
-			return 45;
-		}
-		return 0;
-	}
-
-	private static void WritePaperBuildMetadata(string serverDirectory, PaperBuildInfo build)
-	{
-		string contents = "minecraft-version=26.2\r\nbuild=" + build.Build + "\r\nchannel=" + build.Channel + "\r\nsha256=" + build.Sha256 + "\r\n";
-		File.WriteAllText(Path.Combine(serverDirectory, ".paper-launcher-build"), contents, new UTF8Encoding(false));
-	}
-
 	private static string GetFileSha256(string path)
 	{
 		using (FileStream inputStream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
@@ -3119,15 +2943,6 @@ internal static partial class Launcher
 		}
 	}
 
-	private static void PrintManualPaperUpdateGuide(string jarPath)
-	{
-		Console.WriteLine("수동 업데이트: https://papermc.io/downloads/paper");
-		Console.WriteLine("1) 서버를 stop으로 종료합니다.");
-		Console.WriteLine("2) 위 주소에서 Minecraft 26.2용 최신 Paper JAR을 받습니다.");
-		Console.WriteLine("3) 받은 파일 이름을 paper-26.2-server.jar로 바꿔 다음 파일을 교체합니다:");
-		Console.WriteLine("   " + jarPath);
-	}
-
 	private static void ExtractResource(string resourceName, string destinationPath)
 	{
 		using (Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName))
@@ -3152,32 +2967,6 @@ internal static partial class Launcher
 			{
 				DeleteFileIfPresent(text);
 			}
-		}
-	}
-
-	private static bool PaperJarIsValid(string path)
-	{
-		try
-		{
-			FileInfo fileInfo = new FileInfo(path);
-			return fileInfo.Exists && fileInfo.Length == 61728192 && HashMatches(path, "2ccf928fd842a19c90a2ee66b0fea4d8f90deb35e641fe5e5038c7012ed55956");
-		}
-		catch
-		{
-			return false;
-		}
-	}
-
-	private static bool LegacyPaperJarIsValid(string path)
-	{
-		try
-		{
-			FileInfo fileInfo = new FileInfo(path);
-			return fileInfo.Exists && fileInfo.Length == 61727227 && HashMatches(path, "825bbfce055d22f2e10eb108d5cfd2f554f60d80bc1e0615861e84f278f978d9");
-		}
-		catch
-		{
-			return false;
 		}
 	}
 
@@ -3413,7 +3202,7 @@ internal static partial class Launcher
 		}
 	}
 
-	private static int LaunchServer(string javaPath, string jarPath, string batchPath, string workingDirectory, int memoryGb, int serverPort, string ownerName, bool onlineMode, string serverType)
+	private static int LaunchServer(string javaPath, string jarPath, string batchPath, string workingDirectory, int memoryGb, int serverPort, string ownerName, bool onlineMode, string serverType, string minecraftVersion)
 	{
 		ProcessStartInfo processStartInfo = new ProcessStartInfo();
 		if (!string.IsNullOrEmpty(batchPath))
@@ -3427,7 +3216,7 @@ internal static partial class Launcher
 		{
 			processStartInfo.FileName = javaPath;
 			string launchJarPath = GetLaunchJarPath(jarPath, workingDirectory);
-			processStartInfo.Arguments = "-Xms1G -Xmx" + memoryGb + "G -jar \"" + launchJarPath + "\"" + GetServerConsoleArgument(serverType);
+			processStartInfo.Arguments = "-Xms1G -Xmx" + memoryGb + "G -jar \"" + launchJarPath + "\"" + GetServerConsoleArgument(serverType, minecraftVersion);
 		}
 		processStartInfo.WorkingDirectory = workingDirectory;
 		processStartInfo.UseShellExecute = false;
@@ -3584,15 +3373,30 @@ internal static partial class Launcher
 		File.WriteAllLines(argumentsPath, updatedLines.ToArray(), new UTF8Encoding(false));
 	}
 
-	private static string GetServerConsoleArgument(string serverType)
+	private static string GetServerConsoleArgument(string serverType, string minecraftVersion)
 	{
 		string normalized = NormalizeServerType(serverType);
 		if (string.Equals(normalized, "vanilla", StringComparison.OrdinalIgnoreCase) || string.Equals(normalized, "fabric", StringComparison.OrdinalIgnoreCase))
 		{
 			return " nogui";
 		}
-		// Paper/Purpur 구버전은 --nogui를 지원하지 않으며 기본적으로 콘솔 모드로 실행됩니다.
+		if ((string.Equals(normalized, "paper", StringComparison.OrdinalIgnoreCase) || string.Equals(normalized, "purpur", StringComparison.OrdinalIgnoreCase)) && SupportsModernPaperConsoleArguments(minecraftVersion))
+		{
+			// GUI가 표준 입출력을 직접 관리하므로 JLine과 별도 서버 GUI를 사용하지 않습니다.
+			return " --nojline --nogui";
+		}
+		// 구버전 Paper/Purpur은 지원하지 않는 인수로 종료될 수 있어 기본 콘솔 모드를 유지합니다.
 		return string.Empty;
+	}
+
+	private static bool SupportsModernPaperConsoleArguments(string minecraftVersion)
+	{
+		MinecraftNumericVersion version;
+		if (!TryParseMinecraftNumericVersion(minecraftVersion, out version))
+		{
+			return false;
+		}
+		return version.First >= 26 || (version.First == 1 && version.Second >= 13);
 	}
 
 	private static bool IsLocalTcpPortListening(int port)

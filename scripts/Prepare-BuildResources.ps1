@@ -1,15 +1,18 @@
 [CmdletBinding()]
 param(
-    [string]$DestinationDirectory = (Join-Path $PSScriptRoot '..\.build\dependencies')
+    [string]$DestinationDirectory
 )
 
 $ErrorActionPreference = 'Stop'
 $projectRoot = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..'))
+if ([string]::IsNullOrWhiteSpace($DestinationDirectory)) {
+    $DestinationDirectory = Join-Path $projectRoot '.build\dependencies'
+}
 $destination = [IO.Path]::GetFullPath($DestinationDirectory)
 $manifest = Get-Content -LiteralPath (Join-Path $projectRoot 'build-resources.json') -Raw | ConvertFrom-Json
 New-Item -ItemType Directory -Force -Path $destination | Out-Null
 
-foreach ($name in @('paper', 'java')) {
+foreach ($name in @('java')) {
     $item = $manifest.$name
     $target = Join-Path $destination $item.fileName
     $valid = Test-Path -LiteralPath $target
@@ -37,6 +40,5 @@ foreach ($name in @('paper', 'java')) {
 }
 
 [pscustomobject]@{
-    PaperJar = Join-Path $destination $manifest.paper.fileName
     JavaZip = Join-Path $destination $manifest.java.fileName
 }
