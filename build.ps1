@@ -54,11 +54,11 @@ if (!$SkipCompile) {
     if (!(Test-Path -LiteralPath $csc)) { throw 'The .NET Framework 4.x C# compiler was not found.' }
     & $csc @arguments
 	if ($LASTEXITCODE -ne 0) { throw "C# build failed with exit code $LASTEXITCODE." }
-	# v1.2.1 이하 런처는 1MB보다 작은 업데이트 파일을 손상된 메타데이터로 거부합니다.
-	# Java를 다시 내장하지 않고 PE 오버레이 여백만 추가해 기존 자동 업데이트와 호환합니다.
-	$minimumLegacyUpdateSize = 1MB
+	# v1.3.2는 최소 크기 제한이 있는 구버전에서 넘어오는 마지막 호환 다리입니다.
+	# v1.3.3 이상은 이 조건을 자동으로 벗어나 컴파일된 실제 크기 그대로 배포됩니다.
+	$minimumLegacyUpdateSize = if ([Version]$version.productVersion -le [Version]'1.3.2') { 1MB } else { 0 }
 	$portableInfo = Get-Item -LiteralPath $portableExe
-	if ($portableInfo.Length -lt $minimumLegacyUpdateSize) {
+	if ($minimumLegacyUpdateSize -gt 0 -and $portableInfo.Length -lt $minimumLegacyUpdateSize) {
 		$stream = [IO.File]::Open($portableExe, [IO.FileMode]::Open, [IO.FileAccess]::Write, [IO.FileShare]::None)
 		try { $stream.SetLength($minimumLegacyUpdateSize) }
 		finally { $stream.Dispose() }

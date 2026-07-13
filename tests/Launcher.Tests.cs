@@ -121,7 +121,8 @@ internal static class LauncherTests
 		ExpectFailure(delegate { Invoke("ParseLauncherUpdateMetadata", new object[] { json.Replace("https://github.com/Mangom72/", "http://example.com/") }); }, "허용되지 않은 업데이트 주소");
 		string compactJson = json.Replace("2097152", "300000");
 		Equal("0.4.2", Convert.ToString(GetField(Invoke("ParseLauncherUpdateMetadata", new object[] { compactJson }), "ProductVersion")), "경량 런처 업데이트 허용");
-		ExpectFailure(delegate { Invoke("ParseLauncherUpdateMetadata", new object[] { json.Replace("2097152", "200000") }); }, "비정상적으로 작은 런처 업데이트 차단");
+		Equal("0.4.2", Convert.ToString(GetField(Invoke("ParseLauncherUpdateMetadata", new object[] { json.Replace("2097152", "1") }), "ProductVersion")), "최소 업데이트 파일 크기 제한 없음");
+		ExpectFailure(delegate { Invoke("ParseLauncherUpdateMetadata", new object[] { json.Replace("2097152", "0") }); }, "빈 런처 업데이트 차단");
 		Pass();
 	}
 

@@ -228,8 +228,6 @@ internal static partial class Launcher
 
 	private const string LauncherUpdatePreferencesFileName = "launcher-update-preferences.properties";
 
-	private const long MinimumLauncherAssetSize = 262144L;
-
 	// 테스트가 실제 사용자 업데이트 설정을 건드리지 않도록 경로만 교체하는 내부 지점입니다.
 	private static string LauncherUpdatePreferencesPathOverride = null;
 
@@ -659,7 +657,7 @@ internal static partial class Launcher
 		Version minimumVersion;
 		Version buildVersion;
 		if (!TryParseProductVersion(productVersion, out product) || !TryParseProductVersion(minimum, out minimumVersion) || !Version.TryParse(build, out buildVersion)) throw new InvalidDataException("업데이트 버전 정보가 올바르지 않습니다.");
-		if (!IsValidSha256(sha) || size < MinimumLauncherAssetSize || size > 1073741824 || !IsAllowedLauncherDownloadUrl(url)) throw new InvalidDataException("업데이트 다운로드 정보가 안전하지 않습니다.");
+		if (!IsValidSha256(sha) || size <= 0 || size > 1073741824 || !IsAllowedLauncherDownloadUrl(url)) throw new InvalidDataException("업데이트 다운로드 정보가 안전하지 않습니다.");
 		LauncherReleaseAsset asset = new LauncherReleaseAsset();
 		asset.Url = url;
 		asset.Sha256 = sha;
@@ -729,7 +727,7 @@ internal static partial class Launcher
 					throw new InvalidDataException("GitHub 릴리스 파일의 상태 또는 SHA-256 정보를 검증하지 못했습니다.");
 				}
 				string text2 = text.Substring(7);
-				if (!IsValidSha256(text2) || num < MinimumLauncherAssetSize || num > 1073741824 || !IsAllowedLauncherDownloadUrl(url))
+				if (!IsValidSha256(text2) || num <= 0 || num > 1073741824 || !IsAllowedLauncherDownloadUrl(url))
 				{
 					throw new InvalidDataException("GitHub 릴리스 파일의 다운로드 정보를 검증하지 못했습니다.");
 				}

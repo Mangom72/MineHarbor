@@ -35,7 +35,7 @@ $metadata = Get-Content -LiteralPath (Join-Path $artifacts 'update.json') -Raw |
 if ([string]$metadata.version -ne [string]$version.productVersion -or [string]$metadata.build -ne [string]$version.buildNumber) { throw 'Launcher update metadata version mismatch.' }
 $portable = Join-Path $artifacts 'MineHarbor.exe'
 $legacyPortable = Join-Path $artifacts 'Minecraft-Server-Launcher.exe'
-if ((Get-Item -LiteralPath $portable).Length -lt 1MB) { throw 'Portable launcher is too small for automatic updates from v1.2.1 and earlier.' }
+if ([Version]$version.productVersion -le [Version]'1.3.2' -and (Get-Item -LiteralPath $portable).Length -lt 1MB) { throw 'The v1.3.2 compatibility bridge must remain large enough for updates from v1.2.1 and earlier.' }
 if ((Get-Item -LiteralPath $portable).Length -gt 25MB) { throw 'Portable launcher is too large. Check that a Java runtime was not embedded again.' }
 if ((Get-FileHash -LiteralPath $legacyPortable -Algorithm SHA256).Hash -ne (Get-FileHash -LiteralPath $portable -Algorithm SHA256).Hash) { throw 'Legacy launcher compatibility asset does not match MineHarbor.exe.' }
 if ([long]$metadata.size -ne (Get-Item -LiteralPath $portable).Length) { throw 'Launcher update metadata size mismatch.' }
