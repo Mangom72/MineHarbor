@@ -20,7 +20,7 @@ foreach ($path in @($portable, $zip, $setup, $bridge)) {
 
 $portableInfo = Get-Item -LiteralPath $portable
 $portableHash = (Get-FileHash -LiteralPath $portable -Algorithm SHA256).Hash.ToLowerInvariant()
-$notes = "Fixes clipped Korean and English labels in server-management buttons while preserving compact, single-row layouts."
+$notes = "Adds a searchable three-level quick-command picker with grouped world actions and theme-aware rounded scrollbars."
 $bridgeInfo = Get-Item -LiteralPath $bridge
 $bridgeHash = (Get-FileHash -LiteralPath $bridge -Algorithm SHA256).Hash.ToLowerInvariant()
 $metadata = [ordered]@{
@@ -60,12 +60,12 @@ $releaseNotes = @"
 
 ### 주요 변경 사항
 
-- Portable EXE/ZIP과 Windows 설치형을 함께 제공합니다.
-- 사용자 폴더, Portable 폴더 또는 사용자 지정 서버 데이터 위치를 선택할 수 있습니다.
-- 제품 버전과 내부 빌드 번호를 분리해 표시하고 관리합니다.
-- 자동 업데이트 파일의 크기와 SHA-256을 검증하며, 교체 실패 시 기존 실행 파일로 복구합니다.
-- 서버 JAR을 내장하지 않고 최초 생성부터 공식 최신 빌드를 받아 SHA-256을 검증합니다.
-- GitHub Actions에서 테스트, Portable, 설치 파일, 해시와 업데이트 메타데이터를 자동 생성합니다.
+- 빠른 명령을 `카테고리 → 기능 → 명령`의 3단 구조로 정리했습니다.
+- 월드 명령은 `월드 → 날씨 → 맑음/비/천둥`, `월드 → 난이도 → 평화로움/쉬움/보통/어려움`처럼 찾을 수 있습니다.
+- 이름, 설명, 계층 경로와 실제 명령어를 한 번에 검색합니다.
+- `Ctrl+F`, 방향키, `Enter`, `Esc`를 이용한 키보드 조작을 지원합니다.
+- 기본 Windows 스크롤바를 다크·라이트·고대비 테마에 맞는 둥근 스크롤바로 교체했습니다.
+- 스크롤이 필요한 목록에만 손잡이를 표시하며 마우스 휠, 드래그와 트랙 클릭을 지원합니다.
 
 ### 빠른 명령과 실시간 자동완성
 
@@ -77,6 +77,8 @@ $releaseNotes = @"
 
 ### UX 개선
 
+- 빠른 명령 선택창을 세 개의 둥근 카드와 현재 선택 경로, 명령 미리보기 중심으로 재구성했습니다.
+- 검색 영역과 카드 배경을 자연스럽게 연결하고 선택·닫기 버튼을 오른쪽에 안정적으로 정렬했습니다.
 - 서버 관리 버튼이 아이콘과 실제 글꼴에 필요한 최소 폭을 유지해 한국어·영어 문구가 잘리지 않습니다.
 - 메인 작업 버튼이 창 너비에 맞게 정렬되며, 콘솔을 닫았을 때 불필요한 빈 공간을 줄였습니다.
 - 라이트·다크·Windows 고대비 모드의 텍스트 대비와 키보드 포커스 표시를 개선했습니다.

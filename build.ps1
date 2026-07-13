@@ -32,6 +32,7 @@ $sources = @(
     'NetworkAndPlayerTools.cs',
 	'QuickCommandsAndBridge.cs',
 	'QuickCommandUi.cs',
+	'QuickCommandPickerUi.cs',
     'obj\GeneratedVersionInfo.cs'
 ) | ForEach-Object { Join-Path $projectRoot $_ }
 

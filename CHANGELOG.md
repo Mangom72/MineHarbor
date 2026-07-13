@@ -2,6 +2,26 @@
 
 이 프로젝트는 제품 버전에 [Semantic Versioning](https://semver.org/)을 사용합니다. `26.2.45.xx` 값은 별도의 내부 빌드 번호입니다.
 
+## [0.4.2] - 2026-07-13
+
+내부 빌드: `26.2.45.30`
+
+### Added
+
+- 빠른 명령을 `카테고리 → 기능 → 명령` 순서로 탐색하는 3단 선택창
+- 이름·설명·계층 경로·실제 명령어를 함께 찾는 검색과 `Ctrl+F`, 방향키, `Enter`, `Esc` 키보드 조작
+
+### Changed
+
+- 시간·날씨·난이도처럼 반복되던 명령을 `월드 → 날씨 → 맑음/비/천둥`, `월드 → 난이도 → 평화로움/쉬움/보통/어려움` 구조로 통합
+- 빠른 명령 목록의 기본 Windows 스크롤바를 다크·라이트·고대비 테마용 둥근 스크롤바로 교체
+- 스크롤이 필요한 목록에만 손잡이를 표시하고 마우스 휠, 손잡이 드래그, 트랙 클릭과 키보드 이동을 유지
+
+### Fixed
+
+- 빠른 명령 선택창의 검색 라벨 배경과 하단 선택·닫기 버튼이 카드 색상 및 오른쪽 정렬과 맞지 않던 문제 수정
+- 한국어·영어 난이도 경로와 날씨·난이도 그룹 개수를 확인하는 회귀 테스트 추가
+
 ## [0.4.1] - 2026-07-13
 
 내부 빌드: `26.2.45.29`
@@ -117,6 +137,8 @@
 - 기존 `Minecraft-Servers-Data` 자동 감지 및 비파괴 사용
 
 ## English
+
+Version `0.4.2` introduces a searchable three-level quick-command picker, groups world actions into clear paths such as World → Weather → Clear and World → Difficulty → Hard, and replaces native list scrollbars with theme-aware rounded controls that preserve wheel, drag, track-click, and keyboard navigation.
 
 Version `0.4.1` prevents Korean and English labels from being clipped inside server-management buttons by measuring icon and text space, aligning adjacent actions from their actual bounds, and adding regression coverage for every management label.
 

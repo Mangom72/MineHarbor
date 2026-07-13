@@ -2,13 +2,13 @@
 
 Windows 10과 Windows 11에서 마인크래프트 서버를 쉽게 열기 위한 런처입니다. Java 런타임, 서버 파일 준비, 최초 설정, 업데이트, 백업, 포트포워딩 점검을 최대한 자동화합니다.
 
-현재 제품 버전은 `v0.4.1`, 내부 빌드 번호는 `26.2.45.29`입니다.
+현재 제품 버전은 `v0.4.2`, 내부 빌드 번호는 `26.2.45.30`입니다.
 
 ## 다운로드
 
 - [최신 Portable EXE](https://github.com/Mangom72/mc-server-launcher/releases/latest/download/Minecraft-Server-Launcher.exe)
 - [Portable ZIP 및 Windows 설치 프로그램](https://github.com/Mangom72/mc-server-launcher/releases/latest)
-- [Paper/Purpur 명령 브리지](https://github.com/Mangom72/mc-server-launcher/releases/latest/download/Minecraft-Server-Launcher-Command-Bridge-Paper-v0.4.1.jar)
+- [Paper/Purpur 명령 브리지](https://github.com/Mangom72/mc-server-launcher/releases/latest/download/Minecraft-Server-Launcher-Command-Bridge-Paper-v0.4.2.jar)
 
 Portable EXE의 고정 파일명은 `Minecraft-Server-Launcher.exe`입니다. 설치형은 시작 메뉴 바로가기, 선택적 바탕화면 바로가기와 제거 기능을 제공합니다. 같은 설치 경로에 새 버전을 설치하면 기존 설치를 안전하게 갱신하며, 제거 시 `%LOCALAPPDATA%\MinecraftServerLauncher`의 서버 데이터는 삭제하지 않습니다.
 
@@ -169,6 +169,8 @@ Minecraft-Servers-Data/
 
 메인 화면 오른쪽 아래의 `빠른 명령`에서 접속자 확인, 월드 저장, 시간·날씨·난이도 변경, 게임 모드, 텔레포트, 아이템 지급과 화이트리스트 명령을 선택할 수 있습니다. 명령은 서버가 실행 중일 때만 전송되며, `stop`, `save-off`, `op`, `ban`, `whitelist off`와 고급 위험 명령은 실행 전에 확인합니다.
 
+명령 선택창은 `카테고리 → 기능 → 명령`의 3단 구조입니다. 예를 들어 난이도 변경은 `월드 → 난이도 → 어려움`, 날씨 변경은 `월드 → 날씨 → 맑음/비/천둥`에서 찾을 수 있습니다. 검색은 이름, 설명, 경로와 실제 명령어를 함께 찾으며 `Ctrl+F`, 방향키, `Enter`, `Esc`로도 조작할 수 있습니다.
+
 입력창은 현재 커서와 따옴표를 인식합니다. `↑`/`↓`로 후보를 고르고 `Tab`으로 적용하며, `Ctrl+Space`로 후보를 다시 열고 `Ctrl+↑`/`Ctrl+↓`로 이전 명령을 찾을 수 있습니다. 앞쪽 `/`는 입력해도 되지만 서버로 전송할 때 제거됩니다.
 
 `명령·브리지 관리`에서 표시 이름, 설명, 카테고리, 명령 템플릿, 실행 전 확인 여부와 지원 서버 종류를 지정해 사용자 명령을 추가할 수 있습니다. 사용자 명령은 데이터 루트의 `config/quick-commands.json`에만 저장되며 런처 업데이트와 분리되어 보존됩니다. 지원 매개변수에는 `{player}`, `{online-player}`, `{gamemode}`, `{difficulty}`, `{item}`, `{effect}`, `{boolean}`, `{number}`, `{count}`, 좌표, `{message}`, `{reason}`와 `{command}`가 있습니다.
@@ -229,7 +231,7 @@ Minecraft-Servers-Data/
 
 ## 제품 버전과 자동 업데이트
 
-사용자에게 표시되는 제품 버전은 Semantic Versioning 형식의 `v0.4.1`이고, `26.2.45.29`는 소스와 빌드를 구분하는 내부 번호입니다. 두 값의 단일 기준은 `version.json`입니다.
+사용자에게 표시되는 제품 버전은 Semantic Versioning 형식의 `v0.4.2`이고, `26.2.45.30`은 소스와 빌드를 구분하는 내부 번호입니다. 두 값의 단일 기준은 `version.json`입니다.
 
 런처는 GitHub Release의 `update.json`을 HTTPS로 확인합니다. 새 버전이 있으면 현재/새 제품 버전, 빌드 번호, 주요 변경 사항과 다운로드 크기를 먼저 보여 주며 사용자가 승인한 경우에만 내려받습니다. 다운로드는 임시 폴더에 저장하고 크기와 SHA-256을 확인합니다. 기존 EXE를 백업한 뒤 별도 프로세스에서 교체하고, 새 버전의 시작 확인을 받지 못하면 기존 EXE를 복원합니다. 업데이트 확인·다운로드·교체가 실패해도 서버 실행은 계속할 수 있습니다.
 
@@ -277,8 +279,8 @@ Minecraft-Servers-Data/
 
 ## 현재 로컬 빌드
 
-- 제품 버전: `0.4.1`
-- 빌드 번호: `26.2.45.29`
+- 제품 버전: `0.4.2`
+- 빌드 번호: `26.2.45.30`
 - 파일명: `Minecraft-Server-Launcher.exe`
 
 ---
@@ -287,7 +289,7 @@ Minecraft-Servers-Data/
 
 Minecraft Server Launcher runs Minecraft servers on Windows 10 and Windows 11 with minimal setup. It prepares Java, manages server files, provides a first-run setup wizard, checks updates, creates backups, and helps verify port forwarding.
 
-The current product version is `v0.4.1`; the internal build number is `26.2.45.29`.
+The current product version is `v0.4.2`; the internal build number is `26.2.45.30`.
 
 ## Downloads
 
@@ -385,6 +387,8 @@ The console supports search, separate warning/compatibility/error filters, and w
 
 The bottom-right command area provides built-in server, player, whitelist, world, and information commands, plus editable user templates and history. Cursor-aware local suggestions work for every server type without a bridge. Use Up/Down and Tab for candidates, Ctrl+Space to reopen suggestions, and Ctrl+Up/Ctrl+Down for history. Commands are enabled only while the server is running, and destructive or privilege-changing commands require confirmation.
 
+The picker organizes commands as `Category → Function → Command`. For example, difficulty is under `World → Difficulty → Hard`, while weather is under `World → Weather → Clear/Rain/Thunder`. Search matches names, descriptions, hierarchy paths, and command text; the picker also supports Ctrl+F, arrow keys, Enter, and Esc.
+
 User templates are stored separately at `config/quick-commands.json` under the selected data root and survive launcher updates. The command manager controls display name, description, category, template parameters, confirmation, and supported server types.
 
 Paper and Purpur 1.13 or newer can optionally install the release bridge after per-profile consent. It exposes registered command metadata, console tab completion, players, and server information through public Paper/Bukkit APIs. Vanilla, Fabric, Forge, NeoForge, and custom JAR profiles continue to use local suggestions only.
@@ -406,7 +410,7 @@ The launcher may access the internet to:
 
 ## Product version and launcher updates
 
-The user-facing product version uses Semantic Versioning (`v0.4.1`); `26.2.45.29` is a separate internal build number. `version.json` is the single source for both values.
+The user-facing product version uses Semantic Versioning (`v0.4.2`); `26.2.45.30` is a separate internal build number. `version.json` is the single source for both values.
 
 The launcher retrieves `update.json` over HTTPS. It shows current/new versions, the build number, release notes, and download size before asking for approval. Approved files are downloaded to a temporary directory and verified against both size and SHA-256. The current EXE is backed up, replacement runs in a separate process, and the backup is restored if the new launcher does not confirm startup. Update failures never block normal server use.
 
@@ -464,6 +468,6 @@ Only mappings created by the current launcher session and still matching the rec
 
 ## Current local build
 
-- Product version: `0.4.1`
-- Build number: `26.2.45.29`
+- Product version: `0.4.2`
+- Build number: `26.2.45.30`
 - File name: `Minecraft-Server-Launcher.exe`

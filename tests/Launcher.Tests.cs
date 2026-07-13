@@ -475,6 +475,39 @@ internal static class LauncherTests
 		List<string> templates = new List<string>();
 		foreach (object item in builtIns) templates.Add(Convert.ToString(GetField(item, "Template")));
 		if (templates.Count < 45 || !templates.Contains("list") || !templates.Contains("save-all flush") || !templates.Contains("whitelist off") || !templates.Contains("datapack list")) throw new InvalidOperationException("기본 빠른 명령 목록이 완전하지 않습니다.");
+		Type pickerLocalizationType = launcher.GetNestedType("Localization", BindingFlags.NonPublic);
+		FieldInfo pickerLanguageField = pickerLocalizationType.GetField("CurrentLanguage", BindingFlags.Static | BindingFlags.Public);
+		object originalPickerLanguage = pickerLanguageField.GetValue(null);
+		try
+		{
+			pickerLanguageField.SetValue(null, "ko");
+			IEnumerable koreanBuiltIns = (IEnumerable)Invoke("GetBuiltInQuickCommands", new object[0]);
+			IEnumerable koreanPickerItems = (IEnumerable)Invoke("BuildQuickCommandPickerItems", new object[] { koreanBuiltIns, "paper" });
+			object hardPickerItem = FindQuickCommandPickerItem(koreanPickerItems, "difficulty hard");
+			Equal("world", Convert.ToString(GetField(hardPickerItem, "CategoryKey")), "빠른 명령 월드 카테고리");
+			Equal("difficulty", Convert.ToString(GetField(hardPickerItem, "GroupKey")), "난이도 명령 그룹화");
+			Equal("어려움", Convert.ToString(GetField(hardPickerItem, "LeafName")), "난이도 공식 한글 명칭");
+			Equal("월드 › 난이도 › 어려움", Convert.ToString(GetField(hardPickerItem, "CategoryName")) + " › " + Convert.ToString(GetField(hardPickerItem, "GroupName")) + " › " + Convert.ToString(GetField(hardPickerItem, "LeafName")), "빠른 명령 계층 경로");
+			int weatherCount = 0;
+			int difficultyCount = 0;
+			foreach (object pickerItem in koreanPickerItems)
+			{
+				string group = Convert.ToString(GetField(pickerItem, "GroupKey"));
+				if (group == "weather") weatherCount++;
+				if (group == "difficulty") difficultyCount++;
+			}
+			Equal(3, weatherCount, "날씨 명령 그룹 개수");
+			Equal(4, difficultyCount, "난이도 명령 그룹 개수");
+			pickerLanguageField.SetValue(null, "en");
+			IEnumerable englishBuiltIns = (IEnumerable)Invoke("GetBuiltInQuickCommands", new object[0]);
+			IEnumerable englishPickerItems = (IEnumerable)Invoke("BuildQuickCommandPickerItems", new object[] { englishBuiltIns, "paper" });
+			object englishHardPickerItem = FindQuickCommandPickerItem(englishPickerItems, "difficulty hard");
+			Equal("World › Difficulty › Hard", Convert.ToString(GetField(englishHardPickerItem, "CategoryName")) + " › " + Convert.ToString(GetField(englishHardPickerItem, "GroupName")) + " › " + Convert.ToString(GetField(englishHardPickerItem, "LeafName")), "영어 빠른 명령 계층 경로");
+		}
+		finally
+		{
+			pickerLanguageField.SetValue(null, originalPickerLanguage);
+		}
 
 		Type definitionType = launcher.GetNestedType("QuickCommandDefinition", BindingFlags.NonPublic);
 		Type definitionListType = typeof(List<>).MakeGenericType(definitionType);
@@ -609,6 +642,16 @@ internal static class LauncherTests
 	{
 		foreach (object item in suggestions) if (string.Equals(Convert.ToString(GetField(item, "Value")), value, StringComparison.OrdinalIgnoreCase)) return true;
 		return false;
+	}
+
+	private static object FindQuickCommandPickerItem(IEnumerable items, string template)
+	{
+		foreach (object item in items)
+		{
+			object definition = GetField(item, "Definition");
+			if (string.Equals(Convert.ToString(GetField(definition, "Template")), template, StringComparison.OrdinalIgnoreCase)) return item;
+		}
+		throw new InvalidOperationException("빠른 명령 선택 항목을 찾지 못했습니다: " + template);
 	}
 
 	private static object FindSuggestion(IEnumerable suggestions, string value)

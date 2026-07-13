@@ -423,41 +423,15 @@ internal static partial class Launcher
 		private void ShowQuickCommandMenu()
 		{
 			ReloadQuickCommandContext();
-			ContextMenuStrip menu = new ContextMenuStrip();
-			string[] categories = new string[] { "server", "player", "whitelist", "world", "info", "user" };
 			List<QuickCommandDefinition> definitions = GetBuiltInQuickCommands();
 			definitions.AddRange(quickCommandUsers);
-			string[] priority = new string[] { "list", "save-all", "time set day", "time set night", "weather clear", "difficulty", "gamemode", "tp", "give", "whitelist" };
-			foreach (string category in categories)
+			using (QuickCommandPickerForm picker = new QuickCommandPickerForm(definitions, quickCommandServerType))
 			{
-				ToolStripMenuItem group = new ToolStripMenuItem(GetQuickCommandCategoryName(category));
-				IEnumerable<QuickCommandDefinition> items = definitions.Where(delegate(QuickCommandDefinition item) { return string.Equals(item.Category, category, StringComparison.OrdinalIgnoreCase) && QuickCommandSupportsServer(item, quickCommandServerType); });
-				items = items.OrderBy(delegate(QuickCommandDefinition item)
+				if (picker.ShowDialog(this) == DialogResult.OK && picker.SelectedCommand != null)
 				{
-					int index = Array.FindIndex(priority, delegate(string prefix) { return item.Template.StartsWith(prefix, StringComparison.OrdinalIgnoreCase); });
-					return index < 0 ? 100 : index;
-				}).ThenBy(delegate(QuickCommandDefinition item) { return item.Name; });
-				foreach (QuickCommandDefinition definition in items)
-				{
-					QuickCommandDefinition captured = definition;
-					ToolStripMenuItem item = new ToolStripMenuItem((captured.Confirm ? "⚠ " : string.Empty) + captured.Name);
-					item.ToolTipText = captured.Template + (string.IsNullOrWhiteSpace(captured.Description) ? string.Empty : "\r\n" + captured.Description);
-					item.Click += delegate { InsertQuickCommandTemplate(captured.Template); };
-					group.DropDownItems.Add(item);
+					InsertQuickCommandTemplate(picker.SelectedCommand.Template);
 				}
-				if (group.DropDownItems.Count > 0) menu.Items.Add(group);
 			}
-			menu.Show(quickCommandMenuButton, new Point(0, quickCommandMenuButton.Height));
-		}
-
-		private string GetQuickCommandCategoryName(string category)
-		{
-			if (category == "server") return QuickText("서버 관리", "Server");
-			if (category == "player") return QuickText("플레이어", "Players");
-			if (category == "whitelist") return QuickText("화이트리스트", "Whitelist");
-			if (category == "world") return QuickText("월드", "World");
-			if (category == "info") return QuickText("정보", "Information");
-			return QuickText("사용자 명령", "User commands");
 		}
 
 		private void InsertQuickCommandTemplate(string template)
