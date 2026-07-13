@@ -1,4 +1,5 @@
 /artifacts/
+/artifacts-*/
 /obj/
 /.build/
 /Minecraft-Servers-Data/

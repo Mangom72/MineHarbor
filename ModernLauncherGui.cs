@@ -1151,7 +1151,7 @@ internal static partial class Launcher
 		}
 	}
 
-	private sealed class LauncherForm : Form
+	private sealed partial class LauncherForm : Form
 	{
 		private readonly RoundedPanel statusPill;
 		private readonly Label statusLabel;
@@ -1215,8 +1215,8 @@ internal static partial class Launcher
 			Text = Localization.T("App.Title") + " " + BuildVersionInfo.DisplayVersion;
 			Font = new Font("Segoe UI Variable Text", 10F);
 			StartPosition = FormStartPosition.CenterScreen;
-			MinimumSize = new Size(940, 560);
-			Size = new Size(1040, 570);
+			MinimumSize = new Size(940, 720);
+			Size = new Size(1120, 760);
 			FormBorderStyle = FormBorderStyle.Sizable;
 			MaximizeBox = true;
 			KeyPreview = true;
@@ -1525,11 +1525,17 @@ internal static partial class Launcher
 			loadingProgress.MarqueeAnimationSpeed = GetMarqueeAnimationSpeed();
 			loadingPanel.Controls.Add(loadingProgress);
 
+			Panel workspacePanel = new Panel();
+			workspacePanel.Dock = DockStyle.Fill;
+			workspacePanel.Padding = new Padding(0, 8, 0, 0);
+			root.Controls.Add(workspacePanel, 0, 3);
+
 			consolePanel = new Panel();
 			consolePanel.Dock = DockStyle.Fill;
-			consolePanel.Padding = new Padding(0, 8, 0, 0);
+			consolePanel.Padding = new Padding(0, 0, 12, 0);
 			consolePanel.Visible = false;
-			root.Controls.Add(consolePanel, 0, 3);
+			workspacePanel.Controls.Add(consolePanel);
+			InitializeQuickCommandPanel(workspacePanel);
 			consoleBox = new RichTextBox();
 			consoleBox.Dock = DockStyle.Fill;
 			consoleBox.ReadOnly = true;
@@ -1737,6 +1743,7 @@ internal static partial class Launcher
 			ConfigureAccessibleField(addressBox, Localization.T("Address.Title"), Localization.CurrentLanguage == Localization.Korean ? "친구가 서버에 접속할 때 사용하는 주소입니다." : "The address friends use to join the server.");
 			ConfigureAccessibleField(consoleSearchBox, Localization.T("Console.Search"), Localization.CurrentLanguage == Localization.Korean ? "표시된 콘솔 로그를 검색합니다." : "Search the visible console log.");
 			ConfigureAccessibleField(consoleFilterBox, Localization.T("Console.All"), Localization.CurrentLanguage == Localization.Korean ? "일반 경고, 호환성 안내와 오류를 구분해 표시합니다." : "Separate actionable warnings, compatibility notices, and errors.");
+			ApplyQuickCommandLocalization();
 			ApplyCommonButtonToolTips(this);
 		}
 
@@ -1868,6 +1875,7 @@ internal static partial class Launcher
 			networkButton.Enabled = enabled;
 			diagnosticsButton.Enabled = enabled;
 			playersButton.Enabled = enabled && serverRunning;
+			UpdateQuickCommandControls();
 		}
 
 		public void SetLoadingState(string message, bool active, int percent)
@@ -1964,6 +1972,7 @@ internal static partial class Launcher
 			upgradeButton.Enabled = true;
 			commandBox.Enabled = false;
 			sendButton.Enabled = false;
+			UpdateQuickCommandControls();
 			SetLoadingState(string.Empty, false, -1);
 			string upnpCleanup = ConsumeUpnpCleanupStatus();
 			if (canceled)
@@ -2006,6 +2015,7 @@ internal static partial class Launcher
 			stopButton.Enabled = true;
 			commandBox.Enabled = true;
 			sendButton.Enabled = !string.IsNullOrWhiteSpace(commandBox.Text);
+			UpdateQuickCommandControls();
 			ShowNoticeKey("Notice.WaitingServer", false);
 			SetLoadingState(Localization.CurrentLanguage == Localization.Korean ? "서버 프로세스가 포트를 열 때까지 기다리고 있습니다…" : "Waiting for the server process to open its port…", true, -1);
 		}
@@ -2284,8 +2294,8 @@ internal static partial class Launcher
 		{
 			consolePanel.Visible = !consolePanel.Visible;
 			consoleButton.Text = consolePanel.Visible ? Localization.T("Button.ConsoleClose") : Localization.T("Button.ConsoleOpen");
-			int maximumHeight = Math.Max(540, Screen.FromControl(this).WorkingArea.Height - 40);
-			Size = consolePanel.Visible ? new Size(Math.Max(Width, 880), Math.Min(760, maximumHeight)) : new Size(Width, Math.Min(550, maximumHeight));
+			int maximumHeight = Math.Max(720, Screen.FromControl(this).WorkingArea.Height - 40);
+			Size = new Size(Math.Max(Width, consolePanel.Visible ? 1120 : 940), Math.Min(Math.Max(Height, 720), maximumHeight));
 			if (consolePanel.Visible)
 			{
 				consoleBox.SelectionStart = consoleBox.TextLength;
@@ -2566,6 +2576,7 @@ internal static partial class Launcher
 			consoleSearchBox.ForeColor = palette.Text;
 			consoleFilterBox.BackColor = palette.CardSecondary;
 			consoleFilterBox.ForeColor = palette.Text;
+			ApplyQuickCommandTheme();
 			ModernComboBox consoleFilter = consoleFilterBox as ModernComboBox;
 			if (consoleFilter != null)
 			{

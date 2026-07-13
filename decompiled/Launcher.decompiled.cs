@@ -976,6 +976,7 @@ internal static partial class Launcher
 			ReportLauncherLoading(LauncherUiText("서버 파일 업데이트를 확인하고 있습니다…", "Checking server file updates…"), 75);
 			UpgradeServerRuntime(serverDirectory, launcherOptions, text4, serverRuntime, false);
 		}
+		EnsureCommandBridgeChoiceAndInstallation(text, launcherOptions);
 		int memoryGb = launcherOptions.MemoryGb;
 		Console.WriteLine();
 		Console.WriteLine("서버 프로필: " + launcherOptions.ProfileName);
@@ -991,13 +992,20 @@ internal static partial class Launcher
 		bool onlineMode = !serverProperties.ContainsKey("online-mode") || !string.Equals(serverProperties["online-mode"], "false", StringComparison.OrdinalIgnoreCase);
 		currentSelectedJavaPath = text4;
 		int num;
+		CommandBridgeSession commandBridge = null;
 		try
 		{
+			commandBridge = StartCommandBridgeSessionIfInstalled(serverDirectory, launcherOptions.ProfileName);
 			ReportLauncherLoading(LauncherUiText("서버 프로세스를 시작하고 있습니다…", "Starting the server process…"), 90);
 			num = LaunchServer(text4, serverRuntime.JarPath, serverRuntime.BatchPath, serverDirectory, memoryGb, serverPort, launcherOptions.OwnerName, onlineMode, launcherOptions.ServerType, launcherOptions.MinecraftVersion);
 		}
 		finally
 		{
+			if (commandBridge != null)
+			{
+				commandBridge.Dispose();
+				ClearActiveCommandBridge(commandBridge);
+			}
 			currentSelectedJavaPath = null;
 		}
 		Console.WriteLine();

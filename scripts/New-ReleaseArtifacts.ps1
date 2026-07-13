@@ -13,13 +13,16 @@ if ([string]::IsNullOrWhiteSpace($ReleaseTag)) { $ReleaseTag = 'v' + $version.pr
 $portable = Join-Path $artifacts 'Minecraft-Server-Launcher.exe'
 $zip = Join-Path $artifacts ("Minecraft-Server-Launcher-Portable-v{0}.zip" -f $version.productVersion)
 $setup = Join-Path $artifacts ("Minecraft-Server-Launcher-Setup-v{0}.exe" -f $version.productVersion)
-foreach ($path in @($portable, $zip, $setup)) {
+$bridge = Join-Path $artifacts ("Minecraft-Server-Launcher-Command-Bridge-Paper-v{0}.jar" -f $version.productVersion)
+foreach ($path in @($portable, $zip, $setup, $bridge)) {
     if (!(Test-Path -LiteralPath $path)) { throw "Missing release artifact: $path" }
 }
 
 $portableInfo = Get-Item -LiteralPath $portable
 $portableHash = (Get-FileHash -LiteralPath $portable -Algorithm SHA256).Hash.ToLowerInvariant()
-$notes = "Refined launcher UI with a consistent vector icon system, themed controls, clearer visual hierarchy, compact setup sections, and SHA-256 verified updates."
+$notes = "Adds quick commands, cursor-aware local autocomplete, user command templates, and an optional loopback-only Paper/Purpur live command bridge."
+$bridgeInfo = Get-Item -LiteralPath $bridge
+$bridgeHash = (Get-FileHash -LiteralPath $bridge -Algorithm SHA256).Hash.ToLowerInvariant()
 $metadata = [ordered]@{
     version = [string]$version.productVersion
     build = [string]$version.buildNumber
@@ -28,12 +31,21 @@ $metadata = [ordered]@{
     size = $portableInfo.Length
     release_notes = $notes
     minimum_supported_version = [string]$version.minimumSupportedVersion
+	bridge = [ordered]@{
+		version = [string]$version.productVersion
+		protocol = 1
+		minimum_minecraft = '1.13'
+		maximum_minecraft = '26.2'
+		download_url = "https://github.com/Mangom72/mc-server-launcher/releases/download/$ReleaseTag/Minecraft-Server-Launcher-Command-Bridge-Paper-v$($version.productVersion).jar"
+		sha256 = $bridgeHash
+		size = $bridgeInfo.Length
+	}
 }
 $updateMetadata = Join-Path $artifacts 'update.json'
-$metadataJson = $metadata | ConvertTo-Json
+$metadataJson = $metadata | ConvertTo-Json -Depth 5
 [IO.File]::WriteAllText($updateMetadata, $metadataJson, [Text.UTF8Encoding]::new($false))
 
-$files = @($portable, $zip, $setup, $updateMetadata)
+$files = @($portable, $zip, $setup, $bridge, $updateMetadata)
 $sumLines = foreach ($path in $files) {
     $hash = (Get-FileHash -LiteralPath $path -Algorithm SHA256).Hash.ToLowerInvariant()
     "$hash  $([IO.Path]::GetFileName($path))"
@@ -54,6 +66,14 @@ $releaseNotes = @"
 - 자동 업데이트 파일의 크기와 SHA-256을 검증하며, 교체 실패 시 기존 실행 파일로 복구합니다.
 - 서버 JAR을 내장하지 않고 최초 생성부터 공식 최신 빌드를 받아 SHA-256을 검증합니다.
 - GitHub Actions에서 테스트, Portable, 설치 파일, 해시와 업데이트 메타데이터를 자동 생성합니다.
+
+### 빠른 명령과 실시간 자동완성
+
+- 메인 화면에서 기본·사용자 빠른 명령과 명령 기록을 사용할 수 있습니다.
+- 현재 커서와 따옴표를 인식하는 로컬 자동완성을 제공하며, 브리지가 없어도 동작합니다.
+- Paper/Purpur 서버는 사용자가 서버별로 동의한 경우에만 실시간 명령 브리지를 설치합니다.
+- 브리지는 무작위 세션 토큰과 임시 포트를 사용해 `127.0.0.1`에서만 통신하며 외부 포트를 열지 않습니다.
+- 실시간 후보는 Paper 공개 CommandMap API를 사용하고, 실제 명령 실행은 기존 서버 콘솔 경로에서만 수행합니다.
 
 ### UX 개선
 

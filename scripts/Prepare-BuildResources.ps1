@@ -12,7 +12,7 @@ $destination = [IO.Path]::GetFullPath($DestinationDirectory)
 $manifest = Get-Content -LiteralPath (Join-Path $projectRoot 'build-resources.json') -Raw | ConvertFrom-Json
 New-Item -ItemType Directory -Force -Path $destination | Out-Null
 
-foreach ($name in @('java')) {
+foreach ($name in @('java', 'paperApi', 'adventureApi', 'adventureKey')) {
     $item = $manifest.$name
     $target = Join-Path $destination $item.fileName
     $valid = Test-Path -LiteralPath $target
@@ -41,4 +41,7 @@ foreach ($name in @('java')) {
 
 [pscustomobject]@{
     JavaZip = Join-Path $destination $manifest.java.fileName
+    PaperApiJar = Join-Path $destination $manifest.paperApi.fileName
+	AdventureApiJar = Join-Path $destination $manifest.adventureApi.fileName
+	AdventureKeyJar = Join-Path $destination $manifest.adventureKey.fileName
 }

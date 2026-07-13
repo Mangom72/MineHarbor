@@ -9,6 +9,9 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
 using System.Threading;
+using System.Collections.Generic;
+using System.IO.Compression;
+using System.Text.RegularExpressions;
 
 internal static class LauncherTests
 {
@@ -38,6 +41,7 @@ internal static class LauncherTests
 			TestUpnpOwnershipRules();
 			TestModrinthHash(temporary);
 			TestDiagnosticRedaction(temporary);
+			TestQuickCommandsAndBridge(temporary);
 			Console.WriteLine("PASSED=" + passed);
 			return 0;
 		}
@@ -51,6 +55,8 @@ internal static class LauncherTests
 		finally
 		{
 			SetStaticField("StorageSettingsPathOverride", null);
+			SetStaticField("BridgeArtifactOverridePath", null);
+			SetStaticField("BridgeInstallFailureAfterBackup", false);
 			if (Directory.Exists(temporary)) Directory.Delete(temporary, true);
 		}
 	}
@@ -89,12 +95,12 @@ internal static class LauncherTests
 	private static void TestUpdateMetadataParsing()
 	{
 		string hash = new string('a', 64);
-		string json = "{\"version\":\"0.3.4\",\"build\":\"26.2.45.28\",\"download_url\":\"https://github.com/Mangom72/mc-server-launcher/releases/download/v0.3.4/Minecraft-Server-Launcher.exe\",\"sha256\":\"" + hash + "\",\"size\":2097152,\"release_notes\":\"test\",\"minimum_supported_version\":\"0.1.0\"}";
+		string json = "{\"version\":\"0.4.1\",\"build\":\"26.2.45.29\",\"download_url\":\"https://github.com/Mangom72/mc-server-launcher/releases/download/v0.4.1/Minecraft-Server-Launcher.exe\",\"sha256\":\"" + hash + "\",\"size\":2097152,\"release_notes\":\"test\",\"minimum_supported_version\":\"0.1.0\"}";
 		object metadata = Invoke("ParseLauncherUpdateMetadata", new object[] { json });
-		Equal("0.3.4", Convert.ToString(GetField(metadata, "ProductVersion")), "업데이트 제품 버전");
-		Equal("26.2.45.28", Convert.ToString(GetField(metadata, "BuildNumber")), "업데이트 빌드");
-		Equal(true, Invoke("IsLauncherUpdateNewer", new object[] { metadata, "0.3.3", "26.2.45.27" }), "새 제품 버전 판별");
-		Equal(false, Invoke("IsLauncherUpdateNewer", new object[] { metadata, "0.3.4", "26.2.45.28" }), "최신 버전 판별");
+		Equal("0.4.1", Convert.ToString(GetField(metadata, "ProductVersion")), "업데이트 제품 버전");
+		Equal("26.2.45.29", Convert.ToString(GetField(metadata, "BuildNumber")), "업데이트 빌드");
+		Equal(true, Invoke("IsLauncherUpdateNewer", new object[] { metadata, "0.4.0", "26.2.45.28" }), "새 제품 버전 판별");
+		Equal(false, Invoke("IsLauncherUpdateNewer", new object[] { metadata, "0.4.1", "26.2.45.29" }), "최신 버전 판별");
 		ExpectFailure(delegate { Invoke("ParseLauncherUpdateMetadata", new object[] { "{}" }); }, "누락된 업데이트 메타데이터");
 		ExpectFailure(delegate { Invoke("ParseLauncherUpdateMetadata", new object[] { json.Replace(hash, "bad") }); }, "잘못된 업데이트 해시");
 		ExpectFailure(delegate { Invoke("ParseLauncherUpdateMetadata", new object[] { json.Replace("https://github.com/Mangom72/", "http://example.com/") }); }, "허용되지 않은 업데이트 주소");
@@ -434,6 +440,169 @@ internal static class LauncherTests
 		string redacted = Convert.ToString(Invoke("RedactDiagnosticText", new object[] { input, server }));
 		if (redacted.Contains("SecretOwner") || redacted.Contains("192.168.0.10") || redacted.Contains("secret") || redacted.Contains(server)) throw new InvalidOperationException("진단 정보 민감값이 남아 있습니다.");
 		Pass();
+	}
+
+	private static void TestQuickCommandsAndBridge(string root)
+	{
+		IEnumerable builtIns = (IEnumerable)Invoke("GetBuiltInQuickCommands", new object[0]);
+		List<string> templates = new List<string>();
+		foreach (object item in builtIns) templates.Add(Convert.ToString(GetField(item, "Template")));
+		if (templates.Count < 45 || !templates.Contains("list") || !templates.Contains("save-all flush") || !templates.Contains("whitelist off") || !templates.Contains("datapack list")) throw new InvalidOperationException("기본 빠른 명령 목록이 완전하지 않습니다.");
+
+		Type definitionType = launcher.GetNestedType("QuickCommandDefinition", BindingFlags.NonPublic);
+		Type definitionListType = typeof(List<>).MakeGenericType(definitionType);
+		IList userCommands = (IList)Activator.CreateInstance(definitionListType);
+		object command = Activator.CreateInstance(definitionType, true);
+		SetPublic(command, "Id", "test-command");
+		SetPublic(command, "Name", "테스트 지급");
+		SetPublic(command, "Description", "테스트 설명");
+		SetPublic(command, "Category", "user");
+		SetPublic(command, "Template", "give {online-player} {item} {count}");
+		SetPublic(command, "Confirm", false);
+		SetPublic(command, "ServerTypes", new string[] { "paper" });
+		object[] valid = { command, null };
+		Equal(true, Invoke("ValidateUserQuickCommand", valid), "사용자 명령 템플릿 검증");
+		userCommands.Add(command);
+		string dataRoot = Path.Combine(root, "quick-command-data");
+		Invoke("SaveUserQuickCommands", new object[] { dataRoot, userCommands });
+		IEnumerable loaded = (IEnumerable)Invoke("LoadUserQuickCommands", new object[] { dataRoot });
+		int loadedCount = 0; foreach (object ignored in loaded) loadedCount++;
+		Equal(1, loadedCount, "사용자 명령 저장과 로드");
+		SetPublic(command, "Description", "수정된 설명");
+		Invoke("SaveUserQuickCommands", new object[] { dataRoot, userCommands });
+		userCommands.Clear();
+		Invoke("SaveUserQuickCommands", new object[] { dataRoot, userCommands });
+		loaded = (IEnumerable)Invoke("LoadUserQuickCommands", new object[] { dataRoot });
+		loadedCount = 0; foreach (object ignored in loaded) loadedCount++;
+		Equal(0, loadedCount, "사용자 명령 삭제");
+		SetPublic(command, "Template", "say {unsupported}");
+		object[] invalid = { command, null };
+		Equal(false, Invoke("ValidateUserQuickCommand", invalid), "지원하지 않는 템플릿 매개변수 차단");
+
+		object parse = Invoke("ParseCommandInput", new object[] { "say \"hello world\"", 10 });
+		IList tokens = (IList)GetField(parse, "Tokens");
+		Equal(2, tokens.Count, "따옴표 명령 토큰 처리");
+		IEnumerable suggestions = (IEnumerable)Invoke("GetLocalQuickCommandSuggestions", new object[] { "gam", 3, "paper", Activator.CreateInstance(definitionListType), new string[] { "Alex" }, new string[0] });
+		Equal(true, SuggestionContains(suggestions, "gamemode"), "루트 명령 자동완성");
+		suggestions = (IEnumerable)Invoke("GetLocalQuickCommandSuggestions", new object[] { "gamemode c", 10, "paper", Activator.CreateInstance(definitionListType), new string[] { "Alex" }, new string[0] });
+		Equal(true, SuggestionContains(suggestions, "creative"), "하위 명령 자동완성");
+		suggestions = (IEnumerable)Invoke("GetLocalQuickCommandSuggestions", new object[] { "op A", 4, "paper", Activator.CreateInstance(definitionListType), new string[] { "Alex" }, new string[0] });
+		Equal(true, SuggestionContains(suggestions, "Alex"), "온라인 플레이어 후보");
+		suggestions = (IEnumerable)Invoke("GetLocalQuickCommandSuggestions", new object[] { "sa", 2, "paper", Activator.CreateInstance(definitionListType), new string[0], new string[] { "say custom recent" } });
+		object historySuggestion = FindSuggestion(suggestions, "say custom recent");
+		Equal(2, Convert.ToInt32(GetField(historySuggestion, "ReplaceLength")), "명령 기록 전체 입력 교체");
+		Equal("say hello", Convert.ToString(Invoke("NormalizeCommandForSend", new object[] { "/say hello\r\n" })), "전송 전 슬래시 제거");
+		Equal(true, Invoke("RequiresQuickCommandConfirmation", new object[] { "whitelist off", Activator.CreateInstance(definitionListType) }), "위험 명령 확인");
+		Equal(false, Invoke("CanSendQuickCommand", new object[] { false, "list" }), "서버 미실행 명령 차단");
+		Equal(true, Invoke("IsSuggestionGenerationCurrent", new object[] { 4, 4 }), "최신 자동완성 응답 허용");
+		Equal(false, Invoke("IsSuggestionGenerationCurrent", new object[] { 3, 4 }), "오래된 자동완성 응답 무시");
+		Type suggestionType = launcher.GetNestedType("QuickCommandSuggestion", BindingFlags.NonPublic);
+		Type suggestionListType = typeof(List<>).MakeGenericType(suggestionType);
+		IList bridgeSuggestions = (IList)Activator.CreateInstance(suggestionListType);
+		IList localSuggestions = (IList)Activator.CreateInstance(suggestionListType);
+		bridgeSuggestions.Add(Invoke("NewSuggestion", new object[] { "live", "live", "", "bridge", false }));
+		localSuggestions.Add(Invoke("NewSuggestion", new object[] { "user", "user", "", "user", false }));
+		localSuggestions.Add(Invoke("NewSuggestion", new object[] { "builtin", "builtin", "", "builtin", false }));
+		IList mergedSuggestions = (IList)Invoke("MergeQuickCommandSuggestions", new object[] { bridgeSuggestions, localSuggestions, 10 });
+		Equal("bridge", Convert.ToString(GetField(mergedSuggestions[0], "Source")), "실시간 후보 우선 정렬");
+		Equal("user", Convert.ToString(GetField(mergedSuggestions[1], "Source")), "사용자 후보 다음 정렬");
+		object[] historyArguments = { new List<string>(new string[] { "list", "save-all" }), -1, -1, null };
+		Equal("save-all", Convert.ToString(Invoke("GetQuickCommandHistoryValue", historyArguments)), "명령 기록 탐색");
+
+		Equal(true, Invoke("IsCommandBridgeSupported", new object[] { "paper", "1.13" }), "Paper 브리지 최소 버전");
+		Equal(true, Invoke("IsCommandBridgeSupported", new object[] { "purpur", "26.2" }), "Purpur 브리지 지원");
+		Equal(false, Invoke("IsCommandBridgeSupported", new object[] { "vanilla", "1.21.11" }), "지원하지 않는 서버 브리지 제안 차단");
+		Equal(true, Invoke("IsMinecraftVersionInBridgeRange", new object[] { "1.21.11", "1.13", "26.2" }), "브리지 Minecraft 호환 범위");
+		Equal(false, Invoke("IsMinecraftVersionInBridgeRange", new object[] { "1.12.2", "1.13", "26.2" }), "브리지 최소 버전 차단");
+		string profileA = Path.Combine(root, "bridge-a");
+		string profileB = Path.Combine(root, "bridge-b");
+		Directory.CreateDirectory(profileA); Directory.CreateDirectory(profileB);
+		Invoke("WriteBridgeChoice", new object[] { profileA, "install" });
+		Invoke("WriteBridgeChoice", new object[] { profileB, "skip" });
+		Equal("install", Convert.ToString(GetField(Invoke("ReadBridgeChoice", new object[] { profileA }), "Choice")), "프로필별 브리지 설치 동의");
+		Equal("skip", Convert.ToString(GetField(Invoke("ReadBridgeChoice", new object[] { profileB }), "Choice")), "프로필별 브리지 거절 분리");
+		Invoke("WriteBridgeDefaultPreference", new object[] { dataRoot, "install" });
+		object defaultPreference = Invoke("ReadBridgeDefaultPreference", new object[] { dataRoot });
+		Equal(true, GetField(defaultPreference, "HasDefault"), "새 프로필 브리지 기본 선택 저장");
+		Equal("install", Convert.ToString(GetField(defaultPreference, "Choice")), "브리지 기본 동의 값");
+
+		string firstJar = Path.Combine(root, "bridge-first.jar");
+		string secondJar = Path.Combine(root, "bridge-second.jar");
+		CreateFakeBridgeJar(firstJar, "first");
+		CreateFakeBridgeJar(secondJar, "second");
+		string firstHash = FileSha256(firstJar);
+		Equal(false, Invoke("ValidateCommandBridgeArtifact", new object[] { firstJar, new FileInfo(firstJar).Length, new string('0', 64) }), "브리지 JAR 해시 불일치 차단");
+		SetStaticField("BridgeArtifactOverridePath", firstJar);
+		Invoke("InstallOrUpdateCommandBridge", new object[] { profileA, "paper", "1.21.11" });
+		string installedJar = Convert.ToString(Invoke("GetBridgeJarPath", new object[] { profileA }));
+		Equal(firstHash, FileSha256(installedJar), "검증된 브리지 설치");
+		SetStaticField("BridgeArtifactOverridePath", secondJar);
+		File.AppendAllText(installedJar, "changed");
+		ExpectFailure(delegate { Invoke("InstallOrUpdateCommandBridge", new object[] { profileA, "paper", "1.21.11" }); }, "사용자가 변경한 관리 JAR 덮어쓰기 차단");
+		File.Copy(firstJar, installedJar, true);
+		SetStaticField("BridgeInstallFailureAfterBackup", true);
+		ExpectFailure(delegate { Invoke("InstallOrUpdateCommandBridge", new object[] { profileA, "paper", "1.21.11" }); }, "브리지 업데이트 실패 주입");
+		SetStaticField("BridgeInstallFailureAfterBackup", false);
+		Equal(firstHash, FileSha256(installedJar), "업데이트 실패 시 기존 브리지 복구");
+		string bridgeData = Path.Combine(profileA, "plugins", "MinecraftServerLauncherCommandBridge");
+		Directory.CreateDirectory(bridgeData); File.WriteAllText(Path.Combine(bridgeData, "keep.txt"), "keep");
+		Invoke("RemoveManagedCommandBridge", new object[] { profileA, false });
+		Equal(true, File.Exists(Path.Combine(bridgeData, "keep.txt")), "브리지 제거 시 사용자 데이터 보존");
+
+		string sessionDirectory = Path.Combine(root, "bridge-session");
+		Directory.CreateDirectory(sessionDirectory);
+		Type sessionType = launcher.GetNestedType("CommandBridgeSession", BindingFlags.NonPublic);
+		object session = Activator.CreateInstance(sessionType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { sessionDirectory, "profile-test" }, null);
+		try
+		{
+			TcpListener listener = (TcpListener)sessionType.GetField("listener", BindingFlags.Instance | BindingFlags.NonPublic).GetValue(session);
+			IPEndPoint endpoint = (IPEndPoint)listener.LocalEndpoint;
+			Equal(true, IPAddress.IsLoopback(endpoint.Address), "브리지 리스너 루프백 바인딩");
+			using (TcpClient client = new TcpClient())
+			{
+				client.Connect(IPAddress.Loopback, endpoint.Port);
+				using (StreamWriter writer = new StreamWriter(client.GetStream(), new UTF8Encoding(false), 1024, true))
+				using (StreamReader reader = new StreamReader(client.GetStream(), Encoding.UTF8, false, 1024, true))
+				{
+					writer.AutoFlush = true;
+					writer.WriteLine("{\"type\":\"hello\",\"id\":\"bad\",\"token\":\"wrong-token\",\"profile\":\"profile-test\",\"protocol\":1}");
+					string response = reader.ReadLine();
+					if (response == null || response.IndexOf("handshake-rejected", StringComparison.Ordinal) < 0) throw new InvalidOperationException("브리지 토큰 불일치가 거부되지 않았습니다.");
+				}
+			}
+		}
+		finally { ((IDisposable)session).Dispose(); }
+		ExpectFailure(delegate { Invoke("DeserializeBridgeObject", new object[] { new string('x', 65537) }); }, "과도한 브리지 요청 차단");
+		Equal(true, Invoke("BridgeTokenEquals", new object[] { "same-token", "same-token" }), "고정 시간 토큰 비교");
+		Equal(false, Invoke("BridgeTokenEquals", new object[] { "same-token", "other-token" }), "토큰 불일치 거부");
+		Pass();
+	}
+
+	private static bool SuggestionContains(IEnumerable suggestions, string value)
+	{
+		foreach (object item in suggestions) if (string.Equals(Convert.ToString(GetField(item, "Value")), value, StringComparison.OrdinalIgnoreCase)) return true;
+		return false;
+	}
+
+	private static object FindSuggestion(IEnumerable suggestions, string value)
+	{
+		foreach (object item in suggestions) if (string.Equals(Convert.ToString(GetField(item, "Value")), value, StringComparison.OrdinalIgnoreCase)) return item;
+		throw new InvalidOperationException("자동완성 후보를 찾지 못했습니다: " + value);
+	}
+
+	private static void CreateFakeBridgeJar(string path, string marker)
+	{
+		if (File.Exists(path)) File.Delete(path);
+		using (ZipArchive archive = ZipFile.Open(path, ZipArchiveMode.Create))
+		{
+			using (StreamWriter writer = new StreamWriter(archive.CreateEntry("plugin.yml").Open())) writer.Write("name: TestBridge\nmain: test.CommandBridgePlugin\n" + marker);
+			using (Stream stream = archive.CreateEntry("test/CommandBridgePlugin.class").Open()) { byte[] bytes = Encoding.UTF8.GetBytes(marker); stream.Write(bytes, 0, bytes.Length); }
+		}
+	}
+
+	private static string FileSha256(string path)
+	{
+		using (SHA256 hash = SHA256.Create()) return BitConverter.ToString(hash.ComputeHash(File.ReadAllBytes(path))).Replace("-", string.Empty).ToLowerInvariant();
 	}
 
 	private static object Invoke(string name, object[] arguments)

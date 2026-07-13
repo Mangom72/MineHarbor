@@ -4,5 +4,23 @@
     "url": "https://github.com/adoptium/temurin25-binaries/releases/download/jdk-25.0.3%2B9/OpenJDK25U-jdk_x64_windows_hotspot_25.0.3_9.zip",
     "sha256": "709312cd0420296d9b9de917fe6e28a5b979e875ee5ab91783fb79bcd5857235",
     "size": 141131903
+  },
+  "paperApi": {
+    "fileName": "paper-api-26.2.build.56-alpha.jar",
+    "url": "https://repo.papermc.io/repository/maven-public/io/papermc/paper/paper-api/26.2.build.56-alpha/paper-api-26.2.build.56-alpha.jar",
+    "sha256": "d59987721c2a731b32132c0f48a5ac7261cc10ee28057dfa2a7ce2f5ca8d8f6f",
+    "size": 2882343
+  },
+  "adventureApi": {
+    "fileName": "adventure-api-5.2.0.jar",
+    "url": "https://repo1.maven.org/maven2/net/kyori/adventure-api/5.2.0/adventure-api-5.2.0.jar",
+    "sha256": "7e52fe7190be3e87b3b3f71712cfa12315fcd27109f302a7b440c12f01fae827",
+    "size": 428448
+  },
+  "adventureKey": {
+    "fileName": "adventure-key-5.2.0.jar",
+    "url": "https://repo1.maven.org/maven2/net/kyori/adventure-key/5.2.0/adventure-key-5.2.0.jar",
+    "sha256": "0184d173200e2eef8fbc791f622d1d58fd459f8930c616b5a4fe79e83eda6c55",
+    "size": 11211
   }
 }

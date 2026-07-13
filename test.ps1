@@ -14,7 +14,7 @@ if (!(Test-Path -LiteralPath $launcher)) { throw "Launcher not found: $launcher"
 $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
 $testOutput = Join-Path $projectRoot 'obj\Launcher.Tests.exe'
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $testOutput) | Out-Null
-& $csc /nologo /target:exe /platform:anycpu /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll "/out:$testOutput" (Join-Path $projectRoot 'tests\Launcher.Tests.cs')
+& $csc /nologo /target:exe /platform:anycpu /reference:System.dll /reference:System.Core.dll /reference:System.Drawing.dll /reference:System.Windows.Forms.dll /reference:System.IO.Compression.dll /reference:System.IO.Compression.FileSystem.dll "/out:$testOutput" (Join-Path $projectRoot 'tests\Launcher.Tests.cs')
 if ($LASTEXITCODE -ne 0) { throw "Test compilation failed with exit code $LASTEXITCODE." }
 & $testOutput $launcher
 if ($LASTEXITCODE -ne 0) { throw "Tests failed with exit code $LASTEXITCODE." }
@@ -30,3 +30,4 @@ Write-Host 'PORTABLE_VERSION_OK'
 $smoke = Start-Process -FilePath $launcher -ArgumentList '--version' -Wait -PassThru -WindowStyle Hidden
 if ($smoke.ExitCode -ne 0) { throw "Portable EXE smoke test failed with exit code $($smoke.ExitCode)." }
 Write-Host 'PORTABLE_SMOKE_OK'
+& (Join-Path $projectRoot 'scripts\Test-CommandBridge.ps1')

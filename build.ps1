@@ -30,6 +30,8 @@ $sources = @(
     'ContentAndDiagnostics.cs',
     'ManagedServerDashboard.cs',
     'NetworkAndPlayerTools.cs',
+	'QuickCommandsAndBridge.cs',
+	'QuickCommandUi.cs',
     'obj\GeneratedVersionInfo.cs'
 ) | ForEach-Object { Join-Path $projectRoot $_ }
 
@@ -44,13 +46,14 @@ $arguments = @(
     "/out:$portableExe"
 ) + $sources
 if (!$SkipCompile) {
-    foreach ($dependency in @($javaZip)) {
+	foreach ($dependency in @($javaZip, (Join-Path $dependencyDirectory 'paper-api-26.2.build.56-alpha.jar'), (Join-Path $dependencyDirectory 'adventure-api-5.2.0.jar'), (Join-Path $dependencyDirectory 'adventure-key-5.2.0.jar'))) {
         if (!(Test-Path -LiteralPath $dependency)) { throw "Missing build dependency: $dependency" }
     }
     $csc = Join-Path $env:WINDIR 'Microsoft.NET\Framework64\v4.0.30319\csc.exe'
     if (!(Test-Path -LiteralPath $csc)) { throw 'The .NET Framework 4.x C# compiler was not found.' }
     & $csc @arguments
-    if ($LASTEXITCODE -ne 0) { throw "C# build failed with exit code $LASTEXITCODE." }
+	if ($LASTEXITCODE -ne 0) { throw "C# build failed with exit code $LASTEXITCODE." }
+	$bridgeBuild = & (Join-Path $projectRoot 'scripts\Build-CommandBridge.ps1') -OutputDirectory $output -DependencyDirectory $dependencyDirectory
 }
 elseif (!(Test-Path -LiteralPath $portableExe)) {
     throw "Portable EXE does not exist for -SkipCompile: $portableExe"
@@ -90,4 +93,5 @@ if ($BuildInstaller) {
     PortableExe = $portableExe
     PortableZip = $portableZip
     SetupExe = $setupPath
+	CommandBridgeJar = if ($bridgeBuild) { $bridgeBuild.Jar } else { $null }
 }

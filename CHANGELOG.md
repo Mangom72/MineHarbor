@@ -2,6 +2,32 @@
 
 이 프로젝트는 제품 버전에 [Semantic Versioning](https://semver.org/)을 사용합니다. `26.2.45.xx` 값은 별도의 내부 빌드 번호입니다.
 
+## [0.4.0] - 2026-07-13
+
+내부 빌드: `26.2.45.28`
+
+### Added
+
+- 서버 관리·플레이어·화이트리스트·월드·정보 카테고리의 기본 빠른 명령과 실행 전 위험 확인
+- `config/quick-commands.json`에 별도로 보존되는 사용자 명령 템플릿 추가·수정·삭제 화면
+- 현재 커서, 따옴표, 온라인 플레이어, 명령 기록을 반영하는 125ms 디바운스 로컬 자동완성
+- Paper/Purpur 1.13 이상에서 공개 CommandMap API로 명령·별칭·설명·usage·플러그인·탭 완성을 제공하는 선택형 Java 브리지
+- 실행별 256비트 토큰, 프로필 확인, 루프백 전용 임시 포트와 크기 제한 JSON Lines 통신
+- 브리지 설치 동의 기본값, 상태·버전·프로토콜·발견 명령 표시와 검증된 설치·업데이트·제거
+- 브리지 프로토콜 단위 테스트와 임시 Paper 서버 명령 목록·자동완성·플레이어·재연결 통합 테스트
+
+### Changed
+
+- 메인 하단을 콘솔과 빠른 명령이 함께 사용할 수 있는 반응형 작업 영역으로 확장
+- 기본 창 높이를 조정해 빠른 명령을 추가한 뒤에도 기존 버튼과 입력창이 잘리지 않도록 개선
+- 릴리스 자산과 `update.json`에 브리지 JAR의 버전, 프로토콜, 호환 Minecraft 범위, 크기와 SHA-256 포함
+
+### Security
+
+- 브리지 연결은 외부 주소를 허용하지 않고 세션 토큰을 로그나 진단 묶음에 포함하지 않음
+- 브리지는 명령을 실행하지 않으며 실제 전송은 기존 서버 콘솔 입력 경로만 사용
+- 런처가 관리 기록을 가진 정확한 JAR만 제거하고 업데이트 실패 시 이전 JAR 복원
+
 ## [0.3.3] - 2026-07-12
 
 내부 빌드: `26.2.45.27`
@@ -81,6 +107,8 @@
 - 기존 `Minecraft-Servers-Data` 자동 감지 및 비파괴 사용
 
 ## English
+
+Version `0.4.0` adds built-in and user quick commands, cursor-aware local completion, command history and safety confirmation, plus an optional loopback-only Paper/Purpur bridge for live command metadata, console tab completion, and online players. Bridge installation requires per-profile consent, verifies release metadata and SHA-256, never executes commands, and preserves user data on removal.
 
 Version `0.3.3` removes the bundled Paper server JAR, unifies first-run preparation with the verified official latest-build path, prevents duplicate downloads, fixes setup horizontal scrolling, shortens bilingual action labels, and separates compatibility notices from actionable warnings and errors.
 
