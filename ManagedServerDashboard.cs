@@ -525,7 +525,7 @@ internal static partial class Launcher
 				ShowManagedMessage("마지막 프로필은 보관할 수 없습니다.", "The last profile cannot be archived.", true);
 				return;
 			}
-			if (MessageBox.Show(this, ManagedText("이 서버를 삭제하지 않고 보관 폴더로 옮길까요?", "Move this server to the archive without deleting it?"), Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
+			if (ShowMineHarborDialog(this, ManagedText("이 서버를 삭제하지 않고 보관 폴더로 옮길까요?", "Move this server to the archive without deleting it?"), Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
 			string archiveRoot = Path.Combine(serversRoot, "servers-archive");
 			Directory.CreateDirectory(archiveRoot);
 			string destination = Path.Combine(archiveRoot, ToSafeDirectoryName(profile.Name) + "-" + DateTime.Now.ToString("yyyyMMdd-HHmmss"));
@@ -544,7 +544,7 @@ internal static partial class Launcher
 		{
 			ManagedProfileRecord profile = GetSelectedProfile();
 			if (profile == null || !EnsureProfileStopped(profile)) return;
-			MessageBox.Show(this, ManagedText("서버 폴더 전체(월드, 플러그인, 모드, 설정)를 휴지통으로 옮기며 30일 동안 복구할 수 있습니다. 별도 백업 폴더는 그대로 유지됩니다. 계속하려면 다음 창에 서버 이름을 입력하세요.\r\n\r\n" + profile.Name, "The entire server folder (worlds, plugins, mods, and settings) will move to Trash and can be restored for 30 days. Separate backups are kept. Enter the server name in the next window to continue.\r\n\r\n" + profile.Name), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+			ShowMineHarborDialog(this, ManagedText("서버 폴더 전체(월드, 플러그인, 모드, 설정)를 휴지통으로 옮기며 30일 동안 복구할 수 있습니다. 별도 백업 폴더는 그대로 유지됩니다. 계속하려면 다음 창에 서버 이름을 입력하세요.\r\n\r\n" + profile.Name, "The entire server folder (worlds, plugins, mods, and settings) will move to Trash and can be restored for 30 days. Separate backups are kept. Enter the server name in the next window to continue.\r\n\r\n" + profile.Name), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
 			string confirmation = PromptProfileText(this, ManagedText("서버 삭제 확인", "Confirm server deletion"), string.Empty);
 			if (!string.Equals(confirmation, profile.Name, StringComparison.Ordinal))
 			{
@@ -634,7 +634,7 @@ internal static partial class Launcher
 				}
 				int previousPort = profile.Port;
 				int availablePort = FindAvailableServerPort(serversRoot, previousPort + 1, profile.Name);
-				DialogResult changePort = MessageBox.Show(this,
+				DialogResult changePort = ShowMineHarborDialog(this,
 					ManagedText(
 						"포트 " + previousPort + "을(를) 실행 중인 다른 서버가 사용하고 있습니다. 이 서버의 포트를 " + availablePort + "(으)로 자동 변경하고 실행할까요?",
 						"Another running server is using port " + previousPort + ". Change this server to port " + availablePort + " and start it?"),
@@ -842,7 +842,7 @@ internal static partial class Launcher
 			{
 				return;
 			}
-			DialogResult result = MessageBox.Show(this,
+			DialogResult result = ShowMineHarborDialog(this,
 				ManagedText("실행 중인 서버를 모두 안전하게 종료한 뒤 창을 닫을까요?", "Stop all running servers safely before closing?"),
 				ManagedText("멀티 서버 종료", "Close multi-server dashboard"),
 				MessageBoxButtons.YesNo,
@@ -1064,7 +1064,7 @@ internal static partial class Launcher
 
 		private void ShowManagedMessage(string korean, string english, bool warning)
 		{
-			MessageBox.Show(this, IsManagedKorean() ? korean : english, Text, MessageBoxButtons.OK, warning ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+			ShowMineHarborDialog(this, IsManagedKorean() ? korean : english, Text, MessageBoxButtons.OK, warning ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
 		}
 	}
 
@@ -1225,7 +1225,7 @@ internal static partial class Launcher
 			}
 			catch (Exception exception)
 			{
-				MessageBox.Show(this, exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				ShowMineHarborDialog(this, exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 	}

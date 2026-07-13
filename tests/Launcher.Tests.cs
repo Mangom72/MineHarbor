@@ -425,6 +425,32 @@ internal static class LauncherTests
 		}
 		string startDescription = Convert.ToString(Invoke("GetCommonButtonDescription", new object[] { "서버 시작" }));
 		if (startDescription.IndexOf("F5", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("시작 단축키 안내가 없습니다.");
+		object updateIcon = Enum.Parse(managedIconType, "Upgrade");
+		using (Button updateDialogButton = (Button)Invoke("CreateLauncherUpdateDialogButton", new object[] { "지금 업데이트", 148, "primary", updateIcon, palette }))
+		{
+			Equal(buttonType, updateDialogButton.GetType(), "업데이트 창 공통 둥근 버튼 사용");
+			Equal(44, updateDialogButton.Height, "업데이트 창 버튼 높이");
+			Equal("primary", Convert.ToString(updateDialogButton.Tag), "업데이트 창 기본 동작 역할");
+			Equal("Upgrade", Convert.ToString(managedIconProperty.GetValue(updateDialogButton, null)), "업데이트 창 버튼 아이콘");
+		}
+		Type messageDialogType = launcher.GetNestedType("MineHarborMessageDialog", BindingFlags.NonPublic);
+		using (Form messageDialog = (Form)Activator.CreateInstance(messageDialogType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { "확인할 내용입니다.", "공통 대화상자", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Warning, false }, null))
+		{
+			List<Button> dialogButtons = new List<Button>();
+			CollectButtons(messageDialog, dialogButtons);
+			Equal(3, dialogButtons.Count, "예·아니요·취소 공통 대화상자 버튼 수");
+			int primaryCount = 0;
+			foreach (Button dialogButton in dialogButtons)
+			{
+				Equal(buttonType, dialogButton.GetType(), "공통 대화상자 둥근 버튼 사용");
+				if (dialogButton.Height < 44) throw new InvalidOperationException("공통 대화상자 버튼 높이가 44px보다 작습니다.");
+				if (string.IsNullOrWhiteSpace(dialogButton.AccessibleName)) throw new InvalidOperationException("공통 대화상자 버튼 접근성 이름이 없습니다.");
+				if (string.Equals(Convert.ToString(dialogButton.Tag), "primary", StringComparison.Ordinal)) primaryCount++;
+			}
+			Equal(1, primaryCount, "공통 대화상자 기본 동작 수");
+			Equal(true, messageDialog.AcceptButton != null, "공통 대화상자 Enter 동작");
+			Equal(true, messageDialog.CancelButton != null, "공통 대화상자 Esc 동작");
+		}
 
 		Type localizationType = launcher.GetNestedType("Localization", BindingFlags.NonPublic);
 		FieldInfo languageField = localizationType.GetField("CurrentLanguage", BindingFlags.Static | BindingFlags.Public);
@@ -869,6 +895,16 @@ internal static class LauncherTests
 	{
 		foreach (object item in suggestions) if (string.Equals(Convert.ToString(GetField(item, "Value")), value, StringComparison.OrdinalIgnoreCase)) return item;
 		throw new InvalidOperationException("자동완성 후보를 찾지 못했습니다: " + value);
+	}
+
+	private static void CollectButtons(Control parent, List<Button> buttons)
+	{
+		foreach (Control control in parent.Controls)
+		{
+			Button button = control as Button;
+			if (button != null) buttons.Add(button);
+			if (control.HasChildren) CollectButtons(control, buttons);
+		}
 	}
 
 	private static void CreateFakeBridgeJar(string path, string marker)

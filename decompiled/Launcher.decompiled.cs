@@ -489,25 +489,15 @@ internal static partial class Launcher
 				ignoreBox.Location = new Point(24, 401);
 				dialog.Controls.Add(ignoreBox);
 
-				Button later = new Button();
-				later.Text = korean ? "나중에" : "Later";
+				ThemePalette palette = ThemePalette.Create(dark);
+				Button later = CreateLauncherUpdateDialogButton(korean ? "나중에" : "Later", 112, "secondary", ButtonIcon.None, palette);
 				later.DialogResult = DialogResult.No;
-				later.Size = new Size(108, 42);
-				later.Location = new Point(326, 435);
-				later.FlatStyle = FlatStyle.Flat;
-				later.ForeColor = textColor;
-				later.BackColor = surface;
+				later.Location = new Point(288, 433);
 				dialog.Controls.Add(later);
 
-				Button update = new Button();
-				update.Text = korean ? "지금 업데이트" : "Update now";
+				Button update = CreateLauncherUpdateDialogButton(korean ? "지금 업데이트" : "Update now", 148, "primary", ButtonIcon.Upgrade, palette);
 				update.DialogResult = DialogResult.Yes;
-				update.Size = new Size(122, 42);
-				update.Location = new Point(440, 435);
-				update.FlatStyle = FlatStyle.Flat;
-				update.FlatAppearance.BorderSize = 0;
-				update.ForeColor = Color.White;
-				update.BackColor = Color.FromArgb(48, 129, 247);
+				update.Location = new Point(408, 433);
 				dialog.Controls.Add(update);
 				dialog.AcceptButton = update;
 				dialog.CancelButton = later;
@@ -523,6 +513,11 @@ internal static partial class Launcher
 			return (bool)form.Invoke(ask);
 		}
 		return ask();
+	}
+
+	private static Button CreateLauncherUpdateDialogButton(string text, int width, string role, ButtonIcon icon, ThemePalette palette)
+	{
+		return CreateMineHarborDialogButton(text, width, role, icon, palette);
 	}
 
 	private static string GetLauncherUpdatePreferencesPath()

@@ -339,18 +339,18 @@ internal static partial class Launcher
 			RestoreServerTrashRecord(serversRoot, record, restoreName);
 			if (ReadManagedProfiles(serversRoot).Count == 1) WriteActiveProfileName(serversRoot, restoreName);
 			ReloadTrash();
-			MessageBox.Show(this, IsBackupKorean() ? "서버를 복구했습니다." : "The server was restored.", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+			ShowMineHarborDialog(this, IsBackupKorean() ? "서버를 복구했습니다." : "The server was restored.", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
 		}
 
 		private void DeleteSelectedForever()
 		{
 			ServerTrashRecord record = GetSelectedTrashRecord();
 			if (record == null) return;
-			MessageBox.Show(this, IsBackupKorean() ? "이 작업은 되돌릴 수 없습니다. 계속하려면 다음 창에 서버 이름을 입력하세요.\r\n\r\n" + record.ProfileName : "This cannot be undone. Enter the server name in the next window to continue.\r\n\r\n" + record.ProfileName, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+			ShowMineHarborDialog(this, IsBackupKorean() ? "이 작업은 되돌릴 수 없습니다. 계속하려면 다음 창에 서버 이름을 입력하세요.\r\n\r\n" + record.ProfileName : "This cannot be undone. Enter the server name in the next window to continue.\r\n\r\n" + record.ProfileName, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
 			string confirmation = PromptProfileText(this, IsBackupKorean() ? "영구 삭제 확인" : "Confirm permanent deletion", string.Empty);
 			if (!string.Equals(confirmation, record.ProfileName, StringComparison.Ordinal))
 			{
-				if (confirmation != null) MessageBox.Show(this, IsBackupKorean() ? "서버 이름이 일치하지 않습니다." : "The server name does not match.", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				if (confirmation != null) ShowMineHarborDialog(this, IsBackupKorean() ? "서버 이름이 일치하지 않습니다." : "The server name does not match.", Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
 				return;
 			}
 			PermanentlyDeleteServerTrashRecord(serversRoot, record);
@@ -365,7 +365,7 @@ internal static partial class Launcher
 			}
 			catch (Exception exception)
 			{
-				MessageBox.Show(this, IsBackupKorean() ? "휴지통 작업을 완료하지 못했습니다: " + exception.Message : "Could not complete the trash operation: " + exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				ShowMineHarborDialog(this, IsBackupKorean() ? "휴지통 작업을 완료하지 못했습니다: " + exception.Message : "Could not complete the trash operation: " + exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 	}

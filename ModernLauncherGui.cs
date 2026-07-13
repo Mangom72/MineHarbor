@@ -731,7 +731,7 @@ internal static partial class Launcher
 
 	private static void ShowLauncherMessage(string message, bool error)
 	{
-		MessageBox.Show(message, error ? Localization.T("App.Error") : Localization.T("App.Title"), MessageBoxButtons.OK, error ? MessageBoxIcon.Error : MessageBoxIcon.Information);
+		ShowMineHarborDialog(message, error ? Localization.T("App.Error") : Localization.T("App.Title"), MessageBoxButtons.OK, error ? MessageBoxIcon.Error : MessageBoxIcon.Information);
 	}
 
 	private static void RequestLauncherClose()
@@ -853,7 +853,7 @@ internal static partial class Launcher
 
 	private static bool AskForEulaGui()
 	{
-		DialogResult result = MessageBox.Show(
+		DialogResult result = ShowMineHarborDialog(
 			Localization.T("Eula.Text"),
 			Localization.T("Eula.Title"),
 			MessageBoxButtons.YesNo,
@@ -927,7 +927,7 @@ internal static partial class Launcher
 			bool changesDirectory = !string.Equals(Path.GetFullPath(candidateOptions.ServerDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), Path.GetFullPath(currentOptions.ServerDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), StringComparison.OrdinalIgnoreCase);
 			if (changesDirectory && Directory.Exists(candidateOptions.ServerDirectory) && Directory.GetFileSystemEntries(candidateOptions.ServerDirectory).Length > 0)
 			{
-				MessageBox.Show(launcherForm, Localization.CurrentLanguage == Localization.Korean ? "같은 이름의 서버 프로필이 이미 있습니다. 다른 이름을 입력해 주세요." : "A server profile with that name already exists. Choose another name.", Localization.CurrentLanguage == Localization.Korean ? "프로필 이름 중복" : "Duplicate profile name", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				ShowMineHarborDialog(launcherForm, Localization.CurrentLanguage == Localization.Korean ? "같은 이름의 서버 프로필이 이미 있습니다. 다른 이름을 입력해 주세요." : "A server profile with that name already exists. Choose another name.", Localization.CurrentLanguage == Localization.Korean ? "프로필 이름 중복" : "Duplicate profile name", MessageBoxButtons.OK, MessageBoxIcon.Warning);
 				settings = candidate;
 				continue;
 			}
@@ -2357,7 +2357,7 @@ internal static partial class Launcher
 				string directory;
 				LauncherOptions options = ReadActiveLauncherOptions(out root, out directory);
 				string path = CreateDiagnosticBundle(directory, options);
-				DialogResult result = MessageBox.Show(this, (Localization.CurrentLanguage == Localization.Korean ? "개인정보를 가린 진단 묶음을 만들었습니다.\r\n\r\n" : "Created a redacted diagnostic bundle.\r\n\r\n") + path, Localization.T("Button.Diagnostics"), MessageBoxButtons.OK, MessageBoxIcon.Information);
+				DialogResult result = ShowMineHarborDialog(this, (Localization.CurrentLanguage == Localization.Korean ? "개인정보를 가린 진단 묶음을 만들었습니다.\r\n\r\n" : "Created a redacted diagnostic bundle.\r\n\r\n") + path, Localization.T("Button.Diagnostics"), MessageBoxButtons.OK, MessageBoxIcon.Information);
 				ShowNotice(Localization.CurrentLanguage == Localization.Korean ? "진단 묶음을 만들었습니다." : "Diagnostic bundle created.", false);
 			}
 			catch (Exception exception)
@@ -2450,7 +2450,7 @@ internal static partial class Launcher
 			{
 				return;
 			}
-			DialogResult result = MessageBox.Show(Localization.T("Close.Question"), Localization.T("Close.Title"), MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+			DialogResult result = ShowMineHarborDialog(this, Localization.T("Close.Question"), Localization.T("Close.Title"), MessageBoxButtons.YesNo, MessageBoxIcon.Question);
 			if (result != DialogResult.Yes)
 			{
 				eventArgs.Cancel = true;
@@ -3956,7 +3956,7 @@ internal static partial class Launcher
 			}
 			if (!onlineModeBox.Checked)
 			{
-				DialogResult risk = MessageBox.Show(Localization.T("Setup.OnlineModeWarning"), Localization.T("Setup.SecurityTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+				DialogResult risk = ShowMineHarborDialog(this, Localization.T("Setup.OnlineModeWarning"), Localization.T("Setup.SecurityTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 				if (risk != DialogResult.Yes)
 				{
 					onlineModeBox.Checked = true;
@@ -3997,12 +3997,12 @@ internal static partial class Launcher
 			settings.OwnerName = ownerBox.Text.Trim();
 			if (worldExists && IsMinecraftVersionDowngrade(source.MinecraftVersion, settings.MinecraftVersion))
 			{
-				MessageBox.Show(Localization.T("Setup.DowngradeWarning"), Localization.T("Setup.DowngradeTitle"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				ShowMineHarborDialog(this, Localization.T("Setup.DowngradeWarning"), Localization.T("Setup.DowngradeTitle"), MessageBoxButtons.OK, MessageBoxIcon.Warning);
 				return;
 			}
 			if ((!string.Equals(settings.ServerType, source.ServerType, StringComparison.OrdinalIgnoreCase) || !string.Equals(settings.MinecraftVersion, source.MinecraftVersion, StringComparison.OrdinalIgnoreCase)) && worldExists)
 			{
-				DialogResult compatibilityWarning = MessageBox.Show(Localization.T("Setup.CompatibilityWarning"), Localization.T("Setup.CompatibilityTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+				DialogResult compatibilityWarning = ShowMineHarborDialog(this, Localization.T("Setup.CompatibilityWarning"), Localization.T("Setup.CompatibilityTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 				if (compatibilityWarning != DialogResult.Yes)
 				{
 					return;
@@ -4010,7 +4010,7 @@ internal static partial class Launcher
 			}
 			if (worldExists && !string.Equals(settings.LevelType, source.LevelType, StringComparison.OrdinalIgnoreCase))
 			{
-				DialogResult worldWarning = MessageBox.Show(Localization.T("Setup.WorldWarning"), Localization.T("Setup.WorldTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+				DialogResult worldWarning = ShowMineHarborDialog(this, Localization.T("Setup.WorldWarning"), Localization.T("Setup.WorldTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Information);
 				if (worldWarning != DialogResult.Yes)
 				{
 					return;

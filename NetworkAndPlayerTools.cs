@@ -330,7 +330,7 @@ internal static partial class Launcher
 			string playerName = playerNameBox.Text.Trim();
 			if (!IsValidPlayerName(playerName))
 			{
-				MessageBox.Show(
+				ShowMineHarborDialog(this,
 					ToolText("닉네임은 영문, 숫자, 밑줄만 사용해 3~16자로 입력해 주세요.", "Enter a 3–16 character username using only letters, numbers, and underscores."),
 					ToolText("닉네임 확인", "Check username"),
 					MessageBoxButtons.OK,
@@ -342,7 +342,7 @@ internal static partial class Launcher
 			string command = commandPrefix + " " + playerName;
 			bool destructive = actionKey == "whitelist-remove" || actionKey == "deop" || actionKey == "kick" || actionKey == "ban";
 			string actionName = GetActionName(actionKey);
-			DialogResult confirmation = MessageBox.Show(
+			DialogResult confirmation = ShowMineHarborDialog(this,
 				ToolText(
 					playerName + " 플레이어에게 '" + actionName + "' 작업을 실행할까요?\r\n\r\n전송 명령: " + command,
 					"Run '" + actionName + "' for " + playerName + "?\r\n\r\nCommand: " + command),

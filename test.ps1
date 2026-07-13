@@ -31,3 +31,15 @@ $smoke = Start-Process -FilePath $launcher -ArgumentList '--version' -Wait -Pass
 if ($smoke.ExitCode -ne 0) { throw "Portable EXE smoke test failed with exit code $($smoke.ExitCode)." }
 Write-Host 'PORTABLE_SMOKE_OK'
 & (Join-Path $projectRoot 'scripts\Test-CommandBridge.ps1')
+
+# 새 기능에서 Windows 기본 알림창이나 네모난 표준 버튼이 다시 들어오지 않도록 소스를 검사합니다.
+$uiSources = @(
+    Get-ChildItem -LiteralPath $projectRoot -File -Filter '*.cs'
+    Get-ChildItem -LiteralPath (Join-Path $projectRoot 'decompiled') -File -Filter '*.cs'
+)
+foreach ($source in $uiSources) {
+    $text = Get-Content -LiteralPath $source.FullName -Raw
+    if ($text -match 'MessageBox\s*\.\s*Show\s*\(') { throw "Windows 기본 알림창 호출이 남아 있습니다: $($source.Name)" }
+    if ($text -match 'new\s+(?:System\.Windows\.Forms\.)?Button\s*\(') { throw "네모난 표준 버튼 생성이 남아 있습니다: $($source.Name)" }
+}
+Write-Host 'MODERN_DIALOG_SCAN_OK'

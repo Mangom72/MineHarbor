@@ -405,7 +405,7 @@ internal static partial class Launcher
 			}
 			if (RequiresQuickCommandConfirmation(command, quickCommandUsers) || IsAdvancedDangerousCommand(command))
 			{
-				DialogResult result = MessageBox.Show(this, QuickText("다음 명령을 실행하시겠습니까?\r\n\r\n", "Run this command?\r\n\r\n") + command, QuickText("명령 실행 확인", "Confirm command"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+				DialogResult result = ShowMineHarborDialog(this, QuickText("다음 명령을 실행하시겠습니까?\r\n\r\n", "Run this command?\r\n\r\n") + command, QuickText("명령 실행 확인", "Confirm command"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
 				if (result != DialogResult.Yes) return;
 			}
 			if (!SendServerCommand(command))
@@ -602,7 +602,7 @@ internal static partial class Launcher
 		{
 			QuickCommandDefinition selected = commandList.SelectedItem as QuickCommandDefinition;
 			if (selected == null) return;
-			if (MessageBox.Show(this, LauncherUiText("선택한 사용자 명령을 삭제하시겠습니까?", "Delete the selected user command?"), Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
+			if (ShowMineHarborDialog(this, LauncherUiText("선택한 사용자 명령을 삭제하시겠습니까?", "Delete the selected user command?"), Text, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes) return;
 			commands.RemoveAll(delegate(QuickCommandDefinition item) { return string.Equals(item.Id, selected.Id, StringComparison.Ordinal); });
 			SaveUserQuickCommands(serversRoot, commands);
 			RefreshCommands();
@@ -615,23 +615,23 @@ internal static partial class Launcher
 				InstallOrUpdateCommandBridge(serverDirectory, options.ServerType, options.MinecraftVersion);
 				WriteBridgeChoice(serverDirectory, "install");
 				RefreshBridgeStatus();
-				MessageBox.Show(this, LauncherUiText("브리지를 설치했습니다. 다음 서버 시작부터 실시간 자동완성을 사용할 수 있습니다.", "Bridge installed. Live suggestions will be available on the next server start."), Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
+				ShowMineHarborDialog(this, LauncherUiText("브리지를 설치했습니다. 다음 서버 시작부터 실시간 자동완성을 사용할 수 있습니다.", "Bridge installed. Live suggestions will be available on the next server start."), Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
 			}
-			catch (Exception exception) { MessageBox.Show(this, exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
+			catch (Exception exception) { ShowMineHarborDialog(this, exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
 		}
 
 		private void RemoveBridge(object sender, EventArgs eventArgs)
 		{
 			try
 			{
-				DialogResult choice = MessageBox.Show(this, LauncherUiText("브리지 설정과 캐시도 함께 삭제하시겠습니까?\r\n아니요를 선택하면 사용자 데이터는 보존됩니다.", "Also remove bridge settings and cache?\r\nChoose No to preserve user data."), Text, MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+				DialogResult choice = ShowMineHarborDialog(this, LauncherUiText("브리지 설정과 캐시도 함께 삭제하시겠습니까?\r\n아니요를 선택하면 사용자 데이터는 보존됩니다.", "Also remove bridge settings and cache?\r\nChoose No to preserve user data."), Text, MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
 				if (choice == DialogResult.Cancel) return;
 				bool removeData = choice == DialogResult.Yes;
 				RemoveManagedCommandBridge(serverDirectory, removeData);
 				WriteBridgeChoice(serverDirectory, "skip");
 				RefreshBridgeStatus();
 			}
-			catch (Exception exception) { MessageBox.Show(this, exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
+			catch (Exception exception) { ShowMineHarborDialog(this, exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
 		}
 
 		private void OpenBridgeFolder(object sender, EventArgs eventArgs)
@@ -715,7 +715,7 @@ internal static partial class Launcher
 		{
 			QuickCommandDefinition command = new QuickCommandDefinition(); command.Id = originalId; command.Name = nameBox.Text.Trim(); command.Description = descriptionBox.Text.Trim(); command.Category = Convert.ToString(categoryBox.SelectedItem); command.Template = templateBox.Text; command.Confirm = confirmBox.Checked; command.ServerTypes = serverTypes.CheckedItems.Cast<object>().Select(Convert.ToString).ToArray(); command.Source = "user";
 			string error;
-			if (!ValidateUserQuickCommand(command, out error)) { MessageBox.Show(this, error, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
+			if (!ValidateUserQuickCommand(command, out error)) { ShowMineHarborDialog(this, error, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
 			Value = command; DialogResult = DialogResult.OK; Close();
 		}
 	}

@@ -24,6 +24,7 @@ $sources = @(
     'AssemblyInfo.cs',
     'StorageConfiguration.cs',
     'ModernLauncherGui.cs',
+	'ModernDialogs.cs',
     'RuntimeCompatibility.cs',
     'UpnpExternalAccess.cs',
     'BackupAndProfileTools.cs',

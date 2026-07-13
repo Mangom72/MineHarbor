@@ -239,7 +239,7 @@ internal static partial class Launcher
 			string message = IsBackupKorean()
 				? "선택한 백업으로 현재 프로필을 복원할까요?\r\n\r\n현재 상태를 먼저 자동 백업한 뒤 교체합니다."
 				: "Restore this profile from the selected backup?\r\n\r\nThe current state will be backed up before replacement.";
-			if (MessageBox.Show(this, message, Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+			if (ShowMineHarborDialog(this, message, Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
 			{
 				return;
 			}
@@ -295,7 +295,7 @@ internal static partial class Launcher
 					TryPostToUi(this, (MethodInvoker)delegate
 					{
 						SetBackupBusy(false, (IsBackupKorean() ? "작업 실패: " : "Operation failed: ") + exception.Message);
-						MessageBox.Show(this, exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+						ShowMineHarborDialog(this, exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
 					});
 				}
 			});
@@ -642,7 +642,7 @@ internal static partial class Launcher
 				ShowProfileMessage("마지막 프로필은 보관할 수 없습니다.", "The last profile cannot be archived.", true);
 				return;
 			}
-			if (MessageBox.Show(this, IsBackupKorean() ? "이 서버를 삭제하지 않고 보관 폴더로 옮길까요?" : "Move this server to the archive without deleting it?", Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+			if (ShowMineHarborDialog(this, IsBackupKorean() ? "이 서버를 삭제하지 않고 보관 폴더로 옮길까요?" : "Move this server to the archive without deleting it?", Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
 			{
 				return;
 			}
@@ -668,7 +668,7 @@ internal static partial class Launcher
 		{
 			ManagedProfileRecord profile = GetSelectedProfile();
 			if (profile == null || !EnsureProfileStopped(profile)) return;
-			MessageBox.Show(this, IsBackupKorean() ? "서버 폴더 전체(월드, 플러그인, 모드, 설정)를 휴지통으로 옮기며 30일 동안 복구할 수 있습니다. 별도 백업 폴더는 그대로 유지됩니다. 계속하려면 다음 창에 서버 이름을 입력하세요.\r\n\r\n" + profile.Name : "The entire server folder (worlds, plugins, mods, and settings) will move to Trash and can be restored for 30 days. Separate backups are kept. Enter the server name in the next window to continue.\r\n\r\n" + profile.Name, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+			ShowMineHarborDialog(this, IsBackupKorean() ? "서버 폴더 전체(월드, 플러그인, 모드, 설정)를 휴지통으로 옮기며 30일 동안 복구할 수 있습니다. 별도 백업 폴더는 그대로 유지됩니다. 계속하려면 다음 창에 서버 이름을 입력하세요.\r\n\r\n" + profile.Name : "The entire server folder (worlds, plugins, mods, and settings) will move to Trash and can be restored for 30 days. Separate backups are kept. Enter the server name in the next window to continue.\r\n\r\n" + profile.Name, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning);
 			string confirmation = PromptProfileText(this, IsBackupKorean() ? "서버 삭제 확인" : "Confirm server deletion", string.Empty);
 			if (!string.Equals(confirmation, profile.Name, StringComparison.Ordinal))
 			{
@@ -779,7 +779,7 @@ internal static partial class Launcher
 
 		private void ShowProfileMessage(string korean, string english, bool warning)
 		{
-			MessageBox.Show(this, IsBackupKorean() ? korean : english, Text, MessageBoxButtons.OK, warning ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+			ShowMineHarborDialog(this, IsBackupKorean() ? korean : english, Text, MessageBoxButtons.OK, warning ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
 		}
 	}
 
@@ -1238,17 +1238,14 @@ internal static partial class Launcher
 			textBox.MaxLength = 48;
 			textBox.Text = initial ?? string.Empty;
 			form.Controls.Add(textBox);
-			Button cancel = new Button();
-			cancel.Text = IsBackupKorean() ? "취소" : "Cancel";
+			ThemePalette palette = ThemePalette.Create(launcherForm != null && launcherForm.UsesDarkTheme);
+			Button cancel = CreateMineHarborDialogButton(IsBackupKorean() ? "취소" : "Cancel", 96, "secondary", ButtonIcon.None, palette);
 			cancel.DialogResult = DialogResult.Cancel;
-			cancel.Location = new Point(214, 82);
-			cancel.Size = new Size(86, 36);
+			cancel.Location = new Point(196, 78);
 			form.Controls.Add(cancel);
-			Button ok = new Button();
-			ok.Text = IsBackupKorean() ? "확인" : "OK";
+			Button ok = CreateMineHarborDialogButton(IsBackupKorean() ? "확인" : "OK", 96, "primary", ButtonIcon.Check, palette);
 			ok.DialogResult = DialogResult.OK;
-			ok.Location = new Point(310, 82);
-			ok.Size = new Size(86, 36);
+			ok.Location = new Point(300, 78);
 			form.Controls.Add(ok);
 			form.AcceptButton = ok;
 			form.CancelButton = cancel;
@@ -1260,7 +1257,7 @@ internal static partial class Launcher
 			string value = textBox.Text.Trim();
 			if (!IsValidProfileName(value))
 			{
-				MessageBox.Show(owner, IsBackupKorean() ? "프로필 이름은 1~48자로 입력해 주세요." : "Enter a profile name between 1 and 48 characters.", title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
+				ShowMineHarborDialog(owner, IsBackupKorean() ? "프로필 이름은 1~48자로 입력해 주세요." : "Enter a profile name between 1 and 48 characters.", title, MessageBoxButtons.OK, MessageBoxIcon.Warning);
 				return null;
 			}
 			return value;

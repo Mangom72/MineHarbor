@@ -423,7 +423,7 @@ internal static partial class Launcher
 			string warning = korean
 				? "플러그인과 모드는 서버 PC의 파일에 접근할 수 있습니다. 제작자와 출처를 신뢰할 수 있는지 확인한 뒤 설치하세요.\r\n\r\n'" + project.Title + "'을(를) 설치할까요?"
 				: "Plugins and mods can access files on the server PC. Verify that you trust the author and source before installing.\r\n\r\nInstall '" + project.Title + "'?";
-			if (MessageBox.Show(this, warning, korean ? "콘텐츠 설치 확인" : "Confirm installation", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
+			if (ShowMineHarborDialog(this, warning, korean ? "콘텐츠 설치 확인" : "Confirm installation", MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes)
 			{
 				return;
 			}
@@ -970,7 +970,7 @@ internal static partial class Launcher
 	private static void ShowContentMessage(IWin32Window owner, string korean, string english, bool warning)
 	{
 		bool isKorean = string.Equals(Localization.CurrentLanguage, Localization.Korean, StringComparison.OrdinalIgnoreCase);
-		MessageBox.Show(owner, isKorean ? korean : english, isKorean ? "서버 콘텐츠" : "Server content", MessageBoxButtons.OK, warning ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
+		ShowMineHarborDialog(owner, isKorean ? korean : english, isKorean ? "서버 콘텐츠" : "Server content", MessageBoxButtons.OK, warning ? MessageBoxIcon.Warning : MessageBoxIcon.Information);
 	}
 
 	private static void ApplySimpleDialogTheme(Control root)
@@ -988,10 +988,27 @@ internal static partial class Launcher
 		{
 			if (control is Button)
 			{
-				control.BackColor = palette.CardSecondary;
-				control.ForeColor = palette.Text;
 				Button button = control as Button;
-				if (button != null) button.FlatAppearance.BorderColor = palette.Border;
+				string role = Convert.ToString(button.Tag);
+				button.FlatAppearance.BorderColor = palette.Border;
+				if (string.Equals(role, "primary", StringComparison.Ordinal))
+				{
+					button.BackColor = palette.Accent;
+					button.ForeColor = Color.White;
+					button.FlatAppearance.MouseOverBackColor = palette.AccentHover;
+				}
+				else if (string.Equals(role, "danger", StringComparison.Ordinal))
+				{
+					button.BackColor = palette.DangerSoft;
+					button.ForeColor = palette.Danger;
+					button.FlatAppearance.MouseOverBackColor = ControlPaint.Dark(palette.DangerSoft, 0.04F);
+				}
+				else
+				{
+					button.BackColor = palette.CardSecondary;
+					button.ForeColor = palette.Text;
+					button.FlatAppearance.MouseOverBackColor = palette.AccentSoft;
+				}
 			}
 			else if (control is TextBox || control is ListView || control is DataGridView || control is NumericUpDown || control is ComboBox)
 			{
