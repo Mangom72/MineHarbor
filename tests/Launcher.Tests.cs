@@ -660,6 +660,10 @@ internal static class LauncherTests
 		Equal(false, Invoke("CanSendQuickCommand", new object[] { false, "list" }), "서버 미실행 명령 차단");
 		Equal(true, Invoke("IsSuggestionGenerationCurrent", new object[] { 4, 4 }), "최신 자동완성 응답 허용");
 		Equal(false, Invoke("IsSuggestionGenerationCurrent", new object[] { 3, 4 }), "오래된 자동완성 응답 무시");
+		Equal(1, Invoke("GetNextQuickCommandSuggestionIndex", new object[] { 0, 3, false }), "탭으로 다음 자동완성 후보 이동");
+		Equal(0, Invoke("GetNextQuickCommandSuggestionIndex", new object[] { 2, 3, false }), "마지막 후보에서 첫 후보로 순환");
+		Equal(2, Invoke("GetNextQuickCommandSuggestionIndex", new object[] { 0, 3, true }), "Shift+Tab으로 이전 후보 이동");
+		Equal(-1, Invoke("GetNextQuickCommandSuggestionIndex", new object[] { -1, 0, false }), "빈 자동완성 목록 처리");
 		Type suggestionType = launcher.GetNestedType("QuickCommandSuggestion", BindingFlags.NonPublic);
 		Type suggestionListType = typeof(List<>).MakeGenericType(suggestionType);
 		IList bridgeSuggestions = (IList)Activator.CreateInstance(suggestionListType);

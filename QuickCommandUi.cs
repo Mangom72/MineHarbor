@@ -157,7 +157,7 @@ internal static partial class Launcher
 			quickCommandSendButton.Text = QuickText("전송", "Send");
 			quickCommandSyntax.Text = QuickText("명령을 입력하거나 목록에서 선택하세요.", "Type a command or choose one from the list.");
 			ConfigureAccessibleField(quickCommandBox, QuickText("빠른 서버 명령", "Quick server command"), QuickText("현재 커서 위치에 맞는 후보를 표시합니다. 컨트롤과 스페이스 키로 강제로 열 수 있습니다.", "Shows suggestions for the current cursor. Press Ctrl+Space to force suggestions."));
-			ConfigureAccessibleField(quickCommandSuggestionList, QuickText("명령 자동완성 후보", "Command suggestions"), QuickText("위아래 방향키로 선택하고 탭 또는 엔터로 적용합니다.", "Use Up and Down, then Tab or Enter to apply."));
+			ConfigureAccessibleField(quickCommandSuggestionList, QuickText("명령 자동완성 후보", "Command suggestions"), QuickText("탭 또는 위아래 방향키로 후보를 이동하고 엔터로 선택한 명령을 전송합니다.", "Use Tab or Up and Down to move through suggestions, then press Enter to send the selected command."));
 			ReloadQuickCommandContext();
 			UpdateQuickCommandBridgeStatus();
 		}
@@ -274,14 +274,14 @@ internal static partial class Launcher
 			}
 			if (quickCommandSuggestionList.Visible && eventArgs.KeyCode == Keys.Tab)
 			{
-				ApplySelectedQuickCommandSuggestion();
+				quickCommandSuggestionList.SelectedIndex = GetNextQuickCommandSuggestionIndex(quickCommandSuggestionList.SelectedIndex, quickCommandSuggestionList.Items.Count, eventArgs.Shift);
 				eventArgs.SuppressKeyPress = true;
 				return;
 			}
 			if (eventArgs.KeyCode == Keys.Enter)
 			{
 				if (quickCommandSuggestionList.Visible && quickCommandSuggestionList.SelectedIndex >= 0) ApplySelectedQuickCommandSuggestion();
-				else SendQuickCommand();
+				SendQuickCommand();
 				eventArgs.SuppressKeyPress = true;
 				return;
 			}
@@ -455,6 +455,13 @@ internal static partial class Launcher
 			ReloadQuickCommandContext();
 			UpdateQuickCommandBridgeStatus();
 		}
+	}
+
+	private static int GetNextQuickCommandSuggestionIndex(int selectedIndex, int itemCount, bool backwards)
+	{
+		if (itemCount <= 0) return -1;
+		if (selectedIndex < 0 || selectedIndex >= itemCount) return backwards ? itemCount - 1 : 0;
+		return backwards ? (selectedIndex + itemCount - 1) % itemCount : (selectedIndex + 1) % itemCount;
 	}
 
 	private static bool CanSendQuickCommand(bool serverRunning, string command)
