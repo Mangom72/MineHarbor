@@ -18,26 +18,16 @@ foreach ($required in @($paperApi, $javaZip, $adventureApi, $adventureKey)) {
     if (!(Test-Path -LiteralPath $required)) { throw "Missing bridge build dependency: $required" }
 }
 
-$javac = $null
-if (![string]::IsNullOrWhiteSpace($env:JAVA_HOME)) {
-    $candidate = Join-Path $env:JAVA_HOME 'bin\javac.exe'
-    if (Test-Path -LiteralPath $candidate) { $javac = $candidate }
+# 시스템 Java 버전에 따라 결과가 달라지지 않도록 해시로 고정한 JDK만 사용합니다.
+$compilerRoot = Join-Path $projectRoot '.build\bridge-jdk'
+$cachedCompiler = Get-ChildItem -LiteralPath $compilerRoot -Recurse -Filter javac.exe -ErrorAction SilentlyContinue | Select-Object -First 1
+if (!$cachedCompiler) {
+    Remove-Item -LiteralPath $compilerRoot -Recurse -Force -ErrorAction SilentlyContinue
+    New-Item -ItemType Directory -Force -Path $compilerRoot | Out-Null
+    Expand-Archive -LiteralPath $javaZip -DestinationPath $compilerRoot -Force
+    $cachedCompiler = Get-ChildItem -LiteralPath $compilerRoot -Recurse -Filter javac.exe | Select-Object -First 1
 }
-if (!$javac) {
-    $candidate = Get-Command javac.exe -ErrorAction SilentlyContinue
-    if ($candidate) { $javac = $candidate.Source }
-}
-if (!$javac) {
-    $compilerRoot = Join-Path $projectRoot '.build\bridge-jdk'
-    $cachedCompiler = Get-ChildItem -LiteralPath $compilerRoot -Recurse -Filter javac.exe -ErrorAction SilentlyContinue | Select-Object -First 1
-    if (!$cachedCompiler) {
-        Remove-Item -LiteralPath $compilerRoot -Recurse -Force -ErrorAction SilentlyContinue
-        New-Item -ItemType Directory -Force -Path $compilerRoot | Out-Null
-        Expand-Archive -LiteralPath $javaZip -DestinationPath $compilerRoot -Force
-        $cachedCompiler = Get-ChildItem -LiteralPath $compilerRoot -Recurse -Filter javac.exe | Select-Object -First 1
-    }
-    if ($cachedCompiler) { $javac = $cachedCompiler.FullName }
-}
+$javac = if ($cachedCompiler) { $cachedCompiler.FullName } else { $null }
 if (!$javac) { throw 'Java compiler was not found.' }
 
 $work = Join-Path $projectRoot 'obj\command-bridge'
