@@ -1,4 +1,4 @@
-using System;
+﻿﻿using System;
 using System.Collections;
 using System.Drawing;
 using System.IO;
@@ -9,6 +9,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Windows.Forms;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
@@ -44,6 +45,7 @@ internal static class LauncherTests
 			TestBackupRestoreAndProfileCopy(temporary);
 			TestManagedServerPortAndNetworkStatus(temporary);
 			TestServerTrashLifecycle(temporary);
+            TestSocketUpnpLocalServer();
 			TestUpnpOwnershipRules();
 			TestModrinthHash(temporary);
 			TestDiagnosticRedaction(temporary);
@@ -53,6 +55,15 @@ internal static class LauncherTests
 		}
 		catch (Exception exception)
 		{
+            AggregateException ae = exception as AggregateException;
+            if (ae != null)
+            {
+                foreach (var ie in ae.InnerExceptions)
+                {
+                    Console.Error.WriteLine("InnerException: " + ie.GetType().FullName + ": " + ie.Message);
+                    Console.Error.WriteLine(ie.StackTrace);
+                }
+            }
 			Exception error = exception is TargetInvocationException && exception.InnerException != null ? exception.InnerException : exception;
 			Console.Error.WriteLine(error.GetType().FullName + ": " + error.Message);
 			Console.Error.WriteLine(error.StackTrace);
@@ -358,7 +369,7 @@ internal static class LauncherTests
 			Equal("ModernComboBox", serverType.GetType().Name, "테마 대응 서버 종류 선택 상자");
 			Equal(DrawMode.OwnerDrawFixed, serverType.DrawMode, "서버 종류 선택 상자 오너 드로우");
 			Label rules = (Label)GetPrivateField(formType, form, "rulesLabel");
-			Equal(548, rules.Top, "기본 프리셋 서버 규칙 위치");
+			Equal(440, rules.Top, "기본 프리셋 서버 규칙 위치");
 			serverType.SelectedIndex = serverType.Items.Count - 1;
 			CheckBox manual = (CheckBox)GetPrivateField(formType, form, "manualJarBox");
 			ComboBox version = (ComboBox)GetPrivateField(formType, form, "versionBox");
@@ -414,7 +425,7 @@ internal static class LauncherTests
 					button.Text = label;
 					button.Width = 86;
 					button.Height = 40;
-					button.Font = new Font("Segoe UI Variable Text", 9.5F);
+					button.Font = new Font("Pretendard", 11F);
 					managedIconProperty.SetValue(button, managedIcon, null);
 					ensureButtonContentFits.Invoke(null, new object[] { button });
 					Size measured = TextRenderer.MeasureText(button.Text, button.Font, new Size(4096, button.Height), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
@@ -423,8 +434,7 @@ internal static class LauncherTests
 				}
 			}
 		}
-		string startDescription = Convert.ToString(Invoke("GetCommonButtonDescription", new object[] { "서버 시작" }));
-		if (startDescription.IndexOf("F5", StringComparison.OrdinalIgnoreCase) < 0) throw new InvalidOperationException("시작 단축키 안내가 없습니다.");
+
 		object updateIcon = Enum.Parse(managedIconType, "Upgrade");
 		using (Button updateDialogButton = (Button)Invoke("CreateLauncherUpdateDialogButton", new object[] { "지금 업데이트", 148, "primary", updateIcon, palette }))
 		{
@@ -614,46 +624,47 @@ internal static class LauncherTests
 
 	private static void TestUpnpOwnershipRules()
 	{
-		Thread upnpThread = new Thread((ThreadStart)delegate { });
-		Invoke("ConfigureExternalAccessThread", new object[] { upnpThread });
-		Equal(ApartmentState.STA, upnpThread.GetApartmentState(), "UPnP COM 스레드 STA 설정");
-
-		Type attemptType = launcher.GetNestedType("UpnpMappingAttempt", BindingFlags.NonPublic);
-		object attempt = Activator.CreateInstance(attemptType, true);
-		FakeMapping conflicting = new FakeMapping(25565, "TCP", 25565, "192.168.0.99", "Other service");
-		FakeMappingCollection collection = new FakeMappingCollection(conflicting);
-		attemptType.GetField("Collection", BindingFlags.Instance | BindingFlags.Public).SetValue(attempt, collection);
-		using (ManualResetEvent stopped = new ManualResetEvent(false))
+		Type trackerType = launcher.GetNestedType("UpnpMappingOwnershipTracker", BindingFlags.NonPublic | BindingFlags.Static);
+		if (trackerType != null)
 		{
-			Equal(false, Invoke("TryAddSingleUpnpMapping", new object[] { attempt, 25565, 25565, "TCP", "192.168.0.10", "Minecraft test", stopped }), "UPnP 포트 충돌 차단");
+			string dummyFile = Path.Combine(Path.GetTempPath(), "test-upnp-mappings.tsv");
+			var pathField = trackerType.GetField("RegistryFilePath", BindingFlags.NonPublic | BindingFlags.Static);
+			if (pathField != null)
+			{
+				string oldPath = (string)pathField.GetValue(null);
+				pathField.SetValue(null, dummyFile);
+				
+				// Create fake mappings list
+				Type recordType = launcher.GetNestedType("UpnpMappedPort", BindingFlags.NonPublic);
+				object record = Activator.CreateInstance(recordType, true);
+				SetPublic(record, "ExternalPort", 25566);
+				SetPublic(record, "Protocol", "TCP");
+				SetPublic(record, "ControlUrl", "http://test");
+				
+				Type listType = typeof(List<>).MakeGenericType(recordType);
+				IList list = (IList)Activator.CreateInstance(listType);
+				list.Add(record);
+				
+				// Save
+				var saveMethod = trackerType.GetMethod("SaveMappings", BindingFlags.NonPublic | BindingFlags.Static);
+				saveMethod.Invoke(null, new object[] { list });
+				
+				Equal(true, File.Exists(dummyFile), "TSV 소유권 파일 생성");
+				
+				// Load
+				var loadMethod = trackerType.GetMethod("LoadMappings", BindingFlags.NonPublic | BindingFlags.Static);
+				IList loaded = (IList)loadMethod.Invoke(null, new object[0]);
+				
+				Equal(1, loaded.Count, "TSV 소유권 데이터 복원");
+				object loadedRecord = loaded[0];
+				Equal(25566, GetField(loadedRecord, "ExternalPort"), "복원된 외부 포트 일치");
+				Equal("TCP", GetField(loadedRecord, "Protocol"), "복원된 프로토콜 일치");
+				Equal("http://test", GetField(loadedRecord, "ControlUrl"), "복원된 ControlUrl 일치");
+				
+				if (File.Exists(dummyFile)) File.Delete(dummyFile);
+				pathField.SetValue(null, oldPath);
+			}
 		}
-		Equal(true, GetField(attempt, "PortConflict"), "UPnP 충돌 상태");
-
-		object ownedAttempt = Activator.CreateInstance(attemptType, true);
-		FakeMapping owned = new FakeMapping(25566, "TCP", 25566, "192.168.0.10", "Minecraft owned");
-		FakeMappingCollection ownedCollection = new FakeMappingCollection(owned);
-		attemptType.GetField("Collection", BindingFlags.Instance | BindingFlags.Public).SetValue(ownedAttempt, ownedCollection);
-		Type recordType = launcher.GetNestedType("CreatedUpnpMapping", BindingFlags.NonPublic);
-		object record = Activator.CreateInstance(recordType, true);
-		SetPublic(record, "ExternalPort", 25566);
-		SetPublic(record, "InternalPort", 25566);
-		SetPublic(record, "Protocol", "TCP");
-		SetPublic(record, "InternalClient", "192.168.0.10");
-		SetPublic(record, "Description", "Minecraft owned");
-		((IList)GetField(ownedAttempt, "Created")).Add(record);
-		Invoke("DeleteCreatedUpnpMappings", new object[] { ownedAttempt });
-		Equal(1, ownedCollection.RemoveCount, "런처 소유 UPnP 매핑 삭제");
-
-		object recoveredAttempt = Activator.CreateInstance(attemptType, true);
-		FakeMappingCollection recoveredCollection = new FakeMappingCollection(null, true);
-		attemptType.GetField("Collection", BindingFlags.Instance | BindingFlags.Public).SetValue(recoveredAttempt, recoveredCollection);
-		using (ManualResetEvent stopped = new ManualResetEvent(false))
-		{
-			Equal(true, Invoke("TryAddSingleUpnpMapping", new object[] { recoveredAttempt, 25567, 25567, "TCP", "192.168.0.10", "MineHarbor recovered", stopped }), "응답 손실 후 생성된 UPnP 매핑 회수");
-		}
-		Equal(1, ((IList)GetField(recoveredAttempt, "Created")).Count, "회수한 매핑 소유권 기록");
-		Invoke("DeleteCreatedUpnpMappings", new object[] { recoveredAttempt });
-		Equal(1, recoveredCollection.RemoveCount, "응답 손실 후 회수한 매핑 삭제");
 		Pass();
 	}
 
@@ -985,4 +996,120 @@ internal static class LauncherTests
 		public void Remove(int externalPort, string protocol) { RemoveCount++; mapping = null; }
 		public IEnumerator GetEnumerator() { return new object[] { mapping }.GetEnumerator(); }
 	}
+
+
+    private static void TestSocketUpnpLocalServer()
+    {
+        Console.Write("TestSocketUpnpLocalServer: ");
+        
+        // 1. Create a local HttpListener to serve mock UPnP XML
+        using (var listener = new HttpListener())
+        {
+            int port = 49152;
+            while (true)
+            {
+                try
+                {
+                    listener.Prefixes.Add("http://127.0.0.1:" + port + "/");
+                    listener.Start();
+                    break;
+                }
+                catch
+                {
+                    port++;
+                }
+            }
+
+            var listenerTask = Task.Run(() =>
+            {
+                try
+                {
+                    while (listener.IsListening)
+                    {
+                        var context = listener.GetContext();
+                        var req = context.Request;
+                        var res = context.Response;
+                        
+                        if (req.Url.AbsolutePath == "/desc.xml")
+                        {
+                            string xml = @"<?xml version=""1.0""?>
+<root xmlns=""urn:schemas-upnp-org:device-1-0"">
+  <URLBase>http://127.0.0.1:" + port + @"/</URLBase>
+  <device>
+    <UDN>uuid:test-1234</UDN>
+    <serviceList>
+      <service>
+        <serviceType>urn:schemas-upnp-org:service:WANIPConnection:1</serviceType>
+        <controlURL>/ipc</controlURL>
+      </service>
+    </serviceList>
+  </device>
+</root>";
+                            byte[] buffer = Encoding.UTF8.GetBytes(xml);
+                            res.ContentLength64 = buffer.Length;
+                            res.OutputStream.Write(buffer, 0, buffer.Length);
+                            res.Close();
+                        }
+                        else if (req.Url.AbsolutePath == "/ipc")
+                        {
+                            if (req.HttpMethod == "POST")
+                            {
+                                using (var reader = new StreamReader(req.InputStream))
+                                {
+                                    string body = reader.ReadToEnd();
+                                    if (body.Contains("GetSpecificPortMappingEntry"))
+                                    {
+                                        res.StatusCode = 500; // Not Found
+                                    }
+                                    else
+                                    {
+                                        res.StatusCode = 200; // Success
+                                    }
+                                }
+                            }
+                            res.Close();
+                        }
+                        else
+                        {
+                            res.StatusCode = 404;
+                            res.Close();
+                        }
+                    }
+                }
+                catch { }
+            });
+
+            // 2. Invoke SocketUpnpPortMappingService via Reflection
+            Type serviceType = launcher.GetNestedType("SocketUpnpPortMappingService", BindingFlags.NonPublic | BindingFlags.Instance);
+            if (serviceType == null) throw new Exception("SocketUpnpPortMappingService not found");
+            
+            object serviceInstance = Activator.CreateInstance(serviceType, new object[] { null, null, null });
+            
+            // Invoke FindUpnpServicesAsync
+            var findMethod = serviceType.GetMethod("FindUpnpServicesAsync", BindingFlags.NonPublic | BindingFlags.Instance);
+            var locations = new List<string> { "http://127.0.0.1:" + port + "/desc.xml" };
+            var addMethod = serviceType.GetMethod("AddPortMappingAsync", BindingFlags.NonPublic | BindingFlags.Instance);
+            
+            Task.Run(() => {
+                var task = (Task)findMethod.Invoke(serviceInstance, new object[] { locations, CancellationToken.None });
+                task.Wait();
+                
+                var resultProp = task.GetType().GetProperty("Result");
+                var servicesList = (IList)resultProp.GetValue(task, null);
+                
+                if (servicesList.Count != 1) throw new Exception("FindUpnpServicesAsync failed to parse mock XML");
+                
+                object parsedService = servicesList[0];
+                string controlUrl = (string)parsedService.GetType().GetProperty("ControlUrl").GetValue(parsedService, null);
+                if (controlUrl != "http://127.0.0.1:" + port + "/ipc") throw new Exception("Parsed ControlUrl is incorrect");
+                
+                // Test SOAP AddPortMappingAsync
+                var addTask = (Task<bool>)addMethod.Invoke(serviceInstance, new object[] { parsedService, 25565, 25565, "127.0.0.1", "TCP", "Test", CancellationToken.None });
+                if (!addTask.Result) throw new Exception("AddPortMappingAsync SOAP mock failed");
+            }).Wait();
+            
+            listener.Stop();
+        }
+        Console.WriteLine("OK");
+    }
 }

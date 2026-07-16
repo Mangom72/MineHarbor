@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string]$LauncherPath,
     [Parameter(Mandatory = $true)][string]$ServerJar,

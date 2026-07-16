@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
@@ -224,7 +224,7 @@ internal static partial class Launcher
 			StartPosition = FormStartPosition.CenterParent;
 			MinimumSize = new Size(760, 500);
 			Size = new Size(860, 580);
-			Font = new Font("Segoe UI Variable Text", 9.5F);
+			Font = new Font("Pretendard", 11F);
 			TableLayoutPanel root = new TableLayoutPanel();
 			root.Dock = DockStyle.Fill;
 			root.Padding = new Padding(24);
@@ -237,7 +237,7 @@ internal static partial class Launcher
 			Controls.Add(root);
 			Label heading = new Label();
 			heading.Text = korean ? "삭제한 서버는 30일 동안 보관됩니다" : "Deleted servers are kept for 30 days";
-			heading.Font = new Font("Segoe UI Variable Display Semib", 18F);
+			heading.Font = new Font("Pretendard", 18F, FontStyle.Bold);
 			heading.Dock = DockStyle.Fill;
 			root.Controls.Add(heading, 0, 0);
 			trashList = new BufferedListView();

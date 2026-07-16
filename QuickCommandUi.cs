@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -45,7 +45,7 @@ internal static partial class Launcher
 
 			quickCommandTitle = new Label();
 			quickCommandTitle.AutoSize = true;
-			quickCommandTitle.Font = new Font("Segoe UI Variable Text Semib", 11F);
+			quickCommandTitle.Font = new Font("Pretendard", 11F, FontStyle.Bold);
 			quickCommandTitle.Location = new Point(16, 12);
 			quickCommandPanel.Controls.Add(quickCommandTitle);
 
@@ -86,7 +86,7 @@ internal static partial class Launcher
 			quickCommandBox = new TextBox();
 			quickCommandBox.Dock = DockStyle.Fill;
 			quickCommandBox.Enabled = false;
-			quickCommandBox.Font = new Font("Segoe UI Variable Text", 10.5F);
+			quickCommandBox.Font = new Font("Pretendard", 11F);
 			quickCommandBox.TextChanged += delegate
 			{
 				quickCommandHistoryIndex = -1;
@@ -492,7 +492,7 @@ internal static partial class Launcher
 			MinimumSize = new Size(720, 500);
 			Size = new Size(820, 580);
 			AutoScaleMode = AutoScaleMode.Dpi;
-			Font = new Font("Segoe UI Variable Text", 10F);
+			Font = new Font("Pretendard", 11F);
 
 			TableLayoutPanel rootPanel = new TableLayoutPanel();
 			rootPanel.Dock = DockStyle.Fill;
@@ -681,7 +681,7 @@ internal static partial class Launcher
 			MaximizeBox = false;
 			MinimizeBox = false;
 			ClientSize = new Size(560, 500);
-			Font = new Font("Segoe UI Variable Text", 10F);
+			Font = new Font("Pretendard", 11F);
 			TableLayoutPanel layout = new TableLayoutPanel();
 			layout.Dock = DockStyle.Fill;
 			layout.Padding = new Padding(22);
@@ -735,8 +735,8 @@ internal static partial class Launcher
 			MinimizeBox = false;
 			ClientSize = new Size(560, 330);
 			AutoScaleMode = AutoScaleMode.Dpi;
-			Font = new Font("Segoe UI Variable Text", 10F);
-			Label title = new Label(); title.Text = LauncherUiText("실시간 명령 자동완성 플러그인을 설치하시겠습니까?", "Install the live command suggestion plugin?"); title.Font = new Font("Segoe UI Variable Display Semib", 16F); title.AutoSize = false; title.Location = new Point(28, 26); title.Size = new Size(504, 56); Controls.Add(title);
+			Font = new Font("Pretendard", 11F);
+			Label title = new Label(); title.Text = LauncherUiText("실시간 명령 자동완성 플러그인을 설치하시겠습니까?", "Install the live command suggestion plugin?"); title.Font = new Font("Pretendard", 16F, FontStyle.Bold); title.AutoSize = false; title.Location = new Point(28, 26); title.Size = new Size(584, 56); Controls.Add(title);
 			Label body = new Label(); body.Text = LauncherUiText("설치하면 현재 서버와 설치된 플러그인의 명령 및\r\n자동완성 후보를 런처에서 실시간으로 사용할 수 있습니다.\r\n\r\n브리지는 현재 PC 내부에서만 런처와 통신하며,\r\n별도의 외부 네트워크 포트를 열지 않습니다.", "It provides live commands and suggestions from this server\r\nand its installed plugins.\r\n\r\nThe bridge communicates only inside this PC and does not\r\nopen a separate external network port."); body.Location = new Point(30, 88); body.Size = new Size(500, 124); Controls.Add(body);
 			defaultChoice = new CheckBox(); defaultChoice.Text = LauncherUiText("이 선택을 이후 새 Paper/Purpur 서버의 기본값으로 사용", "Use this choice as the default for new Paper/Purpur servers"); defaultChoice.Location = new Point(30, 218); defaultChoice.Size = new Size(500, 30); Controls.Add(defaultChoice);
 			Button skip = new RoundedButton(); skip.Text = LauncherUiText("설치하지 않기", "Do not install"); skip.Size = new Size(154, 44); skip.Location = new Point(206, 266); skip.Click += delegate { Complete("skip"); }; Controls.Add(skip);

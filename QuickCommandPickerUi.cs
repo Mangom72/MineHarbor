@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -495,7 +495,7 @@ internal static partial class Launcher
 			MinimumSize = new Size(780, 540);
 			Size = new Size(900, 630);
 			AutoScaleMode = AutoScaleMode.Dpi;
-			Font = new Font("Segoe UI Variable Text", 10F);
+			Font = new Font("Pretendard", 11F);
 			KeyPreview = true;
 
 			TableLayoutPanel root = new TableLayoutPanel();
@@ -516,7 +516,7 @@ internal static partial class Launcher
 			root.Controls.Add(header, 0, 0);
 			Label title = new Label();
 			title.Text = LauncherUiText("원하는 명령을 단계별로 선택하세요", "Choose a command step by step");
-			title.Font = new Font("Segoe UI Variable Display Semib", 18F);
+			title.Font = new Font("Pretendard", 18F, FontStyle.Bold);
 			title.AutoSize = true;
 			title.Location = new Point(0, 0);
 			header.Controls.Add(title);
@@ -537,12 +537,12 @@ internal static partial class Launcher
 			searchLabel.Dock = DockStyle.Left;
 			searchLabel.Width = 62;
 			searchLabel.TextAlign = ContentAlignment.MiddleLeft;
-			searchLabel.Font = new Font("Segoe UI Variable Text Semib", 9.5F);
+			searchLabel.Font = new Font("Pretendard", 11F, FontStyle.Bold);
 			searchPanel.Controls.Add(searchLabel);
 			searchBox = new TextBox();
 			searchBox.BorderStyle = BorderStyle.None;
 			searchBox.Dock = DockStyle.Fill;
-			searchBox.Font = new Font("Segoe UI Variable Text", 10.5F);
+			searchBox.Font = new Font("Pretendard", 11F);
 			searchBox.TextChanged += delegate { RebuildCategories(); };
 			searchBox.KeyDown += delegate(object sender, KeyEventArgs eventArgs)
 			{
@@ -558,7 +558,7 @@ internal static partial class Launcher
 			breadcrumbLabel = new Label();
 			breadcrumbLabel.Dock = DockStyle.Fill;
 			breadcrumbLabel.TextAlign = ContentAlignment.MiddleLeft;
-			breadcrumbLabel.Font = new Font("Segoe UI Variable Text Semib", 10F);
+			breadcrumbLabel.Font = new Font("Pretendard", 11F, FontStyle.Bold);
 			breadcrumbLabel.AutoEllipsis = true;
 			root.Controls.Add(breadcrumbLabel, 0, 2);
 
@@ -686,7 +686,7 @@ internal static partial class Launcher
 			Label label = new Label();
 			label.Text = title;
 			label.Dock = DockStyle.Fill;
-			label.Font = new Font("Segoe UI Variable Text Semib", 10F);
+			label.Font = new Font("Pretendard", 11F, FontStyle.Bold);
 			layout.Controls.Add(label, 0, 0);
 			TableLayoutPanel listLayout = new TableLayoutPanel();
 			listLayout.Dock = DockStyle.Fill;

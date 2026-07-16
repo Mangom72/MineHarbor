@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [string]$OutputDirectory = (Join-Path $PSScriptRoot '..\artifacts'),
     [string]$DependencyDirectory = (Join-Path $PSScriptRoot '..\.build\dependencies')

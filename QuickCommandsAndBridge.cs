@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
@@ -318,7 +318,7 @@ internal static partial class Launcher
 				if (disposed || !connected) continue;
 				if ((DateTime.UtcNow - lastReceivedUtc).TotalSeconds > 35)
 				{
-					lock (writerLock) { try { if (client != null) client.Close(); } catch { } }
+					lock (writerLock) { try { if (client != null) client.Close(); } catch (Exception ex) { Console.WriteLine("[Bridge] 클라이언트 종료 실패: " + ex.Message); } }
 					continue;
 				}
 				string id = "p" + Interlocked.Increment(ref requestSequence).ToString(CultureInfo.InvariantCulture);
@@ -367,11 +367,11 @@ internal static partial class Launcher
 			if (disposed) return;
 			disposed = true;
 			connected = false;
-			try { listener.Stop(); } catch { }
-			lock (writerLock) { try { if (client != null) client.Close(); } catch { } client = null; writer = null; }
+			try { listener.Stop(); } catch (Exception ex) { Console.WriteLine("[Bridge] 리스너 중지 실패: " + ex.Message); }
+			lock (writerLock) { try { if (client != null) client.Close(); } catch (Exception ex) { Console.WriteLine("[Bridge] 클라이언트 닫기 실패: " + ex.Message); } client = null; writer = null; }
 			lock (requestLock) suggestionCallbacks.Clear();
-			try { if (acceptThread != Thread.CurrentThread) acceptThread.Join(2000); } catch { }
-			try { if (pingThread != Thread.CurrentThread) pingThread.Join(2000); } catch { }
+			try { if (acceptThread != Thread.CurrentThread) acceptThread.Join(2000); } catch (Exception ex) { Console.WriteLine("[Bridge] Accept 스레드 조인 실패: " + ex.Message); }
+			try { if (pingThread != Thread.CurrentThread) pingThread.Join(2000); } catch (Exception ex) { Console.WriteLine("[Bridge] Ping 스레드 조인 실패: " + ex.Message); }
 			DeleteBridgeSessionFile(serverDirectory);
 			NotifyCommandBridgeChanged();
 		}
@@ -962,7 +962,7 @@ internal static partial class Launcher
 		Dictionary<string, object> value = new Dictionary<string, object>(); value["port"] = port; value["token"] = token; value["protocol"] = CommandBridgeProtocolVersion; value["profile"] = profileName; value["expiresUtc"] = DateTime.UtcNow.AddHours(12).ToString("o", CultureInfo.InvariantCulture); WriteJsonAtomic(Path.Combine(serverDirectory, CommandBridgeSessionFileName), value);
 	}
 
-	private static void DeleteBridgeSessionFile(string serverDirectory) { try { DeleteFileIfPresent(Path.Combine(serverDirectory, CommandBridgeSessionFileName)); } catch { } }
+	internal static void DeleteBridgeSessionFile(string serverDirectory) { try { DeleteFileIfPresent(Path.Combine(serverDirectory, CommandBridgeSessionFileName)); } catch (Exception ex) { Console.WriteLine("[Bridge] 세션 파일 삭제 실패: " + ex.Message); } }
 	private static void WriteJsonAtomic(string path, object value) { Directory.CreateDirectory(Path.GetDirectoryName(path)); string temporary = path + ".준비중"; File.WriteAllText(temporary, new JavaScriptSerializer().Serialize(value), new UTF8Encoding(false)); ReplaceFile(temporary, path); }
 	private static string ReadLimitedLine(StreamReader reader, int maximum) { StringBuilder result = new StringBuilder(); while (true) { int value = reader.Read(); if (value < 0) return result.Length == 0 ? null : result.ToString(); char character = (char)value; if (character == '\n') return result.ToString(); if (character != '\r') result.Append(character); if (result.Length > maximum) throw new InvalidDataException("브리지 요청 크기 제한을 초과했습니다."); } }
 	private static Dictionary<string, object> DeserializeBridgeObject(string json) { if (string.IsNullOrEmpty(json) || json.Length > CommandBridgeMaximumLineLength) throw new InvalidDataException("브리지 JSON 크기가 올바르지 않습니다."); Dictionary<string, object> value = new JavaScriptSerializer().DeserializeObject(json) as Dictionary<string, object>; if (value == null || string.IsNullOrEmpty(BridgeString(value, "type")) || string.IsNullOrEmpty(BridgeString(value, "id"))) throw new InvalidDataException("브리지 JSON 형식이 올바르지 않습니다."); return value; }

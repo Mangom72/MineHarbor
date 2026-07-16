@@ -1,4 +1,4 @@
-[CmdletBinding()]
+﻿[CmdletBinding()]
 param(
     [Parameter(Mandatory = $true)][string]$ArtifactsDirectory,
     [string]$ReleaseTag
@@ -20,14 +20,28 @@ foreach ($path in @($portable, $legacyPortable, $zip, $setup, $bridge)) {
 }
 
 # 업데이트 창과 GitHub 릴리스가 항상 현재 제품 버전의 변경 기록을 공유하도록 CHANGELOG에서 직접 읽습니다.
-$changelog = Get-Content -LiteralPath (Join-Path $projectRoot 'CHANGELOG.md') -Raw
+$changelog = [IO.File]::ReadAllText((Join-Path $projectRoot 'CHANGELOG.md'), [Text.Encoding]::UTF8)
 $escapedVersion = [Regex]::Escape([string]$version.productVersion)
 $sectionMatch = [Regex]::Match($changelog, "(?ms)^## \[$escapedVersion\][^\r\n]*\r?\n(?<body>.*?)(?=^## \[|\z)")
 if (!$sectionMatch.Success) { throw "CHANGELOG section is missing for version $($version.productVersion)." }
 $changelogSection = $sectionMatch.Groups['body'].Value.Trim()
-$noteLines = @($changelogSection -split '\r?\n' | Where-Object { $_ -match '^\s*-\s+\S' } | ForEach-Object { $_.Trim() })
-if ($noteLines.Count -eq 0) { throw "CHANGELOG section has no release notes for version $($version.productVersion)." }
-$notes = $noteLines -join "`n"
+$koreanMatch = [Regex]::Match($changelogSection, "(?ms)(?:### Korean\r?\n)?(?<korean>.*?)(?=### English|\z)")
+$englishMatch = [Regex]::Match($changelogSection, "(?ms)### English\r?\n(?<english>.*?)(?=###.*|\z)")
+
+$koreanText = if ($koreanMatch.Success) { $koreanMatch.Groups['korean'].Value.Trim() } else { $changelogSection }
+$englishText = if ($englishMatch.Success) { $englishMatch.Groups['english'].Value.Trim() } else { $null }
+
+$koreanLines = @($koreanText -split '\r?\n' | Where-Object { $_ -match '^\s*-\s+\S' } | ForEach-Object { $_.Trim() })
+if ($koreanLines.Count -eq 0) { throw "CHANGELOG section has no release notes for version $($version.productVersion)." }
+$notes = $koreanLines -join "`n"
+
+$notesEn = $null
+if ($englishText) {
+    $englishLines = @($englishText -split '\r?\n' | Where-Object { $_ -match '^\s*-\s+\S' } | ForEach-Object { $_.Trim() })
+    if ($englishLines.Count -gt 0) {
+        $notesEn = $englishLines -join "`n"
+    }
+}
 
 $portableInfo = Get-Item -LiteralPath $portable
 $portableHash = (Get-FileHash -LiteralPath $portable -Algorithm SHA256).Hash.ToLowerInvariant()
@@ -42,6 +56,7 @@ $metadata = [ordered]@{
     sha256 = $portableHash
     size = $portableInfo.Length
     release_notes = $notes
+    release_notes_en = $notesEn
     minimum_supported_version = [string]$version.minimumSupportedVersion
     bridge = [ordered]@{
         version = [string]$version.productVersion

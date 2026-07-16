@@ -21,8 +21,13 @@ $portableExe = Join-Path $output 'MineHarbor.exe'
 $legacyPortableExe = Join-Path $output 'Minecraft-Server-Launcher.exe'
 $sources = @(
     'decompiled\Launcher.decompiled.cs',
+    'ChildProcessTracker.cs',
     'AssemblyInfo.cs',
     'StorageConfiguration.cs',
+    'ThemePalette.cs',
+    'Localization.cs',
+    'CustomControls.cs',
+    'RoundedProgressBar.cs',
     'ModernLauncherGui.cs',
 	'ModernDialogs.cs',
     'RuntimeCompatibility.cs',
@@ -35,6 +40,7 @@ $sources = @(
 	'QuickCommandsAndBridge.cs',
 	'QuickCommandUi.cs',
 	'QuickCommandPickerUi.cs',
+	'UpnpCore.cs',
     'obj\GeneratedVersionInfo.cs'
 ) | ForEach-Object { Join-Path $projectRoot $_ }
 
@@ -45,6 +51,7 @@ $arguments = @(
     '/reference:System.dll', '/reference:System.Core.dll', '/reference:System.Drawing.dll',
     '/reference:System.Windows.Forms.dll', '/reference:System.Web.Extensions.dll',
     '/reference:System.IO.Compression.dll', '/reference:System.IO.Compression.FileSystem.dll',
+    '/reference:System.Net.Http.dll',
     "/out:$portableExe"
 ) + $sources
 if (!$SkipCompile) {
@@ -70,6 +77,8 @@ elseif (!(Test-Path -LiteralPath $portableExe)) {
     throw "Portable EXE does not exist for -SkipCompile: $portableExe"
 }
 
+# Authenticode 署名
+& (Join-Path $projectRoot 'scripts\sign-build.ps1') -ExePath $portableExe
 # 기존 런처가 새 브랜드 버전을 자동 업데이트할 수 있도록 같은 바이너리의 예전 자산 이름을 함께 제공합니다.
 Copy-Item -LiteralPath $portableExe -Destination $legacyPortableExe -Force
 

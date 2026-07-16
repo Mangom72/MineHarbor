@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Windows.Forms;
@@ -84,7 +84,7 @@ internal static partial class Launcher
 			MinimizeBox = false;
 			MaximizeBox = false;
 			ShowInTaskbar = false;
-			Font = new Font("Segoe UI Variable Text", 10F);
+			Font = new Font("Pretendard", 11F);
 			BackColor = palette.Window;
 			ForeColor = palette.Text;
 			KeyPreview = true;
@@ -92,7 +92,7 @@ internal static partial class Launcher
 
 			Label heading = new Label();
 			heading.Text = Text;
-			heading.Font = new Font("Segoe UI Variable Display Semib", 17F);
+			heading.Font = new Font("Pretendard", 17F, FontStyle.Bold);
 			heading.ForeColor = palette.Text;
 			heading.AutoSize = false;
 			heading.Location = new Point(80, 24);
@@ -202,7 +202,7 @@ internal static partial class Launcher
 				eventArgs.Graphics.FillEllipse(brush, bounds);
 				eventArgs.Graphics.DrawEllipse(pen, bounds);
 				string symbol = Kind == MessageBoxIcon.Question ? "?" : Kind == MessageBoxIcon.Warning || Kind == MessageBoxIcon.Error ? "!" : "i";
-				using (Font font = new Font("Segoe UI Variable Display Semib", 17F, FontStyle.Bold))
+				using (Font font = new Font("Pretendard", 17F, FontStyle.Bold))
 				{
 					TextRenderer.DrawText(eventArgs.Graphics, symbol, font, Rectangle.Round(bounds), color, TextFormatFlags.HorizontalCenter | TextFormatFlags.VerticalCenter | TextFormatFlags.NoPadding);
 				}

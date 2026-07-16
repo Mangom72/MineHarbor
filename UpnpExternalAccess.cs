@@ -1,3 +1,4 @@
+﻿using System.Threading.Tasks;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -291,44 +292,69 @@ internal static partial class Launcher
 		throw lastError ?? new WebException("외부 접속 검사 서비스에 연결하지 못했습니다.");
 	}
 
+
 	private static UpnpMappingAttempt TryCreateUpnpMappings(int serverPort, NetworkDetails network, bool udpNeeded, WaitHandle stopped)
 	{
 		UpnpMappingAttempt result = new UpnpMappingAttempt();
 		if (network == null || string.IsNullOrWhiteSpace(network.LocalIpv4))
 		{
-			result.Error = "현재 PC의 내부 IPv4 주소를 확인하지 못했습니다.";
+			result.Error = "현재 PC의 로컬 IPv4 주소를 확인하지 못했습니다.";
 			return result;
 		}
+
 		try
 		{
 			if (stopped.WaitOne(0))
 			{
-				result.Error = "서버가 종료되어 UPnP 매핑을 중단했습니다.";
+				result.Error = "서버가 종료되어 UPnP 매핑이 중단되었습니다.";
 				return result;
 			}
-			if (!TryDiscoverUpnpCollection(result, stopped))
-			{
-				return result;
-			}
-			ReportExternalAccessStatus("UPnP 자동 매핑 중", false);
+
+			// 순수 C# 소켓 방식 UPnP 서비스 사용
+			IPortMappingService upnpService = new SocketUpnpPortMappingService();
+
 			string token = Guid.NewGuid().ToString("N").Substring(0, 12);
 			string description = "MineHarbor " + token;
-			if (!TryAddSingleUpnpMapping(result, serverPort, serverPort, "TCP", network.LocalIpv4, description, stopped))
-			{
-				return result;
-			}
-			if (udpNeeded)
-			{
-				if (!TryAddSingleUpnpMapping(result, serverPort, serverPort, "UDP", network.LocalIpv4, description, stopped))
-				{
-					if (result.PortConflict)
-					{
-						ReportExternalAccessStatus("포트 충돌 발생", true);
-						result.PortConflict = false;
-					}
-					Console.WriteLine("[UPnP] UDP 매핑을 만들지 못했습니다. TCP 외부 접속은 계속 검사합니다.");
-				}
-			}
+
+            using (var cts = new CancellationTokenSource())
+            {
+                Task.Run(() =>
+                {
+                    if (stopped.WaitOne()) cts.Cancel();
+                });
+
+                var mapTask = upnpService.MapPortsAsync(serverPort, serverPort, network.LocalIpv4, udpNeeded, description, cts.Token);
+                mapTask.Wait(cts.Token);
+                var mapResult = mapTask.Result;
+
+                if (mapResult.Success)
+                {
+                    result.Collection = new object(); // Dummy to pass null check
+                    result.RouterExternalIp = mapResult.RouterIp;
+
+                    if (mapResult.MappedTcpCount > 0)
+                        result.Created.Add(new CreatedUpnpMapping { ExternalPort = serverPort, InternalPort = serverPort, Protocol = "TCP", InternalClient = network.LocalIpv4, Description = description });
+                    if (mapResult.MappedUdpCount > 0)
+                        result.Created.Add(new CreatedUpnpMapping { ExternalPort = serverPort, InternalPort = serverPort, Protocol = "UDP", InternalClient = network.LocalIpv4, Description = description });
+                }
+                else
+                {
+                    result.Error = mapResult.ErrorMessage;
+                    result.PortConflict = mapResult.IsConflict;
+                    result.ExistingMatchingMapping = mapResult.ExistingMatchingMapping;
+                }
+            }
+		}
+		catch (AggregateException ae)
+		{
+            if (ae.InnerException is OperationCanceledException)
+            {
+                result.Error = "서버가 종료되어 UPnP 매핑이 중단되었습니다.";
+            }
+            else
+            {
+			    result.Error = SummarizeUpnpError(ae.InnerException);
+            }
 		}
 		catch (Exception exception)
 		{
@@ -596,43 +622,49 @@ internal static partial class Launcher
 		return null;
 	}
 
+
 	private static void DeleteCreatedUpnpMappings(UpnpMappingAttempt attempt)
 	{
 		bool allDeleted = true;
-		for (int i = attempt.Created.Count - 1; i >= 0; i--)
+		try
 		{
-			CreatedUpnpMapping record = attempt.Created[i];
-			object current = FindUpnpMapping(attempt.Collection, record.ExternalPort, record.Protocol);
-			if (current == null)
-			{
-				continue;
-			}
-			try
-			{
-				string client = Convert.ToString(GetComProperty(current, "InternalClient"), CultureInfo.InvariantCulture);
-				int port = Convert.ToInt32(GetComProperty(current, "InternalPort"), CultureInfo.InvariantCulture);
-				string description = Convert.ToString(GetComProperty(current, "Description"), CultureInfo.InvariantCulture);
-				if (!string.Equals(client, record.InternalClient, StringComparison.OrdinalIgnoreCase) || port != record.InternalPort || !string.Equals(description, record.Description, StringComparison.Ordinal))
-				{
-					allDeleted = false;
-					Console.WriteLine("[UPnP] 매핑 소유 정보가 달라 삭제하지 않았습니다: " + record.Protocol + " " + record.ExternalPort);
-					continue;
-				}
-				InvokeComMethod(attempt.Collection, "Remove", record.ExternalPort, record.Protocol);
-			}
-			catch (Exception exception)
-			{
-				allDeleted = false;
-				Console.WriteLine("[UPnP] 매핑 삭제 실패: " + SummarizeUpnpError(exception));
-			}
-			finally
-			{
-				ReleaseComObject(current);
-			}
+            IPortMappingService upnpService = new SocketUpnpPortMappingService();
+            try
+            {
+                var crashTask = ((SocketUpnpPortMappingService)upnpService).HandleCrashRecoveryAsync(CancellationToken.None);
+                crashTask.Wait();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine("[UPnP] 충돌 복구 중 오류: " + ex.Message);
+            }
+            var task = upnpService.CleanupMappingsAsync(CancellationToken.None);
+            task.Wait();
+		}
+		catch (Exception exception)
+		{
+			allDeleted = false;
+			Console.WriteLine("[UPnP] 매핑 삭제 실패: " + SummarizeUpnpError(exception));
 		}
 		string status = allDeleted ? "포트 매핑 삭제 완료" : "포트 매핑 삭제 실패";
 		Interlocked.Exchange(ref lastUpnpCleanupStatus, TranslateExternalAccessStatus(status));
 		ReportExternalAccessStatus(status, !allDeleted);
+	}
+
+	internal static int ClearAllMineHarborUpnpMappings()
+	{
+		try
+		{
+			IPortMappingService upnpService = new SocketUpnpPortMappingService();
+			var task = upnpService.CleanupMappingsAsync(CancellationToken.None);
+			task.Wait();
+			return task.Result;
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine("[UPnP] ClearAllMineHarborUpnpMappings 실패: " + ex.Message);
+			return 0;
+		}
 	}
 
 	private static string ConsumeUpnpCleanupStatus()

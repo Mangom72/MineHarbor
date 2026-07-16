@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Drawing;
@@ -41,7 +41,7 @@ internal static partial class Launcher
 			StartPosition = FormStartPosition.CenterParent;
 			MinimumSize = new Size(800, 540);
 			Size = new Size(900, 620);
-			Font = new Font("Segoe UI Variable Text", 9.5F);
+			Font = new Font("Pretendard", 11F);
 			AutoScaleMode = AutoScaleMode.Dpi;
 
 			TableLayoutPanel root = new TableLayoutPanel();
@@ -60,7 +60,7 @@ internal static partial class Launcher
 			root.Controls.Add(header, 0, 0);
 			Label title = new Label();
 			title.Text = korean ? "월드와 설정을 안전하게 보관하세요" : "Keep worlds and settings safe";
-			title.Font = new Font("Segoe UI Variable Display Semib", 18F);
+			title.Font = new Font("Pretendard", 18F, FontStyle.Bold);
 			title.AutoSize = true;
 			title.Location = new Point(0, 0);
 			header.Controls.Add(title);
@@ -346,7 +346,7 @@ internal static partial class Launcher
 			StartPosition = FormStartPosition.CenterParent;
 			MinimumSize = new Size(780, 520);
 			Size = new Size(860, 590);
-			Font = new Font("Segoe UI Variable Text", 9.5F);
+			Font = new Font("Pretendard", 11F);
 
 			TableLayoutPanel root = new TableLayoutPanel();
 			root.Dock = DockStyle.Fill;
@@ -361,7 +361,7 @@ internal static partial class Launcher
 
 			Label heading = new Label();
 			heading.Text = korean ? "서버를 만들고 복제하거나 안전하게 보관하세요" : "Create, clone, or safely archive servers";
-			heading.Font = new Font("Segoe UI Variable Display Semib", 18F);
+			heading.Font = new Font("Pretendard", 18F, FontStyle.Bold);
 			heading.Dock = DockStyle.Fill;
 			root.Controls.Add(heading, 0, 0);
 
@@ -1231,7 +1231,7 @@ internal static partial class Launcher
 			form.MinimizeBox = false;
 			form.MaximizeBox = false;
 			form.ClientSize = new Size(420, 140);
-			form.Font = new Font("Segoe UI Variable Text", 10F);
+			form.Font = new Font("Pretendard", 11F);
 			TextBox textBox = new TextBox();
 			textBox.Location = new Point(24, 28);
 			textBox.Size = new Size(372, 30);
