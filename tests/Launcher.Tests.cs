@@ -118,14 +118,16 @@ internal static class LauncherTests
 	{
 		string hash = new string('a', 64);
 		Equal("Mangom72/MineHarbor", Convert.ToString(Invoke("GetLauncherReleaseRepositoryPath", new object[0])), "정식 자동 업데이트 저장소");
-		string json = "{\"version\":\"0.4.2\",\"build\":\"26.2.45.30\",\"download_url\":\"https://github.com/Mangom72/MineHarbor/releases/download/v0.4.2/Minecraft-Server-Launcher.exe\",\"primary_download_url\":\"https://github.com/Mangom72/MineHarbor/releases/download/v0.4.2/MineHarbor.exe\",\"sha256\":\"" + hash + "\",\"size\":2097152,\"release_notes\":\"test\",\"minimum_supported_version\":\"0.1.0\"}";
+		string json = "{\"version\":\"0.4.2\",\"build\":\"26.2.45.30\",\"download_url\":\"https://github.com/Mangom72/mc-server-launcher/releases/download/v0.4.2/Minecraft-Server-Launcher.exe\",\"primary_download_url\":\"https://github.com/Mangom72/mc-server-launcher/releases/download/v0.4.2/MineHarbor.exe\",\"sha256\":\"" + hash + "\",\"size\":2097152,\"release_notes\":\"test\",\"minimum_supported_version\":\"0.1.0\"}";
 		object metadata = Invoke("ParseLauncherUpdateMetadata", new object[] { json });
 		Equal("0.4.2", Convert.ToString(GetField(metadata, "ProductVersion")), "업데이트 제품 버전");
 		Equal("26.2.45.30", Convert.ToString(GetField(metadata, "BuildNumber")), "업데이트 빌드");
-		Equal("https://github.com/Mangom72/MineHarbor/releases/download/v0.4.2/MineHarbor.exe", Convert.ToString(GetField(metadata, "Url")), "MineHarbor 기본 업데이트 자산");
-		string legacyJson = json.Replace(",\"primary_download_url\":\"https://github.com/Mangom72/MineHarbor/releases/download/v0.4.2/MineHarbor.exe\"", string.Empty);
+		Equal("https://github.com/Mangom72/mc-server-launcher/releases/download/v0.4.2/MineHarbor.exe", Convert.ToString(GetField(metadata, "Url")), "기존 버전 호환 업데이트 자산");
+		string canonicalJson = json.Replace("Mangom72/mc-server-launcher", "Mangom72/MineHarbor");
+		Equal("https://github.com/Mangom72/MineHarbor/releases/download/v0.4.2/MineHarbor.exe", Convert.ToString(GetField(Invoke("ParseLauncherUpdateMetadata", new object[] { canonicalJson }), "Url")), "정식 저장소 업데이트 자산");
+		string legacyJson = json.Replace(",\"primary_download_url\":\"https://github.com/Mangom72/mc-server-launcher/releases/download/v0.4.2/MineHarbor.exe\"", string.Empty);
 		object legacyMetadata = Invoke("ParseLauncherUpdateMetadata", new object[] { legacyJson });
-		Equal("https://github.com/Mangom72/MineHarbor/releases/download/v0.4.2/Minecraft-Server-Launcher.exe", Convert.ToString(GetField(legacyMetadata, "Url")), "기존 업데이트 메타데이터 호환");
+		Equal("https://github.com/Mangom72/mc-server-launcher/releases/download/v0.4.2/Minecraft-Server-Launcher.exe", Convert.ToString(GetField(legacyMetadata, "Url")), "기존 업데이트 메타데이터 호환");
 		Equal(true, Invoke("IsLauncherUpdateNewer", new object[] { metadata, "0.4.1", "26.2.45.29" }), "새 제품 버전 판별");
 		Equal(false, Invoke("IsLauncherUpdateNewer", new object[] { metadata, "0.4.2", "26.2.45.30" }), "최신 버전 판별");
 		ExpectFailure(delegate { Invoke("ParseLauncherUpdateMetadata", new object[] { "{}" }); }, "누락된 업데이트 메타데이터");

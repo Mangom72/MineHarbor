@@ -739,8 +739,32 @@ internal static partial class Launcher
 	private static bool IsAllowedLauncherDownloadUrl(string url)
 	{
 		Uri result;
-		string requiredPrefix = "/" + GetLauncherReleaseRepositoryPath() + "/releases/download/";
-		if (Uri.TryCreate(url, UriKind.Absolute, out result) && result.Scheme == Uri.UriSchemeHttps && result.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase) && result.AbsolutePath.StartsWith(requiredPrefix, StringComparison.OrdinalIgnoreCase))
+		if (!Uri.TryCreate(url, UriKind.Absolute, out result) || result.Scheme != Uri.UriSchemeHttps || !result.Host.Equals("github.com", StringComparison.OrdinalIgnoreCase)) return false;
+
+		// 저장소 이름 변경 전 런처가 새 버전으로 넘어올 수 있도록 GitHub가 유지하는 이전 별칭도 허용합니다.
+
+		string[] repositoryPaths = new string[] { GetLauncherReleaseRepositoryPath(), "Mangom72/mc-server-launcher" };
+
+		bool allowedRepository = false;
+
+		for (int i = 0; i < repositoryPaths.Length; i = checked(i + 1))
+
+		{
+
+			string requiredPrefix = "/" + repositoryPaths[i] + "/releases/download/";
+
+			if (result.AbsolutePath.StartsWith(requiredPrefix, StringComparison.OrdinalIgnoreCase))
+
+			{
+
+				allowedRepository = true;
+
+				break;
+
+			}
+
+		}
+		if (allowedRepository)
 		{
 			return result.AbsolutePath.EndsWith("/" + LauncherReleaseAssetName, StringComparison.OrdinalIgnoreCase) || result.AbsolutePath.EndsWith("/" + LegacyLauncherReleaseAssetName, StringComparison.OrdinalIgnoreCase);
 		}
