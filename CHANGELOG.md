@@ -19,7 +19,6 @@ Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.
 - **Mapping recovery and ownership protection**: Rechecked router state after a lost add response and removed only MineHarbor-owned mappings whose description, protocol, external and internal ports, and internal address all match exactly.
 - **Canonical automatic-update path**: Standardized launcher and metadata downloads on the official `Mangom72/MineHarbor` GitHub Release and verify release URLs, sizes, and SHA-256 hashes before publication.
 
-
 ## [1.5.20] - 2026-07-18
 
 ### Korean
