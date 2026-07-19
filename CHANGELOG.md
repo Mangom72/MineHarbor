@@ -5,6 +5,19 @@
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
 
+## [1.5.22] - 2026-07-20
+
+### Korean
+- **기존 버전 자동 업데이트 호환 복구**: `v1.5.20` 이하 런처가 허용하는 이전 저장소 별칭 다운로드 URL을 릴리스 메타데이터에 유지하여 최신 버전으로 바로 업데이트할 수 있도록 수정했습니다.
+- **저장소 이전 경로 동시 허용**: 새 런처는 정식 `Mangom72/MineHarbor` 경로와 기존 `Mangom72/mc-server-launcher` 별칭을 모두 엄격한 GitHub Release 경로로 검증합니다.
+- **실제 이전 바이너리 회귀 검증**: 공개 `v1.5.20` 실행 파일이 새 `latest/update.json`을 파싱하고 실행 파일의 크기·SHA-256을 검증할 수 있는지 릴리스 후 다시 확인합니다.
+
+### English
+- **Restored automatic updates for older versions**: Kept the legacy repository-alias download URLs in release metadata so launchers through `v1.5.20` can update directly to the latest release.
+- **Allowed both repository migration paths**: New launchers strictly accept GitHub Release downloads from both the canonical `Mangom72/MineHarbor` path and the legacy `Mangom72/mc-server-launcher` alias.
+- **Regression-tested with the real previous binary**: The published `v1.5.20` executable is checked after release to ensure it can parse the new `latest/update.json` and verify the executable size and SHA-256.
+
+
 ## [1.5.21] - 2026-07-20
 
 ### Korean

@@ -50,9 +50,9 @@ $bridgeHash = (Get-FileHash -LiteralPath $bridge -Algorithm SHA256).Hash.ToLower
 $metadata = [ordered]@{
     version = [string]$version.productVersion
     build = [string]$version.buildNumber
-    # 이전 버전은 이 필드를 사용하므로 호환 자산 이름을 유지합니다.
-    download_url = "https://github.com/Mangom72/MineHarbor/releases/download/$ReleaseTag/Minecraft-Server-Launcher.exe"
-    primary_download_url = "https://github.com/Mangom72/MineHarbor/releases/download/$ReleaseTag/MineHarbor.exe"
+    # v1.5.20 이하 런처의 허용 경로와 자산 이름을 유지합니다. GitHub가 이 별칭을 정식 저장소로 리디렉션합니다.
+    download_url = "https://github.com/Mangom72/mc-server-launcher/releases/download/$ReleaseTag/Minecraft-Server-Launcher.exe"
+    primary_download_url = "https://github.com/Mangom72/mc-server-launcher/releases/download/$ReleaseTag/MineHarbor.exe"
     sha256 = $portableHash
     size = $portableInfo.Length
     release_notes = $notes
@@ -63,7 +63,7 @@ $metadata = [ordered]@{
         protocol = 1
         minimum_minecraft = '1.13'
         maximum_minecraft = '26.2'
-        download_url = "https://github.com/Mangom72/MineHarbor/releases/download/$ReleaseTag/MineHarbor-Command-Bridge-Paper-v$($version.productVersion).jar"
+        download_url = "https://github.com/Mangom72/mc-server-launcher/releases/download/$ReleaseTag/MineHarbor-Command-Bridge-Paper-v$($version.productVersion).jar"
         sha256 = $bridgeHash
         size = $bridgeInfo.Length
     }
