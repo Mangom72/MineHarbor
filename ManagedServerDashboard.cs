@@ -1160,7 +1160,8 @@ internal static partial class Launcher
 
 			outputBox = new RichTextBox();
 			outputBox.Dock = DockStyle.Fill;
-			outputBox.ReadOnly = true;
+			outputBox.ReadOnly = true;
+			outputBox.BorderStyle = BorderStyle.None;
 			outputBox.Font = new Font("Consolas", 9F);
 			outputBox.WordWrap = false;
 			outputBox.DetectUrls = true;
@@ -1201,10 +1202,12 @@ internal static partial class Launcher
 			Button send = MultiServerDashboardForm.NewManagedButton(ManagedText("전송", "Send"), 90, "primary");
 			send.Dock = DockStyle.Right;
 			send.Click += delegate { SendManagedCommand(); };
-			commandPanel.Controls.Add(send);
-			EnsureButtonContentFits(send);
-
-			timer = new System.Windows.Forms.Timer();
+			commandPanel.Controls.Add(send);
+			EnsureButtonContentFits(send);
+			// 채우기 영역을 도킹 순서의 마지막에 계산해 상단·하단 영역의 공간을 정확히 남깁니다.
+			outputBox.BringToFront();
+
+			timer = new System.Windows.Forms.Timer();
 			timer.Interval = 500;
 			timer.Tick += delegate { RenderConsoleIfChanged(); };
 			timer.Start();

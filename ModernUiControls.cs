@@ -4,6 +4,7 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Runtime.CompilerServices;
 using System.Windows.Forms;
 
 internal static partial class Launcher
@@ -148,15 +149,67 @@ internal static partial class Launcher
 
 	private static class NativeControlTheme
 	{
+		private sealed class ThemeState
+		{
+			public bool Dark;
+			public bool Hooked;
+		}
+
+		private static readonly ConditionalWeakTable<Control, ThemeState> States = new ConditionalWeakTable<Control, ThemeState>();
+
 		[DllImport("uxtheme.dll", CharSet = CharSet.Unicode)]
 		private static extern int SetWindowTheme(IntPtr handle, string subAppName, string subIdList);
 
 		public static void Apply(Control control, bool dark)
 		{
-			if (control == null || control.IsDisposed || !control.IsHandleCreated) return;
+			if (control == null || control.IsDisposed) return;
+			ThemeState state = States.GetOrCreateValue(control);
+			state.Dark = dark;
+			if (!state.Hooked)
+			{
+				state.Hooked = true;
+				control.HandleCreated += delegate { Apply(control, state.Dark); };
+			}
+			if (!control.IsHandleCreated) return;
 			try { SetWindowTheme(control.Handle, dark ? "DarkMode_Explorer" : "Explorer", null); }
 			catch (DllNotFoundException) { }
 			catch (EntryPointNotFoundException) { }
+		}
+	}
+
+	internal sealed class ModernGroupBox : GroupBox
+	{
+		public Color BorderColor { get; set; }
+		public int CornerRadius { get; set; }
+
+		public ModernGroupBox()
+		{
+			SetStyle(ControlStyles.UserPaint | ControlStyles.AllPaintingInWmPaint | ControlStyles.OptimizedDoubleBuffer | ControlStyles.ResizeRedraw, true);
+			BorderColor = Color.FromArgb(220, 226, 232);
+			CornerRadius = 12;
+			Padding = new Padding(14, 24, 14, 14);
+		}
+
+		protected override void OnPaint(PaintEventArgs eventArgs)
+		{
+			eventArgs.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+			eventArgs.Graphics.Clear(BackColor);
+			Size textSize = TextRenderer.MeasureText(Text, Font, new Size(Math.Max(1, Width - 28), Height), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+			int top = Math.Max(6, textSize.Height / 2);
+			Rectangle bounds = new Rectangle(1, top, Math.Max(1, Width - 3), Math.Max(1, Height - top - 2));
+			using (GraphicsPath path = RoundedPanel.CreateRoundedRectangle(bounds, CornerRadius))
+			using (Pen pen = new Pen(BorderColor, 1F)) eventArgs.Graphics.DrawPath(pen, path);
+			if (!string.IsNullOrEmpty(Text))
+			{
+				Rectangle textBack = new Rectangle(14, 0, Math.Min(textSize.Width + 10, Math.Max(1, Width - 28)), textSize.Height + 2);
+				using (SolidBrush brush = new SolidBrush(BackColor)) eventArgs.Graphics.FillRectangle(brush, textBack);
+				TextRenderer.DrawText(eventArgs.Graphics, Text, Font, new Point(19, 1), ForeColor, TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+			}
+			if (Focused && ShowFocusCues)
+			{
+				Rectangle focus = new Rectangle(17, 1, Math.Max(1, Math.Min(textSize.Width, Width - 36)), Math.Max(1, textSize.Height));
+				ControlPaint.DrawFocusRectangle(eventArgs.Graphics, focus, ForeColor, BackColor);
+			}
 		}
 	}
 
@@ -579,6 +632,7 @@ internal static partial class Launcher
 
 	private static void ApplyModernControlPalette(Control control, ThemePalette palette)
 	{
+		bool dark = palette.Window.GetBrightness() < 0.45F;
 		ModernCheckBox checkBox = control as ModernCheckBox;
 		if (checkBox != null)
 		{
@@ -624,8 +678,46 @@ internal static partial class Launcher
 			suggestionList.ForeColor = palette.Text;
 			suggestionList.SelectionBackColor = palette.AccentSoft;
 			suggestionList.BorderColor = palette.Border;
-			NativeControlTheme.Apply(suggestionList, palette.Window.GetBrightness() < 0.45F);
+			NativeControlTheme.Apply(suggestionList, dark);
 			suggestionList.Invalidate();
 		}
+		ModernGroupBox groupBox = control as ModernGroupBox;
+		if (groupBox != null)
+		{
+			groupBox.BackColor = palette.Card;
+			groupBox.ForeColor = palette.Text;
+			groupBox.BorderColor = palette.Border;
+			groupBox.Invalidate();
+		}
+		if (control is TextBoxBase || control is ListBox || control is CheckedListBox || control is ListView || control is TreeView || control is NumericUpDown || control is ComboBox)
+		{
+			NativeControlTheme.Apply(control, dark);
+		}
+		DataGridView grid = control as DataGridView;
+		if (grid != null)
+		{
+			grid.EnableHeadersVisualStyles = false;
+			grid.BackgroundColor = palette.Card;
+			grid.BorderStyle = BorderStyle.None;
+			grid.GridColor = palette.Border;
+			grid.DefaultCellStyle.BackColor = palette.Card;
+			grid.DefaultCellStyle.ForeColor = palette.Text;
+			grid.DefaultCellStyle.SelectionBackColor = palette.AccentSoft;
+			grid.DefaultCellStyle.SelectionForeColor = palette.Text;
+			grid.ColumnHeadersDefaultCellStyle.BackColor = palette.CardSecondary;
+			grid.ColumnHeadersDefaultCellStyle.ForeColor = palette.Text;
+			grid.RowHeadersDefaultCellStyle.BackColor = palette.CardSecondary;
+			grid.RowHeadersDefaultCellStyle.ForeColor = palette.Text;
+		}
+	}
+
+	private static void ApplyRoundedPanelPalette(RoundedPanel panel, ThemePalette palette)
+	{
+		string role = Convert.ToString(panel.Tag);
+		bool inputSurface = string.Equals(role, "input-surface", StringComparison.Ordinal);
+		bool secondarySurface = inputSurface || string.Equals(role, "surface", StringComparison.Ordinal);
+		panel.BackColor = secondarySurface ? palette.CardSecondary : palette.Card;
+		panel.BorderColor = inputSurface ? palette.Border : secondarySurface ? panel.BackColor : palette.Border;
+		panel.Invalidate();
 	}
 }

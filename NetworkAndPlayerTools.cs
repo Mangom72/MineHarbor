@@ -55,19 +55,23 @@ internal static partial class Launcher
 		return box;
 	}
 
-	private static void ApplyToolTheme(Control parent, ThemePalette palette)
-	{
+	private static void ApplyToolTheme(Control parent, ThemePalette palette)
+	{
+		Form form = parent as Form;
+		if (form != null) TitleBarDwm.BindTheme(form, palette);
 		foreach (Control control in parent.Controls)
 		{
 			ApplyModernControlPalette(control, palette);
 			RoundedPanel roundedPanel = control as RoundedPanel;
 			if (roundedPanel != null)
 			{
-				bool surface = string.Equals(Convert.ToString(roundedPanel.Tag), "surface", StringComparison.Ordinal);
-				roundedPanel.BackColor = surface ? palette.CardSecondary : palette.Card;
-				roundedPanel.BorderColor = surface ? roundedPanel.BackColor : palette.Border;
+				ApplyRoundedPanelPalette(roundedPanel, palette);
 			}
-			else if (control is Button)
+			else if (control is ModernGroupBox)
+			{
+				// 공통 컨트롤 팔레트가 현대형 그룹 테두리와 표면을 함께 설정합니다.
+			}
+			else if (control is Button)
 			{
 				Button button = (Button)control;
 				string role = Convert.ToString(button.Tag);

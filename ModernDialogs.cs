@@ -110,6 +110,7 @@ internal static partial class Launcher
 			Font = new Font("Pretendard", 11F);
 			BackColor = palette.Window;
 			ForeColor = palette.Text;
+			TitleBarDwm.BindTheme(this, palette);
 			AutoScaleMode = AutoScaleMode.Dpi;
 
 			Label heading = new Label
@@ -181,6 +182,7 @@ internal static partial class Launcher
 			Font = new Font("Pretendard", 11F);
 			BackColor = palette.Window;
 			ForeColor = palette.Text;
+			TitleBarDwm.BindTheme(this, palette);
 			KeyPreview = true;
 			AutoScaleMode = AutoScaleMode.Dpi;
 
@@ -217,6 +219,7 @@ internal static partial class Launcher
 			messageBox.ScrollBars = measured.Height + 14 > messageHeight ? RichTextBoxScrollBars.Vertical : RichTextBoxScrollBars.None;
 			messageBox.DetectUrls = true;
 			messageBox.AccessibleName = safeMessage;
+			ApplyModernControlPalette(messageBox, palette);
 			Controls.Add(messageBox);
 
 			int buttonTop = messageBox.Bottom + 24;

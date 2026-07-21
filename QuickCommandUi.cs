@@ -505,13 +505,14 @@ internal static partial class Launcher
 			rootPanel.RowStyles.Add(new RowStyle(SizeType.Absolute, 54F));
 			Controls.Add(rootPanel);
 
-			GroupBox userGroup = new GroupBox();
+			GroupBox userGroup = new ModernGroupBox();
 			userGroup.Text = LauncherUiText("사용자 명령", "User commands");
 			userGroup.Dock = DockStyle.Fill;
-			userGroup.Padding = new Padding(12);
+			userGroup.Padding = new Padding(14, 28, 14, 14);
 			rootPanel.Controls.Add(userGroup, 0, 0);
 			commandList = new ListBox();
 			commandList.Dock = DockStyle.Fill;
+			commandList.BorderStyle = BorderStyle.None;
 			ConfigureAccessibleField(commandList, LauncherUiText("사용자 명령 목록", "User command list"), LauncherUiText("추가하거나 수정할 사용자 명령을 선택합니다.", "Select a user command to add or edit."));
 			userGroup.Controls.Add(commandList);
 			Panel commandButtons = new Panel();
@@ -522,10 +523,10 @@ internal static partial class Launcher
 			AddManagerButton(commandButtons, LauncherUiText("수정", "Edit"), 94, delegate { EditCommand(commandList.SelectedItem as QuickCommandDefinition); });
 			AddManagerButton(commandButtons, LauncherUiText("삭제", "Delete"), 188, DeleteSelectedCommand);
 
-			GroupBox bridgeGroup = new GroupBox();
+			GroupBox bridgeGroup = new ModernGroupBox();
 			bridgeGroup.Text = LauncherUiText("Paper/Purpur 실시간 연동", "Paper/Purpur live bridge");
 			bridgeGroup.Dock = DockStyle.Fill;
-			bridgeGroup.Padding = new Padding(16);
+			bridgeGroup.Padding = new Padding(16, 28, 16, 16);
 			rootPanel.Controls.Add(bridgeGroup, 1, 0);
 			bridgeStatus = new Label();
 			bridgeStatus.Dock = DockStyle.Top;

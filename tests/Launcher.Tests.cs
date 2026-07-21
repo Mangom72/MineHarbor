@@ -576,7 +576,9 @@ internal static class LauncherTests
 		Type textType = launcher.GetNestedType("ModernTextBox", BindingFlags.NonPublic);
 		Type tabType = launcher.GetNestedType("ModernTabControl", BindingFlags.NonPublic);
 		Type listType = launcher.GetNestedType("BufferedListView", BindingFlags.NonPublic);
-		if (checkType == null || comboType == null || textType == null || tabType == null || listType == null) throw new InvalidOperationException("현대형 공통 UI 컨트롤이 누락되었습니다.");
+		Type groupType = launcher.GetNestedType("ModernGroupBox", BindingFlags.NonPublic);
+		Type roundedPanelType = launcher.GetNestedType("RoundedPanel", BindingFlags.NonPublic);
+		if (checkType == null || comboType == null || textType == null || tabType == null || listType == null || groupType == null || roundedPanelType == null) throw new InvalidOperationException("현대형 공통 UI 컨트롤이 누락되었습니다.");
 		using (CheckBox checkBox = (CheckBox)Activator.CreateInstance(checkType, true))
 		{
 			Equal(Cursors.Hand, checkBox.Cursor, "현대형 체크박스 포인터");
@@ -593,6 +595,57 @@ internal static class LauncherTests
 			Equal("서버 이름 예시", Convert.ToString(textType.GetProperty("CueText").GetValue(textBox, null)), "입력 예시 문구");
 		}
 
+		Type paletteType = launcher.GetNestedType("ThemePalette", BindingFlags.NonPublic);
+		object darkPalette = paletteType.GetMethod("Create", BindingFlags.Static | BindingFlags.Public).Invoke(null, new object[] { true });
+		Color darkWindow = (Color)paletteType.GetField("Window").GetValue(darkPalette);
+		Color darkCard = (Color)paletteType.GetField("Card").GetValue(darkPalette);
+		Color darkSecondary = (Color)paletteType.GetField("CardSecondary").GetValue(darkPalette);
+		Color darkBorder = (Color)paletteType.GetField("Border").GetValue(darkPalette);
+		Type launcherFormType = launcher.GetNestedType("LauncherForm", BindingFlags.NonPublic);
+		FieldInfo launcherFormField = launcher.GetField("launcherForm", BindingFlags.Static | BindingFlags.NonPublic);
+		object previousLauncherForm = launcherFormField.GetValue(null);
+		using (Form darkOwner = (Form)Activator.CreateInstance(launcherFormType, true))
+		using (Form darkDialog = new Form())
+		using (RichTextBox richText = new RichTextBox())
+		using (ListBox nativeList = new ListBox())
+		using (CheckedListBox checkedList = new CheckedListBox())
+		using (DataGridView grid = new DataGridView())
+		using (Control inputSurface = (Control)Activator.CreateInstance(roundedPanelType, true))
+		using (TextBox modernInput = (TextBox)Activator.CreateInstance(textType, true))
+		using (Control modernGroup = (Control)Activator.CreateInstance(groupType, true))
+		{
+			try
+			{
+				launcherFormType.GetField("darkTheme", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(darkOwner, true);
+				launcherFormField.SetValue(null, darkOwner);
+				inputSurface.Tag = "input-surface";
+				inputSurface.Controls.Add(modernInput);
+				darkDialog.Controls.Add(richText);
+				darkDialog.Controls.Add(nativeList);
+				darkDialog.Controls.Add(checkedList);
+				darkDialog.Controls.Add(grid);
+				darkDialog.Controls.Add(inputSurface);
+				darkDialog.Controls.Add(modernGroup);
+				Invoke("ApplySimpleDialogTheme", new object[] { darkDialog });
+				Equal(darkWindow, darkDialog.BackColor, "보조 창 다크 배경");
+				Equal(darkCard, richText.BackColor, "다크 리치 텍스트 표면");
+				Equal(darkCard, nativeList.BackColor, "다크 목록 표면");
+				Equal(darkCard, checkedList.BackColor, "다크 체크 목록 표면");
+				Equal(darkSecondary, inputSurface.BackColor, "다크 입력 컨테이너 표면");
+				Equal(darkSecondary, modernInput.BackColor, "다크 입력 필드 표면");
+				Equal(darkBorder, (Color)roundedPanelType.GetProperty("BorderColor").GetValue(inputSurface, null), "다크 입력 컨테이너 테두리");
+				Equal(darkCard, modernGroup.BackColor, "다크 그룹 표면");
+				Equal(darkBorder, (Color)groupType.GetProperty("BorderColor").GetValue(modernGroup, null), "다크 그룹 테두리");
+				Equal(false, grid.EnableHeadersVisualStyles, "다크 표 기본 헤더 테마 차단");
+				Equal(darkSecondary, grid.ColumnHeadersDefaultCellStyle.BackColor, "다크 표 헤더 표면");
+				Equal(BorderStyle.None, grid.BorderStyle, "다크 표 기본 외곽선 제거");
+			}
+			finally
+			{
+				launcherFormField.SetValue(null, previousLauncherForm);
+			}
+		}
+
 		string[] playerSuggestions = (string[])Invoke("GetPlayerNameAutoCompleteCandidates", new object[] { "Al", new string[] { "Zed", "Alice", "alex" } });
 		Equal(2, playerSuggestions.Length, "플레이어 자동완성 필터");
 		Equal("alex", playerSuggestions[0], "플레이어 자동완성 정렬");
@@ -604,7 +657,6 @@ internal static class LauncherTests
 		Equal(2, Invoke("GetTimedConfirmationRemainingSeconds", new object[] { start, start.AddSeconds(1.2), 3 }), "영구 삭제 확인 진행 대기");
 		Equal(0, Invoke("GetTimedConfirmationRemainingSeconds", new object[] { start, start.AddSeconds(3), 3 }), "영구 삭제 확인 해제");
 
-		Type launcherFormType = launcher.GetNestedType("LauncherForm", BindingFlags.NonPublic);
 		MethodInfo guardActive = launcherFormType.GetMethod("IsOwnedWindowClickGuardActive", BindingFlags.Static | BindingFlags.NonPublic);
 		MethodInfo mouseMessage = launcherFormType.GetMethod("IsMouseClickMessage", BindingFlags.Static | BindingFlags.NonPublic);
 		Equal(true, guardActive.Invoke(null, new object[] { 100, 350 }), "보조 창 닫기 클릭 관통 보호 활성");
@@ -623,6 +675,23 @@ internal static class LauncherTests
 			Equal("ModernMetricTable", values.GetType().Name, "대시보드 현대형 상태 표");
 			Equal(false, values.AutoScroll, "대시보드 불필요한 스크롤 제거");
 			Equal(TableLayoutPanelCellBorderStyle.None, values.CellBorderStyle, "대시보드 과한 격자 제거");
+		}
+		Type sessionType = launcher.GetNestedType("ManagedServerSession", BindingFlags.NonPublic);
+		object session = Activator.CreateInstance(sessionType, true);
+		SetPublic(session, "Profile", profile);
+		SetPublic(session, "Status", "중지됨");
+		Type managedConsoleType = launcher.GetNestedType("ManagedConsoleForm", BindingFlags.NonPublic);
+		using (Form managedConsole = (Form)Activator.CreateInstance(managedConsoleType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { session }, null))
+		{
+			managedConsole.PerformLayout();
+			TextBox managedSearch = (TextBox)GetPrivateField(managedConsoleType, managedConsole, "searchBox");
+			TextBox managedCommand = (TextBox)GetPrivateField(managedConsoleType, managedConsole, "commandBox");
+			ComboBox managedFilter = (ComboBox)GetPrivateField(managedConsoleType, managedConsole, "filterBox");
+			RichTextBox managedOutput = (RichTextBox)GetPrivateField(managedConsoleType, managedConsole, "outputBox");
+			Control toolbar = managedSearch.Parent.Parent;
+			Control commandPanel = managedCommand.Parent.Parent;
+			if (managedSearch.Parent.Right > managedFilter.Left) throw new InvalidOperationException("관리 콘솔 검색 입력과 필터가 겹칩니다.");
+			if (managedOutput.Top < toolbar.Bottom || managedOutput.Bottom > commandPanel.Top) throw new InvalidOperationException("관리 콘솔 출력 영역이 도구막대 또는 명령 영역과 겹칩니다.");
 		}
 		Pass();
 	}
