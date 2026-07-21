@@ -3,13 +3,15 @@
 ## Codex Secondary Window Dark Theme - 2026-07-22
 
 - **Current Version**: 1.7.1 (build 26.2.45.66)
-- **Branch**: `codex/dark-window-theme-v1.7.1`
-- **Status**: 보조 창·콘솔·네이티브 컨트롤의 다크 테마 수정과 로컬 검증 완료, PR 및 정식 릴리스 진행 중
+- **Branch**: `codex/v1.7.1-release-state` (기능 브랜치: `codex/dark-window-theme-v1.7.1`)
+- **Status**: 보조 창·콘솔·네이티브 컨트롤의 다크 테마 수정, PR #12 병합 및 `v1.7.1` 정식 릴리스 게시 완료
 - 보조 창의 공통 테마 경로가 클라이언트 배경만 바꾸고 Windows 제목 표시줄·테두리를 갱신하지 않던 문제를 수정했습니다. Windows 11 DWM 다크 모드와 색상 특성을 현재 팔레트에 연결하고 핸들 재생성 시 다시 적용합니다.
 - RichTextBox, ListBox, CheckedListBox, ListView, TreeView, NumericUpDown, ComboBox와 DataGridView의 네이티브 테마·표면·헤더·선택 색을 통합했습니다. 핸들이 늦게 생성되는 컨트롤도 HandleCreated에서 원하는 테마를 적용합니다.
 - 메인 콘솔 검색·명령 입력은 둥근 입력 표면으로 바꾸고 관리 콘솔의 기본 외곽선과 도구막대·명령 영역 뒤로 겹치던 출력 Dock 순서를 수정했습니다. 빠른 명령 관리의 기본 GroupBox는 테마 팔레트로 직접 그리는 ModernGroupBox로 교체했습니다.
 - 다크 보조 창의 배경, 리치 텍스트·목록·체크 목록, 입력 표면·테두리, 현대형 그룹 표면·테두리, DataGridView 헤더와 외곽선을 실제 팔레트 값으로 검증하는 회귀 테스트를 추가했습니다.
 - 현재 로컬 검증: .NET SDK `net48` Release 빌드 경고 0/오류 0, `VERSION_CONSISTENCY_OK`, `PASSED=25`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`. UPnP 검증은 루프백 가짜 장치와 가짜 COM만 사용했습니다.
+- GitHub PR [#12](https://github.com/Mangom72/MineHarbor/pull/12)를 병합 커밋 `2f68137`로 `main`에 병합했습니다. [릴리스 워크플로](https://github.com/Mangom72/MineHarbor/actions/runs/29862987941)는 SDK/Portable 빌드, 25개 테스트 그룹, 설치 파일, SHA-256 및 자산 검증을 통과하고 [v1.7.1 정식 릴리스](https://github.com/Mangom72/MineHarbor/releases/tag/v1.7.1)를 게시했습니다. 코드 서명 비밀이 없어 서명 단계만 건너뛰었습니다.
+- 공개 자산 7종을 별도로 다시 내려받아 `RELEASE_ARTIFACTS_PASSED=7`과 공개 자산 모드를 확인했습니다. 공개 v1.7.0 런처의 실제 업데이트 파서와 다운로드 루틴이 v1.7.1을 탐지·다운로드해 `PUBLIC_AUTO_UPDATE_OK=1.7.0->1.7.1`을 통과했으며, 그 다운로드본도 25개 런처 테스트, Portable smoke/version, 브리지 10개, UI·보안 검사를 모두 통과했습니다.
 
 ## Codex Modern UI, Autocomplete, and Port Status - 2026-07-20
 
