@@ -4,6 +4,22 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.7.1] - 2026-07-22
+
+### Korean
+
+- **보조 창 다크 모드 수정**: 콘솔·업데이트·메시지·콘텐츠·백업·네트워크·플레이어 창의 Windows 11 제목 표시줄과 테두리를 현재 앱 테마에 연결하고, 창 핸들이 다시 만들어져도 테마를 재적용합니다.
+- **네이티브 컨트롤 테마 통합**: 리치 텍스트, 목록·체크 목록, 표 헤더와 스크롤바가 다크 팔레트를 사용하도록 공통 테마 경로를 보강했습니다. 핸들이 아직 없는 컨트롤도 생성 시점에 원하는 테마를 적용합니다.
+- **콘솔과 프레임 정돈**: 메인·관리 콘솔의 기본 외곽선을 제거하고 검색·명령 입력을 둥근 입력 표면으로 통일했습니다. 관리 콘솔 출력이 도구막대·명령 영역 뒤로 겹치지 않게 했고, 빠른 명령 관리의 기본 GroupBox를 둥근 현대형 프레임으로 교체했습니다.
+- **회귀 검증**: 보조 창의 다크 배경, 목록·입력·그룹 테두리, 표 헤더와 기본 외곽선 제거를 실제 팔레트 값으로 검증합니다. 25개 런처 테스트 그룹과 10개 브리지 프로토콜 테스트를 통과했습니다.
+
+### English
+
+- **Fixed dark mode in secondary windows**: Connected Windows 11 title bars and borders for console, update, message, content, backup, network, and player windows to the current app theme, including handle recreation.
+- **Unified native-control theming**: Rich text, list/check-list, table headers, and scrollbars now use the dark palette. Controls without a handle receive the requested theme when their handle is created.
+- **Refined console and group frames**: Removed classic console borders, moved main-console search and command fields onto rounded input surfaces, prevented managed-console output from overlapping its toolbars, and replaced native quick-command GroupBox frames with a rounded modern control.
+- **Regression coverage**: Added palette-value checks for secondary-window backgrounds, lists, input/group borders, table headers, and classic-border removal. All 25 launcher test groups and 10 bridge protocol tests pass.
+
 ## [1.7.0] - 2026-07-20
 
 ### Korean

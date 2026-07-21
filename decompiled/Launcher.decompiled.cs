@@ -438,7 +438,8 @@ internal static partial class Launcher
 				Color surface = dark ? Color.FromArgb(31, 32, 39) : Color.White;
 				Color textColor = dark ? Color.FromArgb(244, 246, 250) : Color.FromArgb(25, 31, 40);
 				Color muted = dark ? Color.FromArgb(171, 176, 188) : Color.FromArgb(91, 99, 113);
-				dialog.BackColor = window;
+				dialog.BackColor = window;
+				TitleBarDwm.BindTheme(dialog, ThemePalette.Create(dark));
 
 				Label heading = new Label();
 				heading.Text = korean ? "새 런처를 사용할 수 있어요" : "A new launcher is available";
@@ -476,6 +477,7 @@ internal static partial class Launcher
 				notesBox.Text = notes;
 				notesBox.TabStop = true;
 				notesBox.AccessibleName = korean ? "업데이트 주요 변경 사항" : "Launcher update release notes";
+				ApplyModernControlPalette(notesBox, ThemePalette.Create(dark));
 				dialog.Controls.Add(notesBox);
 
 				Label compatibility = new Label();

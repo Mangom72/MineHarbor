@@ -1563,7 +1563,7 @@ internal static partial class Launcher
 				Application.RemoveMessageFilter(this);
 				clickFilterInstalled = false;
 			};
-			this.HandleCreated += (s, e) => TitleBarDwm.ApplyTheme(this, ThemePalette.Create(darkTheme).Window, ThemePalette.Create(darkTheme).Text, ThemePalette.Create(darkTheme).Border);
+			TitleBarDwm.BindTheme(this, ThemePalette.Create(darkTheme));
 
 			string localAppData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 
@@ -2347,15 +2347,15 @@ internal static partial class Launcher
 
 			consolePanel.Controls.Add(consoleToolbar);
 
-			consoleSearchBox = new TextBox();
-
-			consoleSearchBox.Width = 240;
-
-			consoleSearchBox.Dock = DockStyle.Left;
+			consoleSearchBox = new ModernTextBox();
+			RoundedPanel consoleSearchSurface = CreateModernTextBoxSurface(consoleSearchBox, 8);
+			consoleSearchSurface.Width = 240;
+			consoleSearchSurface.Dock = DockStyle.Left;
+			((ModernTextBox)consoleSearchBox).CueText = LauncherUiText("로그 검색", "Search logs");
 
 			consoleSearchBox.TextChanged += delegate { RebuildConsoleView(); };
 
-			consoleToolbar.Controls.Add(consoleSearchBox);
+			consoleToolbar.Controls.Add(consoleSearchSurface);
 
 			consoleFilterBox = new ModernComboBox();
 
@@ -2395,9 +2395,10 @@ internal static partial class Launcher
 
 			consolePanel.Controls.Add(commandPanel);
 
-			commandBox = new TextBox();
-
-			commandBox.Dock = DockStyle.Fill;
+			commandBox = new ModernTextBox();
+			RoundedPanel commandSurface = CreateModernTextBoxSurface(commandBox, 8);
+			commandSurface.Dock = DockStyle.Fill;
+			((ModernTextBox)commandBox).CueText = LauncherUiText("명령 입력", "Enter a command");
 
 			commandBox.Enabled = false;
 
@@ -2439,7 +2440,7 @@ internal static partial class Launcher
 
 			};
 
-			commandPanel.Controls.Add(commandBox);
+			commandPanel.Controls.Add(commandSurface);
 
 			sendButton = CreateButton(Localization.T("Button.Send"), 86);
 
@@ -2772,6 +2773,10 @@ internal static partial class Launcher
 				consoleFilterBox.SelectedIndex = Math.Min(selectedFilter, consoleFilterBox.Items.Count - 1);
 
 			}
+			ModernTextBox modernConsoleSearch = consoleSearchBox as ModernTextBox;
+			if (modernConsoleSearch != null) modernConsoleSearch.CueText = LauncherUiText("로그 검색", "Search logs");
+			ModernTextBox modernCommand = commandBox as ModernTextBox;
+			if (modernCommand != null) modernCommand.CueText = LauncherUiText("명령 입력", "Enter a command");
 
 			ConfigureAccessibleField(addressBox, Localization.T("Address.Title"), Localization.CurrentLanguage == Localization.Korean ? "친구가 서버에 접속할 때 사용하는 주소입니다." : "The address friends use to join the server.");
 
@@ -5069,7 +5074,7 @@ internal static partial class Launcher
 				ThemePalette palette = ThemePalette.Create(darkTheme);
 				BackColor = palette.Window;
 				ForeColor = palette.Text;
-				TitleBarDwm.ApplyTheme(this, palette.Window, palette.Text, palette.Border);
+				TitleBarDwm.BindTheme(this, palette);
 
 			ApplyThemeRecursive(this, palette);
 
@@ -5144,12 +5149,12 @@ internal static partial class Launcher
 
 				{
 
-					bool surface = string.Equals(Convert.ToString(roundedPanel.Tag), "surface", StringComparison.Ordinal);
+					ApplyRoundedPanelPalette(roundedPanel, palette);
 
-					roundedPanel.BackColor = surface ? palette.CardSecondary : palette.Card;
-
-					roundedPanel.BorderColor = surface ? roundedPanel.BackColor : palette.Border;
-
+				}
+				else if (control is ModernGroupBox)
+				{
+					// 공통 컨트롤 팔레트가 현대형 그룹 테두리와 표면을 함께 설정합니다.
 				}
 
 				else if (control is Button)
@@ -5241,17 +5246,42 @@ internal static partial class Launcher
 
 	private static class TitleBarDwm
 	{
+		private sealed class BoundTheme
+		{
+			public ThemePalette Palette;
+			public bool Hooked;
+		}
+
+		private static readonly System.Runtime.CompilerServices.ConditionalWeakTable<Form, BoundTheme> BoundThemes = new System.Runtime.CompilerServices.ConditionalWeakTable<Form, BoundTheme>();
+
 		[System.Runtime.InteropServices.DllImport("dwmapi.dll", PreserveSig = true)]
 		private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int attrValue, int attrSize);
 
-		private const int DWMWA_WINDOW_CORNER_PREFERENCE = 33;
+		private const int DWMWA_USE_IMMERSIVE_DARK_MODE = 20;
 		private const int DWMWA_BORDER_COLOR = 34;
 		private const int DWMWA_CAPTION_COLOR = 35;
 		private const int DWMWA_TEXT_COLOR = 36;
 
+		public static void BindTheme(Form form, ThemePalette palette)
+		{
+			if (form == null || palette == null || form.IsDisposed) return;
+			BoundTheme bound = BoundThemes.GetOrCreateValue(form);
+			bound.Palette = palette;
+			if (!bound.Hooked)
+			{
+				bound.Hooked = true;
+				form.HandleCreated += delegate
+				{
+					ThemePalette current = bound.Palette;
+					if (current != null) ApplyTheme(form, current.Window, current.Text, current.Border);
+				};
+			}
+			ApplyTheme(form, palette.Window, palette.Text, palette.Border);
+		}
+
 		public static void ApplyTheme(Form form, Color backColor, Color foreColor, Color borderColor)
 		{
-			if (form == null || form.Handle == IntPtr.Zero) return;
+			if (form == null || !form.IsHandleCreated) return;
 
 			if (!IsWindows11OrNewer())
 			{
@@ -5260,6 +5290,9 @@ internal static partial class Launcher
 
 			try
 			{
+				int darkMode = backColor.GetBrightness() < 0.45F ? 1 : 0;
+				DwmSetWindowAttribute(form.Handle, DWMWA_USE_IMMERSIVE_DARK_MODE, ref darkMode, sizeof(int));
+
 				int backWin32 = ColorTranslator.ToWin32(backColor);
 				DwmSetWindowAttribute(form.Handle, DWMWA_CAPTION_COLOR, ref backWin32, sizeof(int));
 				
@@ -5403,7 +5436,6 @@ internal static partial class Launcher
 		{
 
 			ApplyLauncherWindowIcon(this);
-			this.HandleCreated += (s, e) => TitleBarDwm.ApplyTheme(this, setupPalette.Window, setupPalette.Text, setupPalette.Border);
 
 			source = current;
 
@@ -5444,6 +5476,7 @@ internal static partial class Launcher
 			bool dark = launcherForm != null && launcherForm.UsesDarkTheme;
 
 			setupPalette = ThemePalette.Create(dark);
+			TitleBarDwm.BindTheme(this, setupPalette);
 
 			BackColor = setupPalette.Window;
 
@@ -6779,7 +6812,16 @@ internal static partial class Launcher
 			{
 
 				ApplyModernControlPalette(control, palette);
-				if (control is RoundedPresetButton)
+				RoundedPanel roundedPanel = control as RoundedPanel;
+				if (roundedPanel != null)
+				{
+					ApplyRoundedPanelPalette(roundedPanel, palette);
+				}
+				else if (control is ModernGroupBox)
+				{
+					// 공통 컨트롤 팔레트가 현대형 그룹 테두리와 표면을 함께 설정합니다.
+				}
+				else if (control is RoundedPresetButton)
 
 				{
 

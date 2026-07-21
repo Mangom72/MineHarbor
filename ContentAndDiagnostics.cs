@@ -995,7 +995,9 @@ internal static partial class Launcher
 		bool dark = launcherForm != null && launcherForm.UsesDarkTheme;
 		ThemePalette palette = ThemePalette.Create(dark);
 		root.BackColor = palette.Window;
-		root.ForeColor = palette.Text;
+		root.ForeColor = palette.Text;
+		Form form = root as Form;
+		if (form != null) TitleBarDwm.BindTheme(form, palette);
 		ApplySimpleDialogThemeRecursive(root, palette);
 	}
 
@@ -1004,7 +1006,16 @@ internal static partial class Launcher
 		foreach (Control control in parent.Controls)
 		{
 			ApplyModernControlPalette(control, palette);
-			if (control is Button)
+			RoundedPanel roundedPanel = control as RoundedPanel;
+			if (roundedPanel != null)
+			{
+				ApplyRoundedPanelPalette(roundedPanel, palette);
+			}
+			else if (control is ModernGroupBox)
+			{
+				// 공통 컨트롤 팔레트가 현대형 그룹 테두리와 표면을 함께 설정합니다.
+			}
+			else if (control is Button)
 			{
 				Button button = control as Button;
 				string role = Convert.ToString(button.Tag);
@@ -1028,10 +1039,12 @@ internal static partial class Launcher
 					button.FlatAppearance.MouseOverBackColor = palette.AccentSoft;
 				}
 			}
-			else if (control is TextBox || control is ListView || control is DataGridView || control is NumericUpDown || control is ComboBox || control is ModernMetricTable)
+			else if (control is TextBoxBase || control is ListBox || control is CheckedListBox || control is ListView || control is TreeView || control is DataGridView || control is NumericUpDown || control is ComboBox || control is ModernMetricTable)
 			{
-				control.BackColor = palette.Card;
-				control.ForeColor = palette.Text;
+				RoundedPanel inputSurface = control.Parent as RoundedPanel;
+				bool secondaryInput = control is ModernComboBox || (inputSurface != null && string.Equals(Convert.ToString(inputSurface.Tag), "input-surface", StringComparison.Ordinal));
+				control.BackColor = secondaryInput ? palette.CardSecondary : palette.Card;
+				control.ForeColor = palette.Text;
 				ModernComboBox comboBox = control as ModernComboBox;
 				if (comboBox != null)
 				{
@@ -1042,8 +1055,13 @@ internal static partial class Launcher
 			}
 			else
 			{
-				control.BackColor = parent.BackColor;
-				control.ForeColor = palette.Text;
+				control.BackColor = parent.BackColor;
+				string role = Convert.ToString(control.Tag);
+				if (string.Equals(role, "muted", StringComparison.Ordinal)) control.ForeColor = palette.Muted;
+				else if (string.Equals(role, "warning", StringComparison.Ordinal)) control.ForeColor = palette.Warning;
+				else if (string.Equals(role, "danger-text", StringComparison.Ordinal)) control.ForeColor = palette.Danger;
+				else if (string.Equals(role, "success", StringComparison.Ordinal)) control.ForeColor = palette.Success;
+				else control.ForeColor = palette.Text;
 			}
 			ApplySimpleDialogThemeRecursive(control, palette);
 		}
