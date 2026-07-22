@@ -2,13 +2,13 @@
 
 ## 0. Current implementation state (v1.7.2)
 
-- Active feature branch: `codex/close-click-guard-v1.7.2`
+- Release-state branch: `codex/v1.7.2-release-state` (feature branch: `codex/close-click-guard-v1.7.2`)
 - Version source of truth: `version.json` = 1.7.2 / build 26.2.45.67
 - New per-server state: `.mineharbor/content-manifest.json` and `.mineharbor/automation.json`
 - New user areas: installed content/Modrinth/data packs, backup schedules and commands, and a live server status dashboard
 - New service boundaries: `ContentManagementServices.cs`, `ServerAutomation.cs`, and the UI integration in `ContentManagementUi.cs` / `ServerManagementFeatures.cs`
-- CI: `.github/workflows/ci.yml` validates PRs and main separately from `.github/workflows/build-release.yml`; both build the SDK-style `net48` project and the legacy Portable path. The v1.7.2 release path creates an ephemeral self-signed certificate, signs Portable and installer assets, verifies their embedded signer and integrity, and removes all temporary certificate material.
-- Local v1.7.2 validation passed 25 test groups, 10 bridge protocol cases, Portable smoke/version tests, self-signed Portable/installer and seven-asset verification, tamper rejection, UI scan, and security regression scan. The local machine lacks a .NET SDK, so the parallel SDK-style build remains a required GitHub PR/release gate.
+- CI: `.github/workflows/ci.yml` validates PRs and main separately from `.github/workflows/build-release.yml`; both build the SDK-style `net48` project and the legacy Portable path. PR #14 merged as `823e2ca`; release run `29945953541` created an ephemeral self-signed certificate, signed Portable and installer assets, verified their embedded signer and integrity, removed all temporary certificate material, and published v1.7.2.
+- Local and publicly downloaded v1.7.2 validation passed 25 test groups, 10 bridge protocol cases, Portable smoke/version tests, self-signed Portable/installer and seven-asset verification, tamper rejection, UI scan, and security regression scan. The release CI passed the parallel .NET 10 SDK `net48` warnings-as-errors build, and the public v1.7.1 launcher completed a real `1.7.1 -> 1.7.2` automatic update followed by the full test suite.
 - The default runtime remains .NET Framework 4.8. `MineHarbor.csproj` is the migration bridge; do not switch to .NET 10 until updater, COM/UPnP, WinForms, installer, and Portable compatibility tests are equivalent.
 - Do not infer dashboard values. Paper/Purpur TPS/MSPT is shown only when the local bridge reports it; unsupported or disconnected values remain explicit.
 
