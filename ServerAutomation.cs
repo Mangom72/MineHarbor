@@ -441,6 +441,7 @@ internal static partial class Launcher
 		private readonly TextBox timeBox;
 		private readonly NumericUpDown warningBox;
 		private readonly TextBox commandBox;
+		private readonly InlineSuggestionController commandSuggestions;
 		private readonly CheckBox enabledBox;
 		private readonly string originalId;
 		public ServerAutomationJob Job { get; private set; }
@@ -467,6 +468,13 @@ internal static partial class Launcher
 			timeBox = AddAutomationField(root, 4, korean ? "매일 시각(HH:mm)" : "Daily time (HH:mm)") as TextBox;
 			warningBox = new NumericUpDown { Dock = DockStyle.Left, Width = 150, Minimum = 0, Maximum = 3600, Value = 60 }; AddAutomationControl(root, 5, korean ? "사전 공지(초)" : "Warning (seconds)", warningBox);
 			commandBox = AddAutomationField(root, 6, korean ? "명령" : "Command") as TextBox;
+			commandSuggestions = new InlineSuggestionController(
+				this,
+				commandBox,
+				true,
+				delegate(string input) { return GetManagedCommandAutoCompleteCandidates(input, new string[0]); },
+				korean ? "예약 명령 자동완성" : "Scheduled command suggestions",
+				korean ? "위아래 방향키로 이동하고 Tab 또는 Enter로 선택합니다." : "Use Up and Down, then Tab or Enter to select.");
 			enabledBox = new ModernCheckBox { AutoSize = true, Checked = true, Text = korean ? "사용" : "Enabled" }; root.Controls.Add(enabledBox, 1, 7);
 			FlowLayoutPanel actions = new FlowLayoutPanel { Dock = DockStyle.Fill, FlowDirection = FlowDirection.RightToLeft, AutoSize = true };
 			Button save = MultiServerDashboardForm.NewManagedButton(korean ? "저장" : "Save", 96, "primary"); Button cancel = MultiServerDashboardForm.NewManagedButton(korean ? "취소" : "Cancel", 96, "secondary");
@@ -481,7 +489,10 @@ internal static partial class Launcher
 			actionBox.SelectedIndexChanged += delegate { UpdateJobFieldState(); };
 			scheduleBox.SelectedIndexChanged += delegate { UpdateJobFieldState(); };
 			UpdateJobFieldState();
-			ApplySimpleDialogTheme(this); ApplyCommonButtonToolTips(this);
+			ApplySimpleDialogTheme(this);
+			commandSuggestions.ApplyPalette(ThemePalette.Create(launcherForm != null && launcherForm.UsesDarkTheme));
+			ApplyCommonButtonToolTips(this);
+			FormClosed += delegate { commandSuggestions.Dispose(); };
 		}
 
 		private static Control AddAutomationField(TableLayoutPanel root, int row, string label) { TextBox box = new TextBox { Dock = DockStyle.Fill }; AddAutomationControl(root, row, label, box); return box; }

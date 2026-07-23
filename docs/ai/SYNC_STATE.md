@@ -1,5 +1,16 @@
 ﻿# AI Agent Synchronization State
 
+## Codex Responsive Workspace and Command Completion - 2026-07-24
+
+- **Current Version**: 1.7.3 (build 26.2.45.68)
+- **Branch**: `codex/ux-audit-v1.7.3`
+- **Status**: 반응형 빠른 명령·콘솔 탐색·자동완성 UX 수정 및 정식 릴리스 후보 검증 중
+- 콘솔 닫힘 시 빠른 명령이 전체 작업 영역을 사용하고, 콘솔 열림 시 360~460 논리 픽셀의 읽을 수 있는 보조 패널로 전환됩니다. 영어 상태·안내·관리 버튼과 런처 업데이트 버튼의 말줄임표를 제거했습니다.
+- 콘솔 도구막대를 검색 → 로그 분류 → 줄 바꿈 순서로 재배치하고 양언어 폭을 보장했습니다. 시작 준비가 끝나면 기본 서버 시작 동작으로 키보드 포커스를 이동합니다.
+- 메인 콘솔에 기본 명령·연결 플레이어 인수, 예약 명령 편집에 실행 시점과 무관한 기본 명령 자동완성을 추가하고 기존 방향키·Tab·Enter·Esc 및 스크린 리더 흐름을 재사용했습니다.
+- Windows 11 실제 125% DPI에서 한국어·영어, 다크·라이트, 콘솔 닫힘·열림을 확인하고 한국어·다크 설정으로 복원했습니다. 제한 없는 문구 폭, Dock 전환, 콘솔 순서와 자동완성 연결을 검사하는 26번째 테스트 그룹을 추가했습니다.
+- 현재 로컬 검증은 고정 리소스 4종, Portable 빌드, `VERSION_CONSISTENCY_OK`, `PASSED=26`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`를 통과했습니다. UPnP는 루프백 가짜 장치와 가짜 COM만 사용했습니다.
+
 ## Codex Tool Window Close Isolation and Self-Signed Release - 2026-07-23
 
 - **Current Version**: 1.7.2 (build 26.2.45.67)
