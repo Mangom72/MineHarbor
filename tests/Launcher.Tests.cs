@@ -38,6 +38,7 @@ internal static class LauncherTests
 			TestDataLocations(temporary);
 			TestSetupLayoutAndValidation();
 			TestUxAccessibility();
+			TestResponsiveLauncherWorkspace();
 			TestModernUiWorkflows();
 			TestSecondaryDialogScaling(temporary);
 			TestPlayerButtonLifecycle();
@@ -510,13 +511,85 @@ internal static class LauncherTests
 				foreach (string fieldName in new string[] { "startButton", "stopButton", "settingsButton", "upgradeButton", "consoleButton", "profilesButton", "backupButton", "contentButton", "playersButton", "networkButton", "diagnosticsButton", "mainScheduleButton", "mainDashboardButton", "launcherUpdateButton" })
 				{
 					Button action = (Button)GetPrivateField(formType, form, fieldName);
-					Size measured = TextRenderer.MeasureText(action.Text, action.Font, new Size(Math.Max(1, action.Width - 45), action.Height), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
-					if (measured.Width > action.Width - 45) throw new InvalidOperationException(language + " 버튼 문구가 표시 폭을 넘습니다: " + action.Text);
+					AssertButtonTextFits(action, language + " 메인 화면");
 				}
 			}
 		}
 		languageField.SetValue(null, originalLanguage);
 		Pass();
+	}
+
+	private static void TestResponsiveLauncherWorkspace()
+	{
+		Type localizationType = launcher.GetNestedType("Localization", BindingFlags.NonPublic);
+		FieldInfo languageField = localizationType.GetField("CurrentLanguage", BindingFlags.Static | BindingFlags.Public);
+		object originalLanguage = languageField.GetValue(null);
+		Type formType = launcher.GetNestedType("LauncherForm", BindingFlags.NonPublic);
+		try
+		{
+			languageField.SetValue(null, "en");
+			using (Form form = (Form)Activator.CreateInstance(formType, true))
+			{
+				form.Size = form.MinimumSize;
+				form.CreateControl();
+				formType.GetMethod("ApplyLocalization", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(form, null);
+				form.PerformLayout();
+
+				Panel quickPanel = (Panel)GetPrivateField(formType, form, "quickCommandPanel");
+				Label quickStatus = (Label)GetPrivateField(formType, form, "quickCommandStatus");
+				Label quickSyntax = (Label)GetPrivateField(formType, form, "quickCommandSyntax");
+				Button quickMenu = (Button)GetPrivateField(formType, form, "quickCommandMenuButton");
+				Button quickManage = (Button)GetPrivateField(formType, form, "quickCommandManageButton");
+				object consoleSuggestions = GetPrivateField(formType, form, "consoleCommandSuggestions");
+				Equal(DockStyle.Fill, quickPanel.Dock, "콘솔 닫힘 시 빠른 명령 전체 폭 사용");
+				Equal(false, quickStatus.AutoEllipsis, "빠른 명령 상태 말줄임표 제거");
+				Equal(false, quickSyntax.AutoEllipsis, "빠른 명령 안내 말줄임표 제거");
+				AssertSingleLineTextFits(quickStatus, "영어 빠른 명령 상태");
+				AssertSingleLineTextFits(quickSyntax, "영어 빠른 명령 안내");
+				AssertButtonTextFits(quickMenu, "영어 빠른 명령 선택");
+				AssertButtonTextFits(quickManage, "영어 명령·브리지 관리");
+				if (consoleSuggestions == null) throw new InvalidOperationException("메인 콘솔 명령 자동완성이 연결되지 않았습니다.");
+
+				formType.GetMethod("UpdateQuickCommandWorkspaceLayout", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(form, new object[] { true });
+				form.PerformLayout();
+				Equal(DockStyle.Right, quickPanel.Dock, "콘솔 열림 시 빠른 명령 보조 패널");
+				if (quickPanel.Width > 460 || quickPanel.Width < 360) throw new InvalidOperationException("콘솔 열림 상태의 빠른 명령 폭이 반응형 범위를 벗어납니다.");
+				AssertSingleLineTextFits(quickStatus, "콘솔 열림 영어 빠른 명령 상태");
+				AssertButtonTextFits(quickMenu, "콘솔 열림 영어 빠른 명령 선택");
+				AssertButtonTextFits(quickManage, "콘솔 열림 영어 명령·브리지 관리");
+
+				CheckBox wrap = (CheckBox)GetPrivateField(formType, form, "consoleWrapBox");
+				ComboBox filter = (ComboBox)GetPrivateField(formType, form, "consoleFilterBox");
+				TextBox search = (TextBox)GetPrivateField(formType, form, "consoleSearchBox");
+				Control searchSurface = search.Parent;
+				Control toolbar = wrap.Parent;
+				Equal(2, toolbar.Controls.GetChildIndex(searchSurface), "콘솔 검색 도킹 순서");
+				Equal(1, toolbar.Controls.GetChildIndex(filter), "콘솔 필터 도킹 순서");
+				Equal(0, toolbar.Controls.GetChildIndex(wrap), "콘솔 줄 바꿈 도킹 순서");
+				Size wrapText = TextRenderer.MeasureText(wrap.Text, wrap.Font, new Size(4096, Math.Max(1, wrap.Height)), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+				if (wrapText.Width + 34 > wrap.Width) throw new InvalidOperationException("콘솔 줄 바꿈 문구가 표시 폭을 넘습니다.");
+			}
+		}
+		finally
+		{
+			languageField.SetValue(null, originalLanguage);
+		}
+		Pass();
+	}
+
+	private static void AssertButtonTextFits(Button button, string context)
+	{
+		Size measured = TextRenderer.MeasureText(button.Text ?? string.Empty, button.Font, new Size(4096, Math.Max(1, button.Height)), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+		PropertyInfo iconProperty = button.GetType().GetProperty("IconKind", BindingFlags.Instance | BindingFlags.Public);
+		bool hasIcon = iconProperty != null && !string.Equals(Convert.ToString(iconProperty.GetValue(button, null)), "None", StringComparison.Ordinal);
+		int requiredWidth = measured.Width + (hasIcon ? 46 : 24);
+		if (requiredWidth > button.Width) throw new InvalidOperationException(context + " 버튼 문구가 잘립니다: " + button.Text + " (필요 " + requiredWidth + ", 실제 " + button.Width + ")");
+	}
+
+	private static void AssertSingleLineTextFits(Label label, string context)
+	{
+		Size measured = TextRenderer.MeasureText(label.Text ?? string.Empty, label.Font, new Size(4096, Math.Max(1, label.Height)), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+		if (measured.Width > label.Width) throw new InvalidOperationException(context + " 문구가 한 줄 표시 폭을 넘습니다: " + label.Text);
 	}
 
 	private static void TestSecondaryDialogScaling(string root)
@@ -1208,6 +1281,15 @@ internal static class LauncherTests
 			Equal(AutoScaleMode.Dpi, form.AutoScaleMode, "자동화 UI DPI 배율");
 			ListView list = (ListView)GetPrivateField(automationFormType, form, "jobList");
 			if (string.IsNullOrWhiteSpace(list.AccessibleName)) throw new InvalidOperationException("예약 작업 목록 접근성 이름이 없습니다.");
+		}
+		Type automationJobFormType = launcher.GetNestedType("AutomationJobForm", BindingFlags.NonPublic);
+		using (Form jobForm = (Form)Activator.CreateInstance(automationJobFormType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { null }, null))
+		{
+			ComboBox action = (ComboBox)GetPrivateField(automationJobFormType, jobForm, "actionBox");
+			TextBox command = (TextBox)GetPrivateField(automationJobFormType, jobForm, "commandBox");
+			action.SelectedIndex = 4;
+			Equal(true, command.Enabled, "예약 명령 입력 활성화");
+			if (GetPrivateField(automationJobFormType, jobForm, "commandSuggestions") == null) throw new InvalidOperationException("예약 명령 자동완성이 연결되지 않았습니다.");
 		}
 		Type dashboardFormType = launcher.GetNestedType("ServerStatusDashboardForm", BindingFlags.NonPublic);
 		using (Form dashboard = (Form)Activator.CreateInstance(dashboardFormType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { profile, session }, null))

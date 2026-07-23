@@ -36,8 +36,7 @@ internal static partial class Launcher
 		private void InitializeQuickCommandPanel(Control workspace)
 		{
 			quickCommandPanel = new RoundedPanel();
-			quickCommandPanel.Dock = DockStyle.Right;
-			quickCommandPanel.Width = 410;
+			quickCommandPanel.Dock = DockStyle.Fill;
 			quickCommandPanel.Padding = new Padding(16, 12, 16, 12);
 			quickCommandPanel.CornerRadius = 20;
 			quickCommandPanel.Tag = "main-card";
@@ -50,31 +49,32 @@ internal static partial class Launcher
 			quickCommandPanel.Controls.Add(quickCommandTitle);
 
 			quickCommandStatus = new Label();
-			quickCommandStatus.AutoEllipsis = true;
+			quickCommandStatus.AutoEllipsis = false;
 			quickCommandStatus.Tag = "muted";
 			quickCommandStatus.Location = new Point(16, 39);
-			quickCommandStatus.Size = new Size(378, 22);
+			quickCommandStatus.Size = new Size(378, 32);
+			quickCommandStatus.TextAlign = ContentAlignment.MiddleLeft;
 			quickCommandPanel.Controls.Add(quickCommandStatus);
 
 			quickCommandMenuButton = CreateButton(string.Empty, 174);
 			quickCommandMenuButton.Tag = "secondary";
-			quickCommandMenuButton.Location = new Point(16, 66);
+			quickCommandMenuButton.Location = new Point(16, 76);
 			quickCommandMenuButton.Size = new Size(174, 40);
 			quickCommandMenuButton.Click += delegate { ShowQuickCommandMenu(); };
 			quickCommandPanel.Controls.Add(quickCommandMenuButton);
 
 			quickCommandManageButton = CreateButton(string.Empty, 174);
 			quickCommandManageButton.Tag = "secondary";
-			quickCommandManageButton.Location = new Point(202, 66);
+			quickCommandManageButton.Location = new Point(202, 76);
 			quickCommandManageButton.Size = new Size(192, 40);
 			quickCommandManageButton.Click += delegate { OpenQuickCommandManager(); };
 			quickCommandPanel.Controls.Add(quickCommandManageButton);
 
 			quickCommandSyntax = new Label();
-			quickCommandSyntax.AutoEllipsis = true;
+			quickCommandSyntax.AutoEllipsis = false;
 			quickCommandSyntax.Tag = "muted";
-			quickCommandSyntax.Location = new Point(16, 112);
-			quickCommandSyntax.Size = new Size(378, 25);
+			quickCommandSyntax.Location = new Point(16, 122);
+			quickCommandSyntax.Size = new Size(378, 22);
 			quickCommandPanel.Controls.Add(quickCommandSyntax);
 
 			Panel inputPanel = new Panel();
@@ -126,12 +126,37 @@ internal static partial class Launcher
 			};
 
 			quickCommandPanel.Resize += delegate { LayoutQuickCommandPanel(); };
+			workspace.Resize += delegate
+			{
+				if (consolePanel != null && consolePanel.Visible && quickCommandPanel.Dock == DockStyle.Right) UpdateQuickCommandWorkspaceLayout(true);
+			};
 			FormClosed += delegate
 			{
 				if (quickCommandDebounceTimer != null) quickCommandDebounceTimer.Dispose();
 			};
 			ReloadQuickCommandContext();
 			ApplyQuickCommandLocalization();
+			UpdateQuickCommandWorkspaceLayout(false);
+			LayoutQuickCommandPanel();
+		}
+
+		private void UpdateQuickCommandWorkspaceLayout(bool consoleVisible)
+		{
+			if (quickCommandPanel == null || quickCommandPanel.Parent == null) return;
+			Control workspace = quickCommandPanel.Parent;
+			quickCommandPanel.SuspendLayout();
+			if (consoleVisible)
+			{
+				int available = Math.Max(360, workspace.ClientSize.Width - 520);
+				quickCommandPanel.Dock = DockStyle.Right;
+				quickCommandPanel.Width = Math.Min(460, available);
+			}
+			else
+			{
+				quickCommandPanel.Dock = DockStyle.Fill;
+			}
+			quickCommandPanel.BringToFront();
+			quickCommandPanel.ResumeLayout(true);
 			LayoutQuickCommandPanel();
 		}
 
@@ -141,11 +166,30 @@ internal static partial class Launcher
 			int width = Math.Max(260, quickCommandPanel.ClientSize.Width - 32);
 			quickCommandStatus.Width = width;
 			quickCommandSyntax.Width = width;
+			int gap = 12;
+			int menuWidth = Math.Max(174, MeasureQuickCommandButtonWidth(quickCommandMenuButton));
+			int manageWidth = Math.Max(192, MeasureQuickCommandButtonWidth(quickCommandManageButton));
+			if (menuWidth + gap + manageWidth > width)
+			{
+				int overflow = menuWidth + gap + manageWidth - width;
+				int menuReduction = Math.Min(overflow / 2, Math.Max(0, menuWidth - 140));
+				menuWidth -= menuReduction;
+				manageWidth = Math.Max(140, width - gap - menuWidth);
+			}
+			quickCommandMenuButton.Bounds = new Rectangle(16, 76, menuWidth, 40);
+			quickCommandManageButton.Bounds = new Rectangle(16 + menuWidth + gap, 76, Math.Max(140, Math.Min(manageWidth, width - menuWidth - gap)), 40);
 			Control input = quickCommandBox.Parent;
 			input.Location = new Point(16, Math.Max(144, quickCommandPanel.ClientSize.Height - 52));
 			input.Size = new Size(width, 40);
 			int popupHeight = Math.Min(140, Math.Max(92, input.Top - 70));
 			quickCommandSuggestionList.Bounds = new Rectangle(16, input.Top - popupHeight - 4, width, popupHeight);
+		}
+
+		private static int MeasureQuickCommandButtonWidth(Button button)
+		{
+			if (button == null) return 0;
+			Size measured = TextRenderer.MeasureText(button.Text ?? string.Empty, button.Font, new Size(4096, Math.Max(1, button.Height)), TextFormatFlags.SingleLine | TextFormatFlags.NoPadding);
+			return measured.Width + 24;
 		}
 
 		private void ApplyQuickCommandLocalization()
@@ -160,6 +204,7 @@ internal static partial class Launcher
 			ConfigureAccessibleField(quickCommandSuggestionList, QuickText("명령 자동완성 후보", "Command suggestions"), QuickText("탭 또는 위아래 방향키로 후보를 이동하고 엔터로 선택한 명령을 전송합니다.", "Use Tab or Up and Down to move through suggestions, then press Enter to send the selected command."));
 			ReloadQuickCommandContext();
 			UpdateQuickCommandBridgeStatus();
+			LayoutQuickCommandPanel();
 		}
 
 		private void ApplyQuickCommandTheme()
@@ -575,6 +620,7 @@ internal static partial class Launcher
 			button.Size = new Size(142, 42);
 			button.Margin = new Padding(4);
 			button.Click += handler;
+			EnsureButtonContentFits(button);
 			parent.Controls.Add(button);
 		}
 

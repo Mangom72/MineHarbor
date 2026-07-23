@@ -1489,6 +1489,7 @@ internal static partial class Launcher
 		private readonly RichTextBox consoleBox;
 
 		private readonly TextBox commandBox;
+		private readonly InlineSuggestionController consoleCommandSuggestions;
 
 		private readonly Button sendButton;
 
@@ -1725,11 +1726,12 @@ internal static partial class Launcher
 
 			header.Controls.Add(languageButton);
 
-			launcherUpdateButton = CreateButton(Localization.T("Button.LauncherUpdate"), 168);
+			launcherUpdateButton = CreateButton(Localization.T("Button.LauncherUpdate"), 184);
 			launcherUpdateButton.Tag = "ghost";
 			launcherUpdateButton.Anchor = AnchorStyles.Top | AnchorStyles.Right;
 			launcherUpdateButton.Top = 4;
 			SetButtonIcon(launcherUpdateButton, ButtonIcon.Upgrade);
+			EnsureButtonContentFits(launcherUpdateButton);
 
 			launcherUpdateButton.Click += delegate { CheckLauncherUpdateNow(); };
 
@@ -2354,7 +2356,7 @@ internal static partial class Launcher
 
 			consoleSearchBox = new ModernTextBox();
 			RoundedPanel consoleSearchSurface = CreateModernTextBoxSurface(consoleSearchBox, 8);
-			consoleSearchSurface.Width = 240;
+			consoleSearchSurface.Width = 220;
 			consoleSearchSurface.Dock = DockStyle.Left;
 			((ModernTextBox)consoleSearchBox).CueText = LauncherUiText("로그 검색", "Search logs");
 
@@ -2366,7 +2368,7 @@ internal static partial class Launcher
 
 			consoleFilterBox.DropDownStyle = ComboBoxStyle.DropDownList;
 
-			consoleFilterBox.Width = 136;
+			consoleFilterBox.Width = 126;
 
 			consoleFilterBox.Dock = DockStyle.Left;
 
@@ -2382,13 +2384,16 @@ internal static partial class Launcher
 
 			Localize(consoleWrapBox, "Console.Wrap");
 
-			consoleWrapBox.Width = 100;
+			consoleWrapBox.Width = 132;
 
 			consoleWrapBox.Dock = DockStyle.Left;
 
 			consoleWrapBox.CheckedChanged += delegate { consoleBox.WordWrap = consoleWrapBox.Checked; };
 
 			consoleToolbar.Controls.Add(consoleWrapBox);
+			// 검색 → 필터 → 줄 바꿈 순서로 왼쪽부터 자연스럽게 탐색되도록 도킹 순서를 고정합니다.
+			consoleFilterBox.BringToFront();
+			consoleWrapBox.BringToFront();
 
 			Panel commandPanel = new Panel();
 
@@ -2408,10 +2413,23 @@ internal static partial class Launcher
 			commandBox.Enabled = false;
 
 			commandBox.TextChanged += delegate { sendButton.Enabled = serverRunning && !string.IsNullOrWhiteSpace(commandBox.Text); };
+			consoleCommandSuggestions = new InlineSuggestionController(
+				this,
+				commandBox,
+				true,
+				delegate(string input)
+				{
+					CommandBridgeSession bridge = GetActiveCommandBridge();
+					string[] players = bridge == null || !bridge.Connected ? new string[0] : bridge.Players;
+					return GetManagedCommandAutoCompleteCandidates(input, players);
+				},
+				LauncherUiText("콘솔 명령 자동완성", "Console command suggestions"),
+				LauncherUiText("위아래 방향키로 이동하고 Tab 또는 Enter로 선택합니다.", "Use Up and Down, then Tab or Enter to select."));
 
 			commandBox.KeyDown += delegate(object sender, KeyEventArgs eventArgs)
 
 			{
+				if (eventArgs.Handled || eventArgs.SuppressKeyPress) return;
 
 				if (eventArgs.KeyCode == Keys.Enter)
 
@@ -2467,7 +2485,7 @@ internal static partial class Launcher
 
 			FormClosing += OnLauncherClosing;
 
-			FormClosed += delegate { consoleTimer.Stop(); DisposeMainAutomation(); };
+			FormClosed += delegate { consoleTimer.Stop(); consoleCommandSuggestions.Dispose(); DisposeMainAutomation(); };
 
 			Shown += delegate { BeginInvoke((MethodInvoker)BeginStartupInitialization); };
 
@@ -2728,6 +2746,7 @@ internal static partial class Launcher
 			{
 
 				launcherUpdateButton.Text = Localization.T("Button.LauncherUpdate");
+				EnsureButtonContentFits(launcherUpdateButton);
 
 			}
 
@@ -3012,6 +3031,10 @@ internal static partial class Launcher
 							SetStartupControlsEnabled(true);
 
 							SetLoadingState(string.Empty, false, -1);
+							if (ActiveControl == null || languageButton.ContainsFocus || launcherUpdateButton.ContainsFocus || themeButton.ContainsFocus)
+							{
+								startButton.Focus();
+							}
 
 						});
 
@@ -4652,6 +4675,7 @@ internal static partial class Launcher
 		{
 
 			consolePanel.Visible = !consolePanel.Visible;
+			UpdateQuickCommandWorkspaceLayout(consolePanel.Visible);
 
 			consoleButton.Text = consolePanel.Visible ? Localization.T("Button.ConsoleClose") : Localization.T("Button.ConsoleOpen");
 
@@ -5205,6 +5229,7 @@ internal static partial class Launcher
 			consoleFilterBox.ForeColor = palette.Text;
 
 			ApplyQuickCommandTheme();
+			consoleCommandSuggestions.ApplyPalette(palette);
 
 			ModernComboBox consoleFilter = consoleFilterBox as ModernComboBox;
 

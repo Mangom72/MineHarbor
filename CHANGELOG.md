@@ -4,6 +4,22 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.7.3] - 2026-07-24
+
+### Korean
+
+- **빠른 명령 반응형 레이아웃**: 콘솔이 닫혀 있을 때 빠른 명령 카드가 작업 영역 전체 폭을 사용하고, 콘솔을 열면 읽을 수 있는 최소 폭을 보장하는 보조 패널로 전환됩니다. 영어 상태·안내·명령 관리 문구와 런처 업데이트 버튼의 불필요한 말줄임표를 제거했습니다.
+- **콘솔 탐색 흐름 개선**: 검색, 로그 분류, 줄 바꿈을 왼쪽부터 작업 순서대로 배치하고 한국어·영어 문구가 잘리지 않도록 폭을 조정했습니다. 시작 준비가 끝난 뒤 기본 작업인 서버 시작으로 키보드 포커스를 이동합니다.
+- **자동완성 범위 확대**: 메인 콘솔에는 기본 서버 명령과 연결된 플레이어 인수, 예약 명령 편집에는 실행 시점과 무관한 기본 명령 자동완성을 추가했습니다. 방향키, Tab, Enter, Esc와 스크린 리더 설명을 기존 관리 콘솔과 동일하게 제공합니다.
+- **UX 회귀 검증**: 실제 Windows 125% DPI에서 한국어·영어, 다크·라이트, 콘솔 열림·닫힘을 확인했습니다. 제한 없는 실제 글자 폭, 반응형 패널 상태, 콘솔 도킹 순서와 자동완성 연결을 검사하는 26번째 런처 테스트 그룹을 추가했습니다.
+
+### English
+
+- **Responsive quick-command workspace**: The quick-command card now uses the full workspace while the console is closed, then becomes a readable minimum-width companion panel when the console opens. Unnecessary ellipses are gone from English status, guidance, command-management, and launcher-update text.
+- **Improved console flow**: Search, log category, and word wrap now follow the task order from left to right, with enough room for both languages. Keyboard focus moves to the primary Start action after startup preparation completes.
+- **More command completion**: The main console now suggests common commands and connected-player arguments, while the scheduled-command editor suggests time-independent common commands. Both use the same arrow, Tab, Enter, Esc, and screen-reader behavior as the managed console.
+- **UX regression coverage**: Verified Korean/English, dark/light, and open/closed console states on Windows at 125% DPI. A 26th launcher test group measures unconstrained text width and checks responsive panel state, console docking order, and completion wiring.
+
 ## [1.7.2] - 2026-07-23
 
 ### Korean
