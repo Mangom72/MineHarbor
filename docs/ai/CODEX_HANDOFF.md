@@ -1,16 +1,17 @@
 # CODEX_HANDOFF.md
 
-## 0. Current implementation state (v1.7.4 release candidate)
+## 0. Current implementation state (v1.7.4 released)
 
-- Feature branch: `codex/fix-close-confirmation-v1.7.4`
+- Release-state branch: `codex/v1.7.4-release-state` (feature branch: `codex/fix-close-confirmation-v1.7.4`)
 - Version source of truth: `version.json` = 1.7.4 / build 26.2.45.69
 - New per-server state: `.mineharbor/content-manifest.json` and `.mineharbor/automation.json`
 - New user areas: installed content/Modrinth/data packs, backup schedules and commands, and a live server status dashboard
 - New service boundaries: `ContentManagementServices.cs`, `ServerAutomation.cs`, and the UI integration in `ContentManagementUi.cs` / `ServerManagementFeatures.cs`
 - Tool-window title-bar closes retain a short coordinate-scoped input guard, so mouse double-click chatter cannot immediately activate an overlapping launcher control while deliberate clicks elsewhere remain available.
 - User-initiated launcher close now always asks for confirmation. Idle close exits directly without invoking server termination; active work and a running server use separate Korean/English wording and retain deferred or safe-stop behavior.
-- CI: `.github/workflows/ci.yml` validates PRs and main separately from `.github/workflows/build-release.yml`; both build the SDK-style `net48` project and the legacy Portable path. The v1.7.4 candidate is awaiting PR and tagged-release verification.
-- Local v1.7.4 validation passed 26 launcher test groups, 10 bridge protocol cases, Portable smoke/version, UI scan, and security regression scan. The Korean dark-theme idle close confirmation was also checked on Windows without starting a server or changing UPnP state.
+- CI: `.github/workflows/ci.yml` validates PRs and main separately from `.github/workflows/build-release.yml`; both build the SDK-style `net48` project and the legacy Portable path. PR [#18](https://github.com/Mangom72/MineHarbor/pull/18) was merged as `d01c183`; both PR and main CI passed before the [v1.7.4 release workflow](https://github.com/Mangom72/MineHarbor/actions/runs/30112841129) published the [stable release](https://github.com/Mangom72/MineHarbor/releases/tag/v1.7.4).
+- Local v1.7.4 validation passed 26 launcher test groups, 10 bridge protocol cases, Portable smoke/version, UI scan, security regression scan, and seven self-signed release artifacts. The Korean dark-theme idle close confirmation was also checked on Windows without starting a server or changing UPnP state.
+- Seven public assets were downloaded and independently checked for hashes, versions, self-signed Authenticode integrity, and archive structure. The public v1.7.3 launcher updated to v1.7.4 through the published metadata (`PUBLIC_AUTO_UPDATE_OK=1.7.3->1.7.4`), and the updated launcher passed the complete test suite again.
 - The default runtime remains .NET Framework 4.8. `MineHarbor.csproj` is the migration bridge; do not switch to .NET 10 until updater, COM/UPnP, WinForms, installer, and Portable compatibility tests are equivalent.
 - Do not infer dashboard values. Paper/Purpur TPS/MSPT is shown only when the local bridge reports it; unsupported or disconnected values remain explicit.
 

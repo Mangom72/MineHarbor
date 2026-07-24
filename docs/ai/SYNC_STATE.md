@@ -3,12 +3,14 @@
 ## Codex Repeated Close-Click Guard and Exit Confirmation - 2026-07-25
 
 - **Current Version**: 1.7.4 (build 26.2.45.69)
-- **Branch**: `codex/fix-close-confirmation-v1.7.4`
-- **Status**: 보조 창 추가 클릭 방어와 상태별 런처 종료 확인 구현 및 정식 릴리스 후보 검증 중
+- **Branch**: `codex/v1.7.4-release-state` (기능 브랜치: `codex/fix-close-confirmation-v1.7.4`)
+- **Status**: 보조 창 추가 클릭 방어와 상태별 런처 종료 확인을 구현하고 [v1.7.4 정식 릴리스](https://github.com/Mangom72/MineHarbor/releases/tag/v1.7.4) 게시 및 공개 자동 업데이트 검증 완료
 - 보조 창 X의 화면 좌표를 보존하고 64px 주변에서 Windows 더블클릭 시간에 150ms 여유를 더한 구간 동안 추가 마우스 입력을 소비합니다. 보호 시간은 500~1200ms로 제한하며, 포인터가 X 주변을 벗어나면 다른 메인 창 동작을 즉시 사용할 수 있습니다.
 - 기존 `FormClosed`·마우스 해제 직후 `BeginInvoke`로 보호를 해제하던 경쟁 조건을 제거했습니다. 단일 클릭뿐 아니라 마우스 스위치 채터링과 지연된 두 번째 클릭도 같은 닫기 입력으로 처리합니다.
 - 런처 X와 Alt+F4는 서버가 꺼져 있어도 종료 여부를 확인합니다. 유휴 상태의 확인은 서버 종료 프로세스를 실행하지 않으며, 작업 중에는 완료 후 종료, 서버 실행 중에는 월드 저장과 안전 종료 후 런처 종료를 안내합니다.
 - 클릭 보호 시간·좌표 경계·반복 입력·만료와 유휴/작업/서버 종료 질문 분기를 회귀 검사에 추가했습니다. 로컬 Portable 빌드와 `PASSED=26`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`를 통과했고, 실제 Windows에서 한국어·다크 일반 종료 확인창을 확인했습니다.
+- [PR #18](https://github.com/Mangom72/MineHarbor/pull/18)은 `d01c183`으로 병합됐고 PR CI와 `main` CI가 모두 통과했습니다. [릴리스 워크플로](https://github.com/Mangom72/MineHarbor/actions/runs/30112841129)는 자체서명 인증서 생성·폐기, 산출물 7종과 SHA-256, 설치 파일·Portable·브리지 검증을 완료했습니다.
+- 공개 v1.7.3 런처로 v1.7.4 자동 업데이트를 실행해 `PUBLIC_AUTO_UPDATE_OK=1.7.3->1.7.4`를 확인한 뒤, 업데이트된 실행 파일로 전체 `PASSED=26`, `BRIDGE_PROTOCOL_PASSED=10`, Portable/UI/보안 검사를 다시 통과했습니다.
 
 ## Codex Responsive Workspace and Command Completion - 2026-07-24
 
