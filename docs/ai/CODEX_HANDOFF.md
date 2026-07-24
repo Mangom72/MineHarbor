@@ -1,8 +1,8 @@
 # CODEX_HANDOFF.md
 
-## 0. Current implementation state (v1.7.5 release candidate)
+## 0. Current implementation state (v1.7.5 released)
 
-- Feature branch: `codex/fix-quick-command-layout-v1.7.5`
+- Release-state branch: `codex/v1.7.5-release-state` (feature branch: `codex/fix-quick-command-layout-v1.7.5`)
 - Version source of truth: `version.json` = 1.7.5 / build 26.2.45.70
 - New per-server state: `.mineharbor/content-manifest.json` and `.mineharbor/automation.json`
 - New user areas: installed content/Modrinth/data packs, backup schedules and commands, and a live server status dashboard
@@ -10,9 +10,9 @@
 - Tool-window title-bar closes retain a short coordinate-scoped input guard, so mouse double-click chatter cannot immediately activate an overlapping launcher control while deliberate clicks elsewhere remain available.
 - User-initiated launcher close now always asks for confirmation. Idle close exits directly without invoking server termination; active work and a running server use separate Korean/English wording and retain deferred or safe-stop behavior.
 - The quick-command card now remains in a fixed legacy-width right column. The console uses a separate left column, so toggling it no longer moves the card or leaves console content hidden behind it.
-- CI: `.github/workflows/ci.yml` validates PRs and main separately from `.github/workflows/build-release.yml`; both build the SDK-style `net48` project and the legacy Portable path. The v1.7.5 candidate is awaiting PR and tagged-release verification.
+- CI: `.github/workflows/ci.yml` validates PRs and main separately from `.github/workflows/build-release.yml`; both build the SDK-style `net48` project and the legacy Portable path. PR [#20](https://github.com/Mangom72/MineHarbor/pull/20) was merged as `c6bbd29`; both PR and main CI passed before the [v1.7.5 release workflow](https://github.com/Mangom72/MineHarbor/actions/runs/30119473148) published the [stable release](https://github.com/Mangom72/MineHarbor/releases/tag/v1.7.5).
 - Local v1.7.5 validation passed 26 launcher test groups, 10 bridge protocol cases, Portable smoke/version, UI scan, security regression scan, and seven self-signed release artifacts. The Korean dark-theme console closed/open/closed sequence was visually checked without starting a server or changing UPnP state. No local .NET SDK is installed, so the SDK-style `net48` build remains a required GitHub CI gate.
-- The previous stable v1.7.4 release and its public v1.7.3-to-v1.7.4 automatic-update verification remain valid until v1.7.5 is published.
+- Seven public assets were downloaded and independently checked for hashes, versions, self-signed Authenticode integrity, and archive structure. The public v1.7.4 launcher updated to v1.7.5 through the published metadata (`PUBLIC_AUTO_UPDATE_OK=1.7.4->1.7.5`), and the updated launcher passed the complete test suite again.
 - The default runtime remains .NET Framework 4.8. `MineHarbor.csproj` is the migration bridge; do not switch to .NET 10 until updater, COM/UPnP, WinForms, installer, and Portable compatibility tests are equivalent.
 - Do not infer dashboard values. Paper/Purpur TPS/MSPT is shown only when the local bridge reports it; unsupported or disconnected values remain explicit.
 
