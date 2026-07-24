@@ -4,6 +4,20 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.7.4] - 2026-07-25
+
+### Korean
+
+- **추가 닫기 클릭 차단**: 보조 창의 제목 표시줄 X를 누른 좌표 주변에서 시스템 더블클릭 시간 동안 추가 입력을 소비합니다. 마우스 스위치 채터링이나 지연된 두 번째 클릭이 뒤의 메인 창 버튼을 누르지 못하며, X에서 벗어난 정상 클릭은 즉시 허용합니다.
+- **항상 표시되는 런처 종료 확인**: 서버가 꺼져 있어도 MineHarbor 종료 여부를 확인합니다. 일반 종료는 서버 종료 프로세스를 실행하지 않고 즉시 닫으며, 진행 중인 작업과 실행 중인 서버에는 각각 작업 완료 대기와 안전 종료를 설명하는 별도 문구를 사용합니다.
+- **종료 흐름 회귀 검증**: 클릭 보호의 최소·최대 시간, 좌표 경계, 반복 클릭과 만료, 유휴·작업 중·서버 실행 중 질문 분기 및 일반 종료의 비지연 경로를 자동 검증합니다.
+
+### English
+
+- **Repeated close-click suppression**: Additional input near a tool window's title-bar close coordinate is consumed for the Windows double-click interval. Switch chatter or a delayed second click can no longer activate an underlying main-window action, while clicks away from the close point remain immediately available.
+- **Launcher confirmation on every user close**: MineHarbor now asks before closing even while the server is off. An idle close exits without running the server-stop process, while in-progress work and a running server use separate copy explaining deferred completion and safe server shutdown.
+- **Close-flow regression coverage**: Tests now cover minimum and maximum guard duration, coordinate boundaries, repeated clicks and expiry, all three close-question modes, and the non-deferred idle path.
+
 ## [1.7.3] - 2026-07-24
 
 ### Korean

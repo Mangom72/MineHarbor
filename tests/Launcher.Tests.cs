@@ -735,8 +735,17 @@ internal static class LauncherTests
 		MethodInfo mouseMessage = launcherFormType.GetMethod("IsMouseClickMessage", BindingFlags.Static | BindingFlags.NonPublic);
 		MethodInfo mouseRelease = launcherFormType.GetMethod("IsMouseReleaseMessage", BindingFlags.Static | BindingFlags.NonPublic);
 		MethodInfo titleBarClose = launcherFormType.GetMethod("IsTitleBarCloseMessage", BindingFlags.Static | BindingFlags.NonPublic);
+		MethodInfo guardDuration = launcherFormType.GetMethod("GetOwnedWindowClickGuardDuration", BindingFlags.Static | BindingFlags.NonPublic);
+		MethodInfo guardedPoint = launcherFormType.GetMethod("IsPointWithinOwnedWindowClickGuard", BindingFlags.Static | BindingFlags.NonPublic);
+		MethodInfo closeQuestion = launcherFormType.GetMethod("GetLauncherCloseQuestionKey", BindingFlags.Static | BindingFlags.NonPublic);
+		MethodInfo deferredClose = launcherFormType.GetMethod("RequiresDeferredLauncherClose", BindingFlags.Static | BindingFlags.NonPublic);
 		Equal(true, guardActive.Invoke(null, new object[] { 100, 350 }), "보조 창 닫기 클릭 관통 보호 활성");
 		Equal(false, guardActive.Invoke(null, new object[] { 350, 350 }), "보조 창 닫기 클릭 관통 보호 만료");
+		Equal(650, guardDuration.Invoke(null, new object[] { 500 }), "시스템 더블클릭 시간을 포함한 추가 클릭 보호");
+		Equal(500, guardDuration.Invoke(null, new object[] { 100 }), "추가 클릭 보호 최소 시간");
+		Equal(1200, guardDuration.Invoke(null, new object[] { 5000 }), "추가 클릭 보호 최대 시간");
+		Equal(true, guardedPoint.Invoke(null, new object[] { new Point(100, 100), new Point(164, 36), 64 }), "닫기 좌표 주변 추가 클릭 차단");
+		Equal(false, guardedPoint.Invoke(null, new object[] { new Point(100, 100), new Point(165, 100), 64 }), "닫기 좌표에서 벗어난 클릭 허용");
 		Equal(true, mouseMessage.Invoke(null, new object[] { 0x0201 }), "마우스 클릭 메시지 식별");
 		Equal(true, mouseMessage.Invoke(null, new object[] { 0x020B }), "X 버튼 클릭 메시지 식별");
 		Equal(true, mouseMessage.Invoke(null, new object[] { 0x00A2 }), "비클라이언트 클릭 메시지 식별");
@@ -747,6 +756,11 @@ internal static class LauncherTests
 		Equal(false, mouseRelease.Invoke(null, new object[] { 0x0201 }), "마우스 누름 메시지 비해제");
 		Equal(true, titleBarClose.Invoke(null, new object[] { 0x00A1, new IntPtr(20) }), "제목 표시줄 닫기 입력 식별");
 		Equal(false, titleBarClose.Invoke(null, new object[] { 0x00A1, new IntPtr(8) }), "제목 표시줄 최소화 입력 제외");
+		Equal("Close.IdleQuestion", closeQuestion.Invoke(null, new object[] { false, false }), "서버가 꺼진 런처 종료 확인");
+		Equal("Close.WorkQuestion", closeQuestion.Invoke(null, new object[] { true, false }), "작업 중 런처 종료 확인");
+		Equal("Close.ServerQuestion", closeQuestion.Invoke(null, new object[] { false, true }), "서버 실행 중 런처 종료 확인");
+		Equal(false, deferredClose.Invoke(null, new object[] { false, false }), "일반 종료에 서버 종료 프로세스 미사용");
+		Equal(true, deferredClose.Invoke(null, new object[] { false, true }), "서버 실행 중 안전 종료 대기");
 
 		Type profileType = launcher.GetNestedType("ManagedProfileRecord", BindingFlags.NonPublic);
 		object profile = Activator.CreateInstance(profileType, true);
@@ -839,9 +853,14 @@ internal static class LauncherTests
 			object[] upArguments = new object[] { underlyingUp };
 			Equal(true, filter.Invoke(owner, upArguments), "보조 창 닫기 마우스 해제 관통 차단");
 			Application.DoEvents();
-			Message nextDown = Message.Create(underlyingButton.Handle, 0x0201, IntPtr.Zero, IntPtr.Zero);
-			object[] nextArguments = new object[] { nextDown };
-			Equal(false, filter.Invoke(owner, nextArguments), "보조 창 종료 후 다음 독립 클릭 허용");
+			Message repeatedDown = Message.Create(underlyingButton.Handle, 0x0201, IntPtr.Zero, IntPtr.Zero);
+			object[] repeatedArguments = new object[] { repeatedDown };
+			Equal(true, filter.Invoke(owner, repeatedArguments), "보조 창 종료 직후 같은 위치의 추가 클릭 차단");
+			FieldInfo guardUntil = formType.GetField("ownedWindowClickGuardUntilTick", BindingFlags.Instance | BindingFlags.NonPublic);
+			guardUntil.SetValue(owner, Environment.TickCount);
+			Message laterDown = Message.Create(underlyingButton.Handle, 0x0201, IntPtr.Zero, IntPtr.Zero);
+			object[] laterArguments = new object[] { laterDown };
+			Equal(false, filter.Invoke(owner, laterArguments), "추가 클릭 보호 만료 후 클릭 허용");
 			Equal(1, closed, "기능 창 종료 후 콜백 실행");
 			Equal(true, ensureSafe.Invoke(owner, null), "기능 창 종료 후 서버 변경 허용");
 		}

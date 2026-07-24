@@ -1506,12 +1506,11 @@ internal static partial class Launcher
 		private readonly Dictionary<string, Form> modelessToolWindows = new Dictionary<string, Form>(StringComparer.Ordinal);
 
 		private readonly HashSet<string> modelessToolsBlockingServerChanges = new HashSet<string>(StringComparer.Ordinal);
+		private const int OwnedWindowCloseClickGuardRadius = 64;
 		private int ownedWindowClickGuardUntilTick;
-		private int ownedWindowClickGuardGeneration;
 		private IntPtr ownedWindowCloseHandle;
 		private Form ownedWindowCloseForm;
-		private bool ownedWindowClosePointerReleased;
-		private bool ownedWindowCloseCompleted;
+		private Point ownedWindowCloseScreenPoint;
 		private bool clickFilterInstalled;
 
 		private readonly ConcurrentQueue<string> consoleQueue = new ConcurrentQueue<string>();
@@ -3959,6 +3958,19 @@ internal static partial class Launcher
 			return unchecked(untilTick - nowTick) > 0;
 		}
 
+		private static int GetOwnedWindowClickGuardDuration(int doubleClickTime)
+		{
+			return Math.Max(500, Math.Min(1200, doubleClickTime + 150));
+		}
+
+		private static bool IsPointWithinOwnedWindowClickGuard(Point closePoint, Point currentPoint, int radius)
+		{
+			if (radius < 0) return false;
+			long horizontal = (long)closePoint.X - currentPoint.X;
+			long vertical = (long)closePoint.Y - currentPoint.Y;
+			return Math.Abs(horizontal) <= radius && Math.Abs(vertical) <= radius;
+		}
+
 		private static bool IsMouseClickMessage(int message)
 		{
 			return (message >= 0x0201 && message <= 0x0209) ||
@@ -4000,20 +4012,22 @@ internal static partial class Launcher
 
 		private void ArmOwnedWindowClickGuard(Form sourceForm, IntPtr sourceHandle)
 		{
-			ownedWindowClickGuardGeneration++;
 			ownedWindowCloseHandle = sourceHandle;
 			ownedWindowCloseForm = sourceForm;
-			ownedWindowClosePointerReleased = false;
-			ownedWindowCloseCompleted = false;
-			// 비클라이언트 닫기 입력의 해제 또는 창 종료 메시지가 누락되어도 보호가 영구히 남지 않게 제한합니다.
-			ownedWindowClickGuardUntilTick = unchecked(Environment.TickCount + 750);
+			ownedWindowCloseScreenPoint = Control.MousePosition;
+			ExtendOwnedWindowClickGuard();
+		}
+
+		private void ExtendOwnedWindowClickGuard()
+		{
+			// 마우스 스위치 채터링이나 OS의 지연 재전달도 같은 닫기 입력으로 취급합니다.
+			ownedWindowClickGuardUntilTick = unchecked(Environment.TickCount + GetOwnedWindowClickGuardDuration(SystemInformation.DoubleClickTime));
 		}
 
 		private void CompleteOwnedWindowPointerClose(Form form)
 		{
 			if (form == null || ownedWindowCloseHandle == IntPtr.Zero || !object.ReferenceEquals(form, ownedWindowCloseForm)) return;
-			ownedWindowCloseCompleted = true;
-			TryReleaseOwnedWindowClickGuard();
+			ExtendOwnedWindowClickGuard();
 		}
 
 		private bool IsOwnedWindowClickGuardArmed()
@@ -4022,37 +4036,13 @@ internal static partial class Launcher
 			if (IsOwnedWindowClickGuardActive(Environment.TickCount, ownedWindowClickGuardUntilTick)) return true;
 			ownedWindowCloseHandle = IntPtr.Zero;
 			ownedWindowCloseForm = null;
-			ownedWindowClosePointerReleased = false;
-			ownedWindowCloseCompleted = false;
+			ownedWindowCloseScreenPoint = Point.Empty;
 			return false;
 		}
 
 		private void MarkOwnedWindowClosePointerReleased()
 		{
-			ownedWindowClosePointerReleased = true;
-			TryReleaseOwnedWindowClickGuard();
-		}
-
-		private void TryReleaseOwnedWindowClickGuard()
-		{
-			if (!ownedWindowClosePointerReleased || !ownedWindowCloseCompleted || IsDisposed || Disposing || !IsHandleCreated) return;
-			int generation = ownedWindowClickGuardGeneration;
-			try
-			{
-				BeginInvoke(new MethodInvoker(delegate
-				{
-					if (generation != ownedWindowClickGuardGeneration) return;
-					ownedWindowClickGuardUntilTick = Environment.TickCount;
-					ownedWindowCloseHandle = IntPtr.Zero;
-					ownedWindowCloseForm = null;
-					ownedWindowClosePointerReleased = false;
-					ownedWindowCloseCompleted = false;
-				}));
-			}
-			catch (InvalidOperationException)
-			{
-				// 종료 중에는 UI 핸들이 사라질 수 있으며, 메시지 필터도 곧 함께 제거됩니다.
-			}
+			ExtendOwnedWindowClickGuard();
 		}
 
 		public bool PreFilterMessage(ref Message message)
@@ -4069,12 +4059,13 @@ internal static partial class Launcher
 			if (!IsOwnedWindowClickGuardArmed() || !IsMouseClickMessage(message.Msg)) return false;
 			bool launcherTarget = IsLauncherWindowHandle(message.HWnd);
 			if (IsMouseReleaseMessage(message.Msg)) MarkOwnedWindowClosePointerReleased();
-			return launcherTarget;
+			return launcherTarget && IsPointWithinOwnedWindowClickGuard(ownedWindowCloseScreenPoint, Control.MousePosition, OwnedWindowCloseClickGuardRadius);
 		}
 
 		protected override void WndProc(ref Message message)
 		{
-			if (message.Msg == 0x0021 && IsOwnedWindowClickGuardArmed())
+			if (message.Msg == 0x0021 && IsOwnedWindowClickGuardArmed() &&
+				IsPointWithinOwnedWindowClickGuard(ownedWindowCloseScreenPoint, Control.MousePosition, OwnedWindowCloseClickGuardRadius))
 			{
 				// MA_NOACTIVATEANDEAT: 주 창 활성화와 뒤따르는 클릭을 함께 소비합니다.
 				message.Result = new IntPtr(4);
@@ -4526,17 +4517,8 @@ internal static partial class Launcher
 
 		{
 
-			if (!workflowRunning && !serverRunning)
-
-			{
-
-				return;
-
-			}
-
-			
-
-			DialogResult result = ShowMineHarborDialog(this, Localization.T("Close.Question"), Localization.T("Close.Title"), MessageBoxButtons.YesNo, MessageBoxIcon.Question);
+			string questionKey = GetLauncherCloseQuestionKey(workflowRunning, serverRunning);
+			DialogResult result = ShowMineHarborDialog(this, Localization.T(questionKey), Localization.T("Close.Title"), MessageBoxButtons.YesNo, serverRunning ? MessageBoxIcon.Warning : MessageBoxIcon.Question);
 
 			if (result != DialogResult.Yes)
 
@@ -4548,7 +4530,7 @@ internal static partial class Launcher
 
 			}
 
-			
+			if (!RequiresDeferredLauncherClose(workflowRunning, serverRunning)) return;
 
 			eventArgs.Cancel = true;
 
@@ -4666,6 +4648,17 @@ internal static partial class Launcher
 
 			}
 
+		}
+
+		private static string GetLauncherCloseQuestionKey(bool workflowIsRunning, bool serverIsRunning)
+		{
+			if (serverIsRunning) return "Close.ServerQuestion";
+			return workflowIsRunning ? "Close.WorkQuestion" : "Close.IdleQuestion";
+		}
+
+		private static bool RequiresDeferredLauncherClose(bool workflowIsRunning, bool serverIsRunning)
+		{
+			return workflowIsRunning || serverIsRunning;
 		}
 
 
