@@ -3,12 +3,14 @@
 ## Codex Fixed Quick-Command and Console Workspace - 2026-07-25
 
 - **Current Version**: 1.7.5 (build 26.2.45.70)
-- **Branch**: `codex/fix-quick-command-layout-v1.7.5`
-- **Status**: 빠른 명령 위치 복원과 콘솔 겹침 수정 구현 및 정식 릴리스 후보 검증 중
+- **Branch**: `codex/v1.7.5-release-state` (기능 브랜치: `codex/fix-quick-command-layout-v1.7.5`)
+- **Status**: 빠른 명령 위치 복원과 콘솔 겹침 수정을 구현하고 [v1.7.5 정식 릴리스](https://github.com/Mangom72/MineHarbor/releases/tag/v1.7.5) 게시 및 공개 자동 업데이트 검증 완료
 - v1.7.3에서 도입한 콘솔 닫힘 전체 폭·열림 오른쪽 보조 패널 전환을 제거하고, 빠른 명령을 구버전과 같은 오른쪽 410px 고정 열에 유지합니다.
 - 작업 영역을 명시적인 2열 `TableLayoutPanel`로 바꿔 콘솔은 왼쪽 열, 빠른 명령은 오른쪽 열만 사용합니다. 기존에는 실제 창에서 콘솔과 빠른 명령 경계가 겹쳐 콘솔 오른쪽이 가려졌으나 수정 후 경계가 교차하지 않습니다.
 - 고정 열 위치·폭, 콘솔 전환 후 위치 유지, 별도 열과 실제 경계 비중첩을 26번째 UX 테스트 그룹에 추가했습니다. 로컬 빌드와 `PASSED=26`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`, 자체서명 릴리스 산출물 7종 검증을 통과했습니다.
 - 실제 Windows 다크 화면에서 콘솔 닫힘 → 열림 → 닫힘을 확인했습니다. 빠른 명령은 오른쪽 고정 위치를 유지하고 콘솔 출력·도구막대·명령 입력은 왼쪽에서 가려지지 않았습니다. 서버 시작·명령 전송·UPnP는 실행하지 않았고 기존 설치본 창을 검증 후 복원했습니다.
+- [PR #20](https://github.com/Mangom72/MineHarbor/pull/20)은 `c6bbd29`로 병합됐고 PR CI와 [main CI](https://github.com/Mangom72/MineHarbor/actions/runs/30119364755)가 모두 통과했습니다. [릴리스 워크플로](https://github.com/Mangom72/MineHarbor/actions/runs/30119473148)는 자체서명 인증서 생성·폐기, 산출물 7종과 SHA-256, 설치 파일·Portable·브리지 검증을 완료했습니다.
+- 공개 v1.7.4 런처로 v1.7.5 자동 업데이트를 실행해 `PUBLIC_AUTO_UPDATE_OK=1.7.4->1.7.5`를 확인한 뒤, 업데이트된 실행 파일로 전체 `PASSED=26`, `BRIDGE_PROTOCOL_PASSED=10`, Portable/UI/보안 검사를 다시 통과했습니다.
 
 ## Codex Repeated Close-Click Guard and Exit Confirmation - 2026-07-25
 
