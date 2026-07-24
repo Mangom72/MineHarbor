@@ -26,7 +26,7 @@
 | **Windows 설치 프로그램** | 시작 메뉴, 선택적 바탕화면 바로가기, 제거 기능 사용 | **[최신 Release 열기](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 | **Portable ZIP** | README와 라이선스를 포함한 묶음 보관 | **[최신 Release 열기](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 
-현재 소스 버전은 `v1.7.4`, 내부 빌드는 `26.2.45.69`입니다. MineHarbor 이름으로 배포된 Portable EXE는 같은 링크에서 계속 최신 파일을 받을 수 있습니다. 기존 설치의 `%LOCALAPPDATA%\MinecraftServerLauncher` 데이터는 자동으로 찾아 그대로 사용하며, 새 사용자 데이터 경로는 `%LOCALAPPDATA%\MineHarbor`입니다.
+현재 소스 버전은 `v1.7.5`, 내부 빌드는 `26.2.45.70`입니다. MineHarbor 이름으로 배포된 Portable EXE는 같은 링크에서 계속 최신 파일을 받을 수 있습니다. 기존 설치의 `%LOCALAPPDATA%\MinecraftServerLauncher` 데이터는 자동으로 찾아 그대로 사용하며, 새 사용자 데이터 경로는 `%LOCALAPPDATA%\MineHarbor`입니다.
 
 > [!WARNING]
 > 현재 릴리스 실행 파일은 요청된 자체서명 인증서로 무결성을 표시하지만 공개 인증 기관이 신뢰한 배포자 서명은 아닙니다. 따라서 Windows SmartScreen 경고가 나타날 수 있습니다. Release의 `SHA256SUMS.txt`와 GitHub 출처를 함께 확인해 주세요.
@@ -143,6 +143,7 @@ Minecraft 및 서버 종류에 맞춰 Java 8·11·16·17·21·25 중 필요한 �
 - 커서 위치와 따옴표를 이해하는 자동완성, `Tab`으로 후보 적용
 - `Tab`·`Shift+Tab`으로 자동완성 후보 순환, `Enter`로 선택한 명령 전송
 - `Ctrl+Space`로 후보 다시 열기, `Ctrl+↑`·`Ctrl+↓`로 명령 기록 탐색
+- 빠른 명령 카드는 오른쪽 고정 열을 유지하고, 콘솔은 별도 왼쪽 열에서 겹침 없이 표시
 - 멀티 서버 콘솔에서 기본 명령과 온라인 플레이어 이름 자동완성
 - 메인 콘솔의 기본 명령·연결된 플레이어 인수 자동완성과 예약 명령 편집의 기본 명령 자동완성
 - 온라인 플레이어, 게임 모드, 난이도, 아이템, 좌표 등을 받는 사용자 명령 템플릿
@@ -248,7 +249,7 @@ dotnet build .\MineHarbor.csproj -c Release
 | **Windows installer** | Start Menu, optional desktop shortcut, and uninstall support | **[Open the latest release](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 | **Portable ZIP** | Keep the launcher, README, and license together | **[Open the latest release](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 
-Current source version: `v1.7.4` · internal build: `26.2.45.69`. MineHarbor releases keep the same permanent Portable URL. Existing data under `%LOCALAPPDATA%\MinecraftServerLauncher` is detected and preserved; new user-data installations use `%LOCALAPPDATA%\MineHarbor`.
+Current source version: `v1.7.5` · internal build: `26.2.45.70`. MineHarbor releases keep the same permanent Portable URL. Existing data under `%LOCALAPPDATA%\MinecraftServerLauncher` is detected and preserved; new user-data installations use `%LOCALAPPDATA%\MineHarbor`.
 
 > [!WARNING]
 > Release executables carry the requested self-signed integrity signature, not a publisher identity trusted by a public certificate authority. Windows SmartScreen can therefore still warn. Verify the GitHub source and the release `SHA256SUMS.txt`.
@@ -289,6 +290,8 @@ The main window appears first while update, profile, and current version data lo
 Commands are organized as `Category → Function → Command`, such as `World → Difficulty → Hard` or `World → Weather → Clear`. Search matches display names, descriptions, hierarchy paths, and command text. The picker supports Ctrl+F, arrow keys, Enter, and Esc.
 
 Cursor-aware suggestions, history, and editable templates work locally for every server type. When the optional Paper/Purpur bridge is connected, registered plugin commands also appear under `Plugins → Plugin name → Command`. Destructive and privilege-changing commands require confirmation.
+
+The quick-command card stays in a fixed right-side column while the console uses a separate left column, so toggling the console neither moves the card nor hides console output behind it.
 
 The player-management field suggests connected player names. Main and managed consoles suggest common commands and available player arguments, while the scheduled-command editor suggests commands that do not depend on current players. Use Up/Down and Tab or Enter without leaving the keyboard.
 
