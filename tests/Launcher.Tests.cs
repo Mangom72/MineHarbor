@@ -540,8 +540,15 @@ internal static class LauncherTests
 				Label quickSyntax = (Label)GetPrivateField(formType, form, "quickCommandSyntax");
 				Button quickMenu = (Button)GetPrivateField(formType, form, "quickCommandMenuButton");
 				Button quickManage = (Button)GetPrivateField(formType, form, "quickCommandManageButton");
+				Panel consolePanel = (Panel)GetPrivateField(formType, form, "consolePanel");
+				TableLayoutPanel workspace = quickPanel.Parent as TableLayoutPanel;
 				object consoleSuggestions = GetPrivateField(formType, form, "consoleCommandSuggestions");
-				Equal(DockStyle.Fill, quickPanel.Dock, "콘솔 닫힘 시 빠른 명령 전체 폭 사용");
+				if (workspace == null) throw new InvalidOperationException("빠른 명령과 콘솔이 분리된 작업 영역을 사용하지 않습니다.");
+				Equal(DockStyle.Fill, quickPanel.Dock, "빠른 명령 고정 열 채우기");
+				Equal(1, workspace.GetColumn(quickPanel), "빠른 명령 오른쪽 고정 열");
+				Equal(0, workspace.GetColumn(consolePanel), "콘솔 왼쪽 전용 열");
+				Equal(SizeType.Absolute, workspace.ColumnStyles[1].SizeType, "빠른 명령 고정 폭 열");
+				if (Math.Abs(workspace.ColumnStyles[1].Width - 410F) > 0.1F) throw new InvalidOperationException("빠른 명령 고정 폭이 구버전과 다릅니다.");
 				Equal(false, quickStatus.AutoEllipsis, "빠른 명령 상태 말줄임표 제거");
 				Equal(false, quickSyntax.AutoEllipsis, "빠른 명령 안내 말줄임표 제거");
 				AssertSingleLineTextFits(quickStatus, "영어 빠른 명령 상태");
@@ -550,10 +557,17 @@ internal static class LauncherTests
 				AssertButtonTextFits(quickManage, "영어 명령·브리지 관리");
 				if (consoleSuggestions == null) throw new InvalidOperationException("메인 콘솔 명령 자동완성이 연결되지 않았습니다.");
 
-				formType.GetMethod("UpdateQuickCommandWorkspaceLayout", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(form, new object[] { true });
+				int quickColumnBefore = workspace.GetColumn(quickPanel);
+				consolePanel.Visible = true;
+				formType.GetMethod("EnsureQuickCommandWorkspaceLayout", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(form, null);
 				form.PerformLayout();
-				Equal(DockStyle.Right, quickPanel.Dock, "콘솔 열림 시 빠른 명령 보조 패널");
-				if (quickPanel.Width > 460 || quickPanel.Width < 360) throw new InvalidOperationException("콘솔 열림 상태의 빠른 명령 폭이 반응형 범위를 벗어납니다.");
+				workspace.PerformLayout();
+				Equal(quickColumnBefore, workspace.GetColumn(quickPanel), "콘솔 전환 후 빠른 명령 위치 유지");
+				Equal(DockStyle.Fill, quickPanel.Dock, "콘솔 전환 후 빠른 명령 고정 열 유지");
+				if (workspace.GetColumn(consolePanel) == workspace.GetColumn(quickPanel)) throw new InvalidOperationException("콘솔과 빠른 명령이 같은 열에서 겹칩니다.");
+				int[] workspaceWidths = workspace.GetColumnWidths();
+				if (workspaceWidths.Length != 2 || workspaceWidths[0] <= 0 || Math.Abs(workspaceWidths[1] - 410) > 1) throw new InvalidOperationException("콘솔과 빠른 명령의 분리 폭이 올바르지 않습니다.");
+				if (consolePanel.Bounds.IntersectsWith(quickPanel.Bounds)) throw new InvalidOperationException("콘솔이 빠른 명령 패널 뒤까지 확장되어 출력 일부를 가립니다.");
 				AssertSingleLineTextFits(quickStatus, "콘솔 열림 영어 빠른 명령 상태");
 				AssertButtonTextFits(quickMenu, "콘솔 열림 영어 빠른 명령 선택");
 				AssertButtonTextFits(quickManage, "콘솔 열림 영어 명령·브리지 관리");

@@ -11,6 +11,7 @@ internal static partial class Launcher
 {
 	private sealed partial class LauncherForm
 	{
+		private const int QuickCommandPanelWidth = 410;
 		private RoundedPanel quickCommandPanel;
 		private Label quickCommandTitle;
 		private Label quickCommandStatus;
@@ -33,14 +34,15 @@ internal static partial class Launcher
 			return Localization.CurrentLanguage == Localization.Korean ? korean : english;
 		}
 
-		private void InitializeQuickCommandPanel(Control workspace)
+		private void InitializeQuickCommandPanel(TableLayoutPanel workspace)
 		{
 			quickCommandPanel = new RoundedPanel();
 			quickCommandPanel.Dock = DockStyle.Fill;
+			quickCommandPanel.Margin = Padding.Empty;
 			quickCommandPanel.Padding = new Padding(16, 12, 16, 12);
 			quickCommandPanel.CornerRadius = 20;
 			quickCommandPanel.Tag = "main-card";
-			workspace.Controls.Add(quickCommandPanel);
+			workspace.Controls.Add(quickCommandPanel, 1, 0);
 
 			quickCommandTitle = new Label();
 			quickCommandTitle.AutoSize = true;
@@ -126,36 +128,28 @@ internal static partial class Launcher
 			};
 
 			quickCommandPanel.Resize += delegate { LayoutQuickCommandPanel(); };
-			workspace.Resize += delegate
-			{
-				if (consolePanel != null && consolePanel.Visible && quickCommandPanel.Dock == DockStyle.Right) UpdateQuickCommandWorkspaceLayout(true);
-			};
 			FormClosed += delegate
 			{
 				if (quickCommandDebounceTimer != null) quickCommandDebounceTimer.Dispose();
 			};
 			ReloadQuickCommandContext();
 			ApplyQuickCommandLocalization();
-			UpdateQuickCommandWorkspaceLayout(false);
+			EnsureQuickCommandWorkspaceLayout();
 			LayoutQuickCommandPanel();
 		}
 
-		private void UpdateQuickCommandWorkspaceLayout(bool consoleVisible)
+		private void EnsureQuickCommandWorkspaceLayout()
 		{
 			if (quickCommandPanel == null || quickCommandPanel.Parent == null) return;
-			Control workspace = quickCommandPanel.Parent;
+			TableLayoutPanel workspace = quickCommandPanel.Parent as TableLayoutPanel;
+			if (workspace == null || workspace.ColumnStyles.Count < 2) return;
 			quickCommandPanel.SuspendLayout();
-			if (consoleVisible)
-			{
-				int available = Math.Max(360, workspace.ClientSize.Width - 520);
-				quickCommandPanel.Dock = DockStyle.Right;
-				quickCommandPanel.Width = Math.Min(460, available);
-			}
-			else
-			{
-				quickCommandPanel.Dock = DockStyle.Fill;
-			}
-			quickCommandPanel.BringToFront();
+			// 콘솔 표시 여부와 관계없이 빠른 명령을 구버전의 오른쪽 고정 위치에 유지합니다.
+			workspace.ColumnStyles[1].SizeType = SizeType.Absolute;
+			workspace.ColumnStyles[1].Width = QuickCommandPanelWidth;
+			workspace.SetColumn(quickCommandPanel, 1);
+			workspace.SetRow(quickCommandPanel, 0);
+			quickCommandPanel.Dock = DockStyle.Fill;
 			quickCommandPanel.ResumeLayout(true);
 			LayoutQuickCommandPanel();
 		}

@@ -4,6 +4,20 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.7.5] - 2026-07-25
+
+### Korean
+
+- **빠른 명령 위치 복원**: 빠른 명령 카드를 콘솔 표시 여부와 관계없이 구버전처럼 오른쪽 410px 고정 열에 유지합니다. 콘솔을 열고 닫아도 카드가 전체 폭과 오른쪽 사이를 오가지 않습니다.
+- **콘솔 겹침 제거**: 콘솔과 빠른 명령을 독립된 2열 작업 영역에 배치해 빠른 명령 패널 뒤에 가려지던 콘솔 오른쪽 출력과 입력 영역을 모두 표시합니다.
+- **레이아웃 회귀 검증**: 고정 열의 위치·폭, 콘솔 전환 후 위치 유지, 서로 다른 열 배치와 실제 컨트롤 경계의 비중첩을 자동 검증하고 Windows 다크 화면에서 열림·닫힘 상태를 확인했습니다.
+
+### English
+
+- **Restored quick-command position**: The quick-command card now stays in the legacy fixed 410-pixel right column whether the console is open or closed. Toggling the console no longer moves the card between full-width and right-side layouts.
+- **No console overlap**: The console and quick commands now occupy separate workspace columns, keeping the console's right-side output and input area visible instead of hiding it behind the quick-command panel.
+- **Layout regression coverage**: Tests now verify the fixed column position and width, stable placement across console toggles, separate cells, and non-intersecting control bounds. Open and closed states were also checked on the real Windows dark UI.
+
 ## [1.7.4] - 2026-07-25
 
 ### Korean

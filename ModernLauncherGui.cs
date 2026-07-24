@@ -2305,11 +2305,23 @@ internal static partial class Launcher
 
 
 
-			Panel workspacePanel = new Panel();
+			TableLayoutPanel workspacePanel = new TableLayoutPanel();
 
 			workspacePanel.Dock = DockStyle.Fill;
 
 			workspacePanel.Padding = new Padding(0, 8, 0, 0);
+
+			workspacePanel.ColumnCount = 2;
+
+			workspacePanel.RowCount = 1;
+
+			workspacePanel.GrowStyle = TableLayoutPanelGrowStyle.FixedSize;
+
+			workspacePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+
+			workspacePanel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, QuickCommandPanelWidth));
+
+			workspacePanel.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 
 			root.Controls.Add(workspacePanel, 0, 3);
 
@@ -2321,9 +2333,11 @@ internal static partial class Launcher
 
 			consolePanel.Padding = new Padding(0, 0, 12, 0);
 
+			consolePanel.Margin = Padding.Empty;
+
 			consolePanel.Visible = false;
 
-			workspacePanel.Controls.Add(consolePanel);
+			workspacePanel.Controls.Add(consolePanel, 0, 0);
 
 			InitializeQuickCommandPanel(workspacePanel);
 
@@ -4668,7 +4682,7 @@ internal static partial class Launcher
 		{
 
 			consolePanel.Visible = !consolePanel.Visible;
-			UpdateQuickCommandWorkspaceLayout(consolePanel.Visible);
+			EnsureQuickCommandWorkspaceLayout();
 
 			consoleButton.Text = consolePanel.Visible ? Localization.T("Button.ConsoleClose") : Localization.T("Button.ConsoleOpen");
 
