@@ -4,13 +4,13 @@
 
 - **Current Version**: 1.9.0 (build 26.2.45.73, 문서 전용 변경으로 버전 유지)
 - **Branch**: `codex/readme-feature-audit-v1.9.0`
-- **Status**: `README.md`의 한국어·영어 기능 목록을 현재 코드, v1.5.20~v1.9.0 변경 기록, 자동 테스트와 공개 v1.9.0 Release 자산에 대조해 수정하고 PR 검증 준비 완료
+- **Status**: `README.md`의 한국어·영어 기능 목록을 현재 코드, v1.5.20~v1.9.0 변경 기록, 자동 테스트와 공개 v1.9.0 Release 자산에 대조해 수정하고 [PR #27](https://github.com/Mangom72/MineHarbor/pull/27) 게시 및 CI 검증 완료
 - 더 이상 호출되지 않는 이전 콘텐츠 화면 기준의 `첫 화면 인기 콘텐츠`와 `선택 항목 아이콘` 설명을 제거했습니다. 현재 통합 화면의 빈 검색어 인기순 결과, 제작자·다운로드·설명, 로컬 JAR/ZIP 설치와 정확한 `<월드>/datapacks` 대상 및 데이터팩 검증 범위를 반영했습니다.
 - 반복 간격·매일 시각·즉시 실행 일정, 콘텐츠 진행률·취소·종료 후 콜백 차단, 반응형 UI·접근성, 보조 창 클릭 관통/반복 클릭 차단과 상태별 런처 종료 확인을 한·영 기능 목록에 추가했습니다.
 - 직접 SSDP/SOAP, Windows COM 백업, 최대 8개 대체 외부 포트와 보수적 외부 접속 판정을 명시하고 운영체제·런타임, Modrinth, 일정 실행, 브리지 지표, 외부 접속과 자체서명의 현재 지원 범위를 표로 분리했습니다.
 - SDK 스타일 `net48`, 일반 CI와 릴리스 워크플로의 버전·자산·SHA-256·자체서명·이전 공개 런처 업데이트 검증을 설명하고 관련 콘텐츠/복사/빠른 명령/.NET/감사 문서 링크를 추가했습니다.
 - README 로컬 링크 27개와 외부 링크 8종, 한국어/영어 앵커, UTF-8 BOM, 깨진 문자, `v1.9.0`/`26.2.45.73` 및 공개 최신 Release 7개 자산을 확인했습니다. Markdown 규칙 검사는 기존 중앙 정렬 HTML·긴 표 문장 스타일만 보고했으며 새 링크나 구조 오류는 없었습니다.
-- `Prepare-BuildResources.ps1`, `build.ps1`, `test.ps1 -LauncherPath artifacts\MineHarbor.exe`가 통과했습니다. 결과는 `VERSION_CONSISTENCY_OK`, `PASSED=27`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`입니다. 로컬에는 .NET SDK가 없어 경고를 오류로 처리한 SDK 빌드는 PR CI에서 확인합니다.
+- `Prepare-BuildResources.ps1`, `build.ps1`, `test.ps1 -LauncherPath artifacts\MineHarbor.exe`가 통과했습니다. 결과는 `VERSION_CONSISTENCY_OK`, `PASSED=27`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`입니다. 로컬에 없는 .NET SDK 검증은 [PR CI](https://github.com/Mangom72/MineHarbor/actions/runs/30163548740)에서 .NET 10 SDK의 경고=오류 `net48` 빌드, Portable·브리지 빌드, 전체 테스트와 자산 업로드까지 통과했습니다.
 
 ## Codex Version-aware Quick Commands and Risk Model - 2026-07-25
 
