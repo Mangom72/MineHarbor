@@ -28,6 +28,7 @@ internal static partial class Launcher
 		private int quickCommandHistoryIndex = -1;
 		private int quickCommandSuggestionGeneration;
 		private string quickCommandServerType = "paper";
+		private string quickCommandMinecraftVersion = "26.2";
 
 		private static string QuickText(string korean, string english)
 		{
@@ -223,6 +224,7 @@ internal static partial class Launcher
 				string directory;
 				LauncherOptions options = ReadActiveLauncherOptions(out root, out directory);
 				quickCommandServerType = options.ServerType;
+				quickCommandMinecraftVersion = options.MinecraftVersion;
 				quickCommandUsers = LoadUserQuickCommands(root);
 			}
 			catch
@@ -347,7 +349,7 @@ internal static partial class Launcher
 			int generation = ++quickCommandSuggestionGeneration;
 			CommandBridgeSession bridge = GetActiveCommandBridge();
 			string[] players = bridge == null ? new string[0] : bridge.Players;
-			List<QuickCommandSuggestion> local = GetLocalQuickCommandSuggestions(input, quickCommandBox.SelectionStart, quickCommandServerType, quickCommandUsers, players, quickCommandHistory);
+			List<QuickCommandSuggestion> local = GetLocalQuickCommandSuggestions(input, quickCommandBox.SelectionStart, quickCommandServerType, quickCommandMinecraftVersion, quickCommandUsers, players, quickCommandHistory);
 			ShowQuickCommandSuggestions(local, generation);
 			if (bridge == null || !bridge.Connected) return;
 			int cursor = quickCommandBox.SelectionStart;
@@ -404,7 +406,8 @@ internal static partial class Launcher
 			ThemePalette palette = ThemePalette.Create(darkTheme);
 			bool selected = (eventArgs.State & DrawItemState.Selected) != 0;
 			using (SolidBrush background = new SolidBrush(selected ? palette.AccentSoft : palette.Card)) eventArgs.Graphics.FillRectangle(background, eventArgs.Bounds);
-			Color titleColor = item != null && item.Dangerous ? palette.Warning : palette.Text;
+			QuickCommandRisk risk = GetSuggestionRisk(item);
+			Color titleColor = risk == QuickCommandRisk.Dangerous ? palette.Danger : risk == QuickCommandRisk.Confirm ? palette.Warning : palette.Text;
 			using (Font titleFont = new Font(Font, FontStyle.Bold))
 			using (SolidBrush titleBrush = new SolidBrush(titleColor))
 			using (SolidBrush detailBrush = new SolidBrush(palette.Muted))
@@ -446,9 +449,16 @@ internal static partial class Launcher
 				ShowNoticeKey("Notice.NoServer", true);
 				return;
 			}
-			if (RequiresQuickCommandConfirmation(command, quickCommandUsers) || IsAdvancedDangerousCommand(command))
+			List<QuickCommandDefinition> riskDefinitions = GetBuiltInQuickCommands();
+			riskDefinitions.AddRange(quickCommandUsers);
+			QuickCommandRisk risk = GetQuickCommandRisk(command, riskDefinitions);
+			if (risk != QuickCommandRisk.Normal)
 			{
-				DialogResult result = ShowMineHarborDialog(this, QuickText("다음 명령을 실행하시겠습니까?\r\n\r\n", "Run this command?\r\n\r\n") + command, QuickText("명령 실행 확인", "Confirm command"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+				bool dangerous = risk == QuickCommandRisk.Dangerous;
+				string message = dangerous
+					? QuickText("위험 명령입니다. 서버 상태나 넓은 범위의 데이터에 영향을 줄 수 있습니다. 영향 범위와 인수를 다시 확인한 뒤 실행하시겠습니까?\r\n\r\n", "This is a dangerous command. It can affect server state or a broad range of data. Review its scope and arguments before running it.\r\n\r\n")
+					: QuickText("다음 명령은 서버 상태를 변경합니다. 실행하시겠습니까?\r\n\r\n", "This command changes server state. Run it?\r\n\r\n");
+				DialogResult result = ShowMineHarborDialog(this, message + command, dangerous ? QuickText("위험 명령 확인", "Confirm dangerous command") : QuickText("명령 실행 확인", "Confirm command"), MessageBoxButtons.YesNo, dangerous ? MessageBoxIcon.Error : MessageBoxIcon.Warning);
 				if (result != DialogResult.Yes) return;
 			}
 			if (!SendServerCommand(command))
@@ -470,7 +480,7 @@ internal static partial class Launcher
 			definitions.AddRange(quickCommandUsers);
 			CommandBridgeSession bridge = GetActiveCommandBridge();
 			if (bridge != null && bridge.Connected) definitions.AddRange(BuildBridgeQuickCommandDefinitions(bridge.Commands));
-			using (QuickCommandPickerForm picker = new QuickCommandPickerForm(definitions, quickCommandServerType))
+			using (QuickCommandPickerForm picker = new QuickCommandPickerForm(definitions, quickCommandServerType, quickCommandMinecraftVersion))
 			{
 				if (picker.ShowDialog(this) == DialogResult.OK && picker.SelectedCommand != null)
 				{
@@ -714,7 +724,9 @@ internal static partial class Launcher
 		private readonly TextBox descriptionBox;
 		private readonly ComboBox categoryBox;
 		private readonly TextBox templateBox;
-		private readonly CheckBox confirmBox;
+		private readonly ComboBox riskBox;
+		private readonly TextBox minimumVersionBox;
+		private readonly TextBox maximumVersionBox;
 		private readonly CheckedListBox serverTypes;
 		private readonly string originalId;
 		public QuickCommandDefinition Value { get; private set; }
@@ -728,25 +740,28 @@ internal static partial class Launcher
 			FormBorderStyle = FormBorderStyle.FixedDialog;
 			MaximizeBox = false;
 			MinimizeBox = false;
-			ClientSize = new Size(560, 500);
+			ClientSize = new Size(560, 620);
 			Font = new Font("Pretendard", 11F);
 			AutoScaleMode = AutoScaleMode.Dpi;
 			TableLayoutPanel layout = new TableLayoutPanel();
 			layout.Dock = DockStyle.Fill;
 			layout.Padding = new Padding(22);
 			layout.ColumnCount = 1;
-			layout.RowCount = 13;
+			layout.RowCount = 18;
 			Controls.Add(layout);
 			nameBox = AddEditorText(layout, LauncherUiText("표시 이름", "Display name"), value == null ? string.Empty : value.Name);
 			descriptionBox = AddEditorText(layout, LauncherUiText("설명", "Description"), value == null ? string.Empty : value.Description);
 			layout.Controls.Add(new Label { Text = LauncherUiText("카테고리", "Category"), AutoSize = true });
 			categoryBox = new ModernComboBox(); categoryBox.DropDownStyle = ComboBoxStyle.DropDownList; categoryBox.Items.AddRange(new object[] { "user", "server", "player", "whitelist", "world", "info" }); categoryBox.SelectedItem = value == null ? "user" : value.Category; if (categoryBox.SelectedIndex < 0) categoryBox.SelectedIndex = 0; categoryBox.Dock = DockStyle.Top; ConfigureAccessibleField(categoryBox, LauncherUiText("카테고리", "Category"), LauncherUiText("명령이 표시될 분류를 선택합니다.", "Choose the category where this command appears.")); layout.Controls.Add(categoryBox);
 			templateBox = AddEditorText(layout, LauncherUiText("명령 템플릿", "Command template"), value == null ? string.Empty : value.Template);
-			confirmBox = new ModernCheckBox(); confirmBox.Text = LauncherUiText("실행 전에 확인", "Confirm before execution"); confirmBox.Checked = value != null && value.Confirm; confirmBox.AutoSize = true; layout.Controls.Add(confirmBox);
+			layout.Controls.Add(new Label { Text = LauncherUiText("위험도", "Risk level"), AutoSize = true, Margin = new Padding(0, 7, 0, 3) });
+			riskBox = new ModernComboBox(); riskBox.DropDownStyle = ComboBoxStyle.DropDownList; riskBox.Items.AddRange(new object[] { LauncherUiText("일반 · 바로 실행", "Normal · run immediately"), LauncherUiText("확인 · 실행 전 질문", "Confirm · ask before running"), LauncherUiText("위험 · 강한 경고", "Dangerous · strong warning") }); riskBox.SelectedIndex = value == null ? 0 : (int)GetDefinitionRisk(value); riskBox.Dock = DockStyle.Top; ConfigureAccessibleField(riskBox, LauncherUiText("명령 위험도", "Command risk level"), LauncherUiText("실행 전 확인과 경고 강도를 선택합니다.", "Choose the confirmation and warning level.")); layout.Controls.Add(riskBox);
+			minimumVersionBox = AddEditorText(layout, LauncherUiText("최소 Minecraft 버전 (선택)", "Minimum Minecraft version (optional)"), value == null ? string.Empty : value.MinimumMinecraftVersion);
+			maximumVersionBox = AddEditorText(layout, LauncherUiText("최대 Minecraft 버전 (선택)", "Maximum Minecraft version (optional)"), value == null ? string.Empty : value.MaximumMinecraftVersion);
 			layout.Controls.Add(new Label { Text = LauncherUiText("지원 서버 종류 (선택하지 않으면 모두)", "Supported server types (none means all)"), AutoSize = true });
-			serverTypes = new CheckedListBox(); serverTypes.Height = 90; serverTypes.Items.AddRange(new object[] { "paper", "purpur", "vanilla", "fabric", "forge", "neoforge", "custom" }); ConfigureAccessibleField(serverTypes, LauncherUiText("지원 서버 종류", "Supported server types"), LauncherUiText("선택하지 않으면 모든 서버 종류에서 명령을 표시합니다.", "Leave all items clear to show the command for every server type.")); layout.Controls.Add(serverTypes);
+			serverTypes = new CheckedListBox(); serverTypes.Height = 74; serverTypes.Items.AddRange(new object[] { "paper", "purpur", "vanilla", "fabric", "forge", "neoforge", "custom" }); ConfigureAccessibleField(serverTypes, LauncherUiText("지원 서버 종류", "Supported server types"), LauncherUiText("선택하지 않으면 모든 서버 종류에서 명령을 표시합니다.", "Leave all items clear to show the command for every server type.")); layout.Controls.Add(serverTypes);
 			if (value != null && value.ServerTypes != null) for (int i = 0; i < serverTypes.Items.Count; i++) if (value.ServerTypes.Contains(Convert.ToString(serverTypes.Items[i]), StringComparer.OrdinalIgnoreCase)) serverTypes.SetItemChecked(i, true);
-			Label hint = new Label(); hint.Text = LauncherUiText("매개변수 예: {player}, {gamemode}, {item}, {count}, {message}", "Parameters: {player}, {gamemode}, {item}, {count}, {message}"); hint.AutoSize = true; layout.Controls.Add(hint);
+			Label hint = new Label(); hint.Text = LauncherUiText("필수 {player} · 선택 [reason] · 추가: {duration}, {percentage}, {datapack}", "Required {player} · optional [reason] · more: {duration}, {percentage}, {datapack}"); hint.AutoSize = true; layout.Controls.Add(hint);
 			FlowLayoutPanel buttons = new FlowLayoutPanel(); buttons.FlowDirection = FlowDirection.RightToLeft; buttons.Dock = DockStyle.Fill; layout.Controls.Add(buttons);
 			Button save = new RoundedButton(); save.Text = LauncherUiText("저장", "Save"); save.Size = new Size(110, 40); save.Click += Save; buttons.Controls.Add(save);
 			Button cancel = new RoundedButton(); cancel.Text = LauncherUiText("취소", "Cancel"); cancel.Size = new Size(100, 40); cancel.DialogResult = DialogResult.Cancel; buttons.Controls.Add(cancel);
@@ -762,7 +777,7 @@ internal static partial class Launcher
 
 		private void Save(object sender, EventArgs eventArgs)
 		{
-			QuickCommandDefinition command = new QuickCommandDefinition(); command.Id = originalId; command.Name = nameBox.Text.Trim(); command.Description = descriptionBox.Text.Trim(); command.Category = Convert.ToString(categoryBox.SelectedItem); command.Template = templateBox.Text; command.Confirm = confirmBox.Checked; command.ServerTypes = serverTypes.CheckedItems.Cast<object>().Select(Convert.ToString).ToArray(); command.Source = "user";
+			QuickCommandDefinition command = new QuickCommandDefinition(); command.Id = originalId; command.Name = nameBox.Text.Trim(); command.Description = descriptionBox.Text.Trim(); command.Category = Convert.ToString(categoryBox.SelectedItem); command.Template = templateBox.Text; command.Risk = (QuickCommandRisk)Math.Max(0, riskBox.SelectedIndex); command.Confirm = command.Risk != QuickCommandRisk.Normal; command.ServerTypes = serverTypes.CheckedItems.Cast<object>().Select(Convert.ToString).ToArray(); command.MinimumMinecraftVersion = minimumVersionBox.Text.Trim(); command.MaximumMinecraftVersion = maximumVersionBox.Text.Trim(); command.Source = "user";
 			string error;
 			if (!ValidateUserQuickCommand(command, out error)) { ShowMineHarborDialog(this, error, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); return; }
 			Value = command; DialogResult = DialogResult.OK; Close();
@@ -802,6 +817,6 @@ internal static partial class Launcher
 
 	private static QuickCommandDefinition CloneQuickCommand(QuickCommandDefinition value)
 	{
-		QuickCommandDefinition clone = new QuickCommandDefinition(); clone.Id = value.Id; clone.Name = value.Name; clone.Description = value.Description; clone.Category = value.Category; clone.Template = value.Template; clone.Parameters = value.Parameters == null ? new string[0] : (string[])value.Parameters.Clone(); clone.Confirm = value.Confirm; clone.ServerTypes = value.ServerTypes == null ? new string[0] : (string[])value.ServerTypes.Clone(); clone.Source = value.Source; return clone;
+		QuickCommandDefinition clone = new QuickCommandDefinition(); clone.Id = value.Id; clone.Name = value.Name; clone.Description = value.Description; clone.Category = value.Category; clone.Template = value.Template; clone.Parameters = value.Parameters == null ? new string[0] : (string[])value.Parameters.Clone(); clone.Risk = GetDefinitionRisk(value); clone.Confirm = clone.Risk != QuickCommandRisk.Normal; clone.ServerTypes = value.ServerTypes == null ? new string[0] : (string[])value.ServerTypes.Clone(); clone.MinimumMinecraftVersion = value.MinimumMinecraftVersion; clone.MaximumMinecraftVersion = value.MaximumMinecraftVersion; clone.Source = value.Source; return clone;
 	}
 }

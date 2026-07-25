@@ -26,7 +26,7 @@
 | **Windows 설치 프로그램** | 시작 메뉴, 선택적 바탕화면 바로가기, 제거 기능 사용 | **[최신 Release 열기](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 | **Portable ZIP** | README와 라이선스를 포함한 묶음 보관 | **[최신 Release 열기](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 
-현재 소스 버전은 `v1.8.1`, 내부 빌드는 `26.2.45.72`입니다. MineHarbor 이름으로 배포된 Portable EXE는 같은 링크에서 계속 최신 파일을 받을 수 있습니다. 기존 설치의 `%LOCALAPPDATA%\MinecraftServerLauncher` 데이터는 자동으로 찾아 그대로 사용하며, 새 사용자 데이터 경로는 `%LOCALAPPDATA%\MineHarbor`입니다.
+현재 소스 버전은 `v1.9.0`, 내부 빌드는 `26.2.45.73`입니다. MineHarbor 이름으로 배포된 Portable EXE는 같은 링크에서 계속 최신 파일을 받을 수 있습니다. 기존 설치의 `%LOCALAPPDATA%\MinecraftServerLauncher` 데이터는 자동으로 찾아 그대로 사용하며, 새 사용자 데이터 경로는 `%LOCALAPPDATA%\MineHarbor`입니다.
 
 > [!WARNING]
 > 현재 릴리스 실행 파일은 요청된 자체서명 인증서로 무결성을 표시하지만 공개 인증 기관이 신뢰한 배포자 서명은 아닙니다. 따라서 Windows SmartScreen 경고가 나타날 수 있습니다. Release의 `SHA256SUMS.txt`와 GitHub 출처를 함께 확인해 주세요.
@@ -149,8 +149,10 @@ Paper/Purpur의 복사 옵션은 서버가 공식적으로 지원하지 않는 �
 - 빠른 명령 카드는 오른쪽 고정 열을 유지하고, 콘솔은 별도 왼쪽 열에서 겹침 없이 표시
 - 멀티 서버 콘솔에서 기본 명령과 온라인 플레이어 이름 자동완성
 - 메인 콘솔의 기본 명령·연결된 플레이어 인수 자동완성과 예약 명령 편집의 기본 명령 자동완성
-- 온라인 플레이어, 게임 모드, 난이도, 아이템, 좌표 등을 받는 사용자 명령 템플릿
-- 위험하거나 권한을 바꾸는 명령은 전송 전에 확인
+- 제재 목록·IP 차단, 시드·시간 조회, 게임 규칙, 데이터팩 활성화/비활성화와 안전한 조회형 고급 명령을 포함한 70개 이상의 기본 명령
+- `{player}` 같은 필수 인수와 `[reason]` 같은 선택 인수, 주소·시간·비율·날씨·데이터팩 등을 받는 사용자 명령 템플릿
+- 서버 Minecraft 버전에 맞지 않는 명령은 목록과 로컬 자동완성에서 제외
+- 일반·확인·위험 3단계 정책을 적용하고 `reload`, 광범위 변경과 조건부 위험 값은 강한 경고로 구분
 - Paper/Purpur 브리지 연결 시 `플러그인 → 플러그인 이름 → 명령어`로 실시간 분류
 
 사용자 명령은 데이터 루트의 `config/quick-commands.json`에 별도로 저장되어 런처 업데이트 후에도 유지됩니다. 브리지는 실행할 때마다 만든 무작위 토큰과 임시 포트로 `127.0.0.1`에만 연결하며, 실제 명령 실행은 기존 콘솔 입력 경로를 사용합니다.
@@ -252,7 +254,7 @@ dotnet build .\MineHarbor.csproj -c Release
 | **Windows installer** | Start Menu, optional desktop shortcut, and uninstall support | **[Open the latest release](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 | **Portable ZIP** | Keep the launcher, README, and license together | **[Open the latest release](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 
-Current source version: `v1.8.1` · internal build: `26.2.45.72`. MineHarbor releases keep the same permanent Portable URL. Existing data under `%LOCALAPPDATA%\MinecraftServerLauncher` is detected and preserved; new user-data installations use `%LOCALAPPDATA%\MineHarbor`.
+Current source version: `v1.9.0` · internal build: `26.2.45.73`. MineHarbor releases keep the same permanent Portable URL. Existing data under `%LOCALAPPDATA%\MinecraftServerLauncher` is detected and preserved; new user-data installations use `%LOCALAPPDATA%\MineHarbor`.
 
 > [!WARNING]
 > Release executables carry the requested self-signed integrity signature, not a publisher identity trusted by a public certificate authority. Windows SmartScreen can therefore still warn. Verify the GitHub source and the release `SHA256SUMS.txt`.
@@ -292,7 +294,9 @@ The main window appears first while update, profile, and current version data lo
 
 Commands are organized as `Category → Function → Command`, such as `World → Difficulty → Hard` or `World → Weather → Clear`. Search matches display names, descriptions, hierarchy paths, and command text. The picker supports Ctrl+F, arrow keys, Enter, and Esc.
 
-Cursor-aware suggestions, history, and editable templates work locally for every server type. When the optional Paper/Purpur bridge is connected, registered plugin commands also appear under `Plugins → Plugin name → Command`. Destructive and privilege-changing commands require confirmation.
+Cursor-aware suggestions, history, and editable templates work locally for every server type. The built-in catalog now contains more than 70 commands, including moderation lookup and IP bans, seed/time queries, common game rules, datapack enable/disable, and safe read-only advanced operations. Required `{player}` and optional `[reason]` arguments are supported, with local candidates for addresses, durations, percentages, weather, datapacks, and other common values.
+
+Commands outside the selected server's Minecraft version range are omitted from the picker and local suggestions. Normal, confirmation, and dangerous risk levels are applied consistently; `reload`, broad mutations, and conditionally destructive values receive a stronger warning. When the optional Paper/Purpur bridge is connected, registered plugin commands and live argument candidates also appear under `Plugins → Plugin name → Command`.
 
 The quick-command card stays in a fixed right-side column while the console uses a separate left column, so toggling the console neither moves the card nor hides console output behind it.
 

@@ -40,7 +40,7 @@ internal static partial class Launcher
 		}
 	}
 
-	private static List<QuickCommandPickerItem> BuildQuickCommandPickerItems(IEnumerable<QuickCommandDefinition> definitions, string serverType)
+	private static List<QuickCommandPickerItem> BuildQuickCommandPickerItems(IEnumerable<QuickCommandDefinition> definitions, string serverType, string minecraftVersion)
 	{
 		List<QuickCommandPickerItem> result = new List<QuickCommandPickerItem>();
 		if (definitions == null)
@@ -50,7 +50,7 @@ internal static partial class Launcher
 		int order = 0;
 		foreach (QuickCommandDefinition definition in definitions)
 		{
-			if (definition == null || !QuickCommandSupportsServer(definition, serverType))
+			if (definition == null || !QuickCommandSupportsServer(definition, serverType, minecraftVersion))
 			{
 				continue;
 			}
@@ -113,6 +113,8 @@ internal static partial class Launcher
 			if (command == "list" || command.StartsWith("list ", StringComparison.Ordinal)) return "status";
 			if (command.StartsWith("save-", StringComparison.Ordinal)) return "save";
 			if (command.StartsWith("say ", StringComparison.Ordinal)) return "broadcast";
+			if (command.StartsWith("setidletimeout ", StringComparison.Ordinal)) return "settings";
+			if (command == "reload") return "maintenance";
 			return "lifecycle";
 		}
 		if (category == "player")
@@ -137,12 +139,15 @@ internal static partial class Launcher
 			if (command.StartsWith("difficulty ", StringComparison.Ordinal)) return "difficulty";
 			if (command.StartsWith("defaultgamemode ", StringComparison.Ordinal)) return "gamemode";
 			if (command.StartsWith("gamerule ", StringComparison.Ordinal)) return "rules";
+			if (command.StartsWith("worldborder ", StringComparison.Ordinal)) return "border";
+			if (command.StartsWith("forceload ", StringComparison.Ordinal)) return "chunks";
 			return "spawn";
 		}
 		if (category == "info")
 		{
 			if (command == "help" || command.StartsWith("help ", StringComparison.Ordinal)) return "help";
 			if (command == "version" || command == "plugins") return "server-info";
+			if (command == "seed") return "world-info";
 			return "content";
 		}
 		return "custom";
@@ -156,6 +161,7 @@ internal static partial class Launcher
 		if (group == "save") return LauncherUiText("저장", "Saving");
 		if (group == "broadcast") return LauncherUiText("공지", "Broadcast");
 		if (group == "lifecycle") return LauncherUiText("실행", "Lifecycle");
+		if (group == "maintenance") return LauncherUiText("유지 관리", "Maintenance");
 		if (group == "gamemode") return LauncherUiText(category == "world" ? "기본 게임 모드" : "게임 모드", category == "world" ? "Default game mode" : "Game mode");
 		if (group == "teleport") return LauncherUiText("텔레포트", "Teleport");
 		if (group == "items") return LauncherUiText("아이템", "Items");
@@ -169,9 +175,12 @@ internal static partial class Launcher
 		if (group == "weather") return LauncherUiText("날씨", "Weather");
 		if (group == "difficulty") return LauncherUiText("난이도", "Difficulty");
 		if (group == "rules") return LauncherUiText("게임 규칙", "Game rules");
+		if (group == "border") return LauncherUiText("월드 경계", "World border");
+		if (group == "chunks") return LauncherUiText("청크 로딩", "Chunk loading");
 		if (group == "spawn") return LauncherUiText("스폰", "Spawn");
 		if (group == "help") return LauncherUiText("도움말", "Help");
 		if (group == "server-info") return LauncherUiText("서버 정보", "Server information");
+		if (group == "world-info") return LauncherUiText("월드 정보", "World information");
 		if (group == "content") return LauncherUiText("콘텐츠", "Content");
 		return LauncherUiText("기타", "Other");
 	}
@@ -214,12 +223,12 @@ internal static partial class Launcher
 	private static int GetQuickCommandPickerGroupOrder(string category, string group)
 	{
 		string[] order;
-		if (category == "server") order = new string[] { "status", "save", "broadcast", "lifecycle", "custom" };
+		if (category == "server") order = new string[] { "status", "save", "broadcast", "settings", "maintenance", "lifecycle", "custom" };
 		else if (category == "player") order = new string[] { "gamemode", "teleport", "items", "experience", "effects", "permissions", "moderation", "custom" };
 		else if (category == "whitelist") order = new string[] { "players", "settings", "custom" };
-		else if (category == "world") order = new string[] { "time", "weather", "difficulty", "gamemode", "rules", "spawn", "custom" };
+		else if (category == "world") order = new string[] { "time", "weather", "difficulty", "gamemode", "rules", "border", "chunks", "spawn", "custom" };
 		else if (category == "plugin") order = new string[0];
-		else if (category == "info") order = new string[] { "help", "server-info", "content", "custom" };
+		else if (category == "info") order = new string[] { "help", "server-info", "world-info", "content", "custom" };
 		else order = new string[] { "custom" };
 		int index = Array.IndexOf(order, group);
 		return index < 0 ? 100 : index;
@@ -484,9 +493,9 @@ internal static partial class Launcher
 
 		public QuickCommandDefinition SelectedCommand { get; private set; }
 
-		public QuickCommandPickerForm(IEnumerable<QuickCommandDefinition> definitions, string serverType)
+		public QuickCommandPickerForm(IEnumerable<QuickCommandDefinition> definitions, string serverType, string minecraftVersion)
 		{
-			allItems = BuildQuickCommandPickerItems(definitions, serverType);
+			allItems = BuildQuickCommandPickerItems(definitions, serverType, minecraftVersion);
 			bool dark = launcherForm != null && launcherForm.UsesDarkTheme;
 			palette = ThemePalette.Create(dark);
 			Text = LauncherUiText("빠른 명령 선택", "Choose a quick command");
@@ -857,7 +866,8 @@ internal static partial class Launcher
 				return;
 			}
 			breadcrumbLabel.Text = item.Path;
-			descriptionLabel.Text = (item.Definition.Confirm ? LauncherUiText("실행 전 확인 · ", "Confirmation required · ") : string.Empty) + item.Definition.Description;
+			QuickCommandRisk risk = GetDefinitionRisk(item.Definition);
+			descriptionLabel.Text = (risk == QuickCommandRisk.Dangerous ? LauncherUiText("위험 명령 · ", "Dangerous command · ") : risk == QuickCommandRisk.Confirm ? LauncherUiText("실행 전 확인 · ", "Confirmation required · ") : string.Empty) + item.Definition.Description;
 			previewLabel.Text = "/" + NormalizeCommandForSend(item.Definition.Template);
 		}
 
@@ -920,7 +930,8 @@ internal static partial class Launcher
 					Rectangle commandBounds = new Rectangle(bounds.Left, bounds.Top + 27, bounds.Width, Math.Max(1, bounds.Height - 27));
 					using (Font titleFont = new Font(Font, FontStyle.Bold))
 					{
-						TextRenderer.DrawText(eventArgs.Graphics, item.LeafName, titleFont, titleBounds, item.Definition.Confirm ? palette.Warning : foreground, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
+						QuickCommandRisk risk = GetDefinitionRisk(item.Definition);
+						TextRenderer.DrawText(eventArgs.Graphics, item.LeafName, titleFont, titleBounds, risk == QuickCommandRisk.Dangerous ? palette.Danger : risk == QuickCommandRisk.Confirm ? palette.Warning : foreground, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
 					}
 					TextRenderer.DrawText(eventArgs.Graphics, "/" + NormalizeCommandForSend(item.Definition.Template), Font, commandBounds, palette.Muted, TextFormatFlags.Left | TextFormatFlags.VerticalCenter | TextFormatFlags.EndEllipsis | TextFormatFlags.NoPadding);
 				}
