@@ -34,6 +34,7 @@
     <Compile Include="RoundedProgressBar.cs" />
     <Compile Include="ModernLauncherGui.cs" />
     <Compile Include="ModernDialogs.cs" />
+    <Compile Include="DuplicationSettings.cs" />
     <Compile Include="RuntimeCompatibility.cs" />
     <Compile Include="UpnpExternalAccess.cs" />
     <Compile Include="BackupAndProfileTools.cs" />

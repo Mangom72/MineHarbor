@@ -36,7 +36,8 @@ internal static class LauncherTests
 			TestHashAndReplacement(temporary);
 			TestMockedDownload(temporary);
 			TestDataLocations(temporary);
-			TestSetupLayoutAndValidation();
+			TestSetupLayoutAndValidation(temporary);
+			TestDuplicationSettings(temporary);
 			TestUxAccessibility();
 			TestResponsiveLauncherWorkspace();
 			TestModernUiWorkflows();
@@ -359,7 +360,7 @@ internal static class LauncherTests
 		Pass();
 	}
 
-	private static void TestSetupLayoutAndValidation()
+	private static void TestSetupLayoutAndValidation(string root)
 	{
 		Type settingsType = launcher.GetNestedType("ServerSettings", BindingFlags.NonPublic);
 		object settings = Activator.CreateInstance(settingsType, true);
@@ -381,7 +382,9 @@ internal static class LauncherTests
 		SetPublic(settings, "LevelType", "minecraft:normal");
 
 		Type formType = launcher.GetNestedType("ServerSetupForm", BindingFlags.NonPublic);
-		using (Form form = (Form)Activator.CreateInstance(formType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { settings, 4, 8, false, false }, null))
+		string serverDirectory = Path.Combine(root, "setup-layout-server");
+		Directory.CreateDirectory(serverDirectory);
+		using (Form form = (Form)Activator.CreateInstance(formType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { settings, 4, 8, false, false, serverDirectory }, null))
 		{
 			Panel body = null;
 			foreach (Control control in form.Controls) if (control is Panel && ((Panel)control).AutoScroll) body = (Panel)control;
@@ -404,6 +407,20 @@ internal static class LauncherTests
 			Equal(DrawMode.OwnerDrawFixed, serverType.DrawMode, "서버 종류 선택 상자 오너 드로우");
 			Label rules = (Label)GetPrivateField(formType, form, "rulesLabel");
 			Equal(440, rules.Top, "기본 프리셋 서버 규칙 위치");
+			Panel advanced = (Panel)GetPrivateField(formType, form, "advancedPanel");
+			Control duplicationGroup = (Control)GetPrivateField(formType, form, "duplicationGroup");
+			if (advanced.Bottom >= duplicationGroup.Top) throw new InvalidOperationException("서버 규칙과 복사 설정 카드가 겹칩니다.");
+			Equal("ModernGroupBox", duplicationGroup.GetType().Name, "현대형 복사 설정 카드");
+			CheckBox pistonDuplication = (CheckBox)GetPrivateField(formType, form, "pistonDuplicationBox");
+			CheckBox gravityDuplication = (CheckBox)GetPrivateField(formType, form, "gravityBlockDuplicationBox");
+			CheckBox tripwireDuplication = (CheckBox)GetPrivateField(formType, form, "tripwireDuplicationBox");
+			Equal("ModernCheckBox", pistonDuplication.GetType().Name, "현대형 TNT 복사 설정");
+			Equal(true, pistonDuplication.Enabled, "Paper 복사 설정 활성화");
+			if (pistonDuplication.Right > gravityDuplication.Left || gravityDuplication.Right > duplicationGroup.ClientSize.Width)
+			{
+				throw new InvalidOperationException("복사 설정 선택 항목이 서로 겹치거나 카드 경계를 벗어납니다.");
+			}
+			if (tripwireDuplication.Bottom > duplicationGroup.ClientSize.Height) throw new InvalidOperationException("철사덫 복사 설정이 카드 경계를 벗어납니다.");
 			serverType.SelectedIndex = serverType.Items.Count - 1;
 			CheckBox manual = (CheckBox)GetPrivateField(formType, form, "manualJarBox");
 			ComboBox version = (ComboBox)GetPrivateField(formType, form, "versionBox");
@@ -411,14 +428,177 @@ internal static class LauncherTests
 			Equal(false, manual.Enabled, "직접 JAR 필수 설정 표시");
 			Equal(false, version.Enabled, "직접 JAR 버전 비활성화");
 			Equal(false, automatic.Enabled, "직접 JAR 자동 업데이트 비활성화");
+			Equal(false, pistonDuplication.Enabled, "감지되지 않은 직접 JAR의 Paper 전용 설정 비활성화");
 
 			serverType.SelectedIndex = 0;
+			Equal(true, pistonDuplication.Enabled, "Paper 선택 복귀 후 복사 설정 활성화");
 			version.Items.Clear();
 			version.Items.Add("1.20.1");
 			version.SelectedIndex = 0;
 			formType.GetMethod("ApplyVersionChoices", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(form, new object[] { new string[] { "1.21.11", "1.20.1" }, null });
 			Equal("1.20.1", Convert.ToString(version.SelectedItem), "백그라운드 버전 선택 유지");
+			Equal(true, pistonDuplication.Enabled, "Paper 1.20.1 피스톤 복사 설정 지원");
+			Equal(false, gravityDuplication.Enabled, "Paper 1.20.1 미지원 중력 블록 설정 비활성화");
+			Equal(false, tripwireDuplication.Enabled, "Paper 1.20.1 미지원 철사덫 설정 비활성화");
 		}
+		Pass();
+	}
+
+	private static void TestDuplicationSettings(string root)
+	{
+		string paper = Path.Combine(root, "duplication-paper");
+		Directory.CreateDirectory(Path.Combine(paper, "config"));
+		string modernPath = Path.Combine(paper, "config", "paper-global.yml");
+		File.WriteAllText(modernPath,
+			"# Paper 설정 보존\r\n_version: 31\r\nunsupported-settings:\r\n  allow-piston-duplication: false # 기존 주석\r\n  perform-username-validation: true\r\nwatchdog:\r\n  early-warning-delay: 15000\r\n",
+			new UTF8Encoding(false));
+
+		string applied = Convert.ToString(Invoke("ApplyDuplicationSettings", new object[] { paper, "paper", "1.21.11", true, true, true }));
+		Equal(Path.GetFullPath(modernPath), Path.GetFullPath(applied), "현대 Paper 복사 설정 경로");
+		string configured = File.ReadAllText(modernPath, Encoding.UTF8);
+		if (configured.IndexOf("allow-piston-duplication: true # 기존 주석", StringComparison.Ordinal) < 0) throw new InvalidOperationException("TNT·양탄자·레일 복사 설정 또는 기존 주석이 보존되지 않았습니다.");
+		if (configured.IndexOf("allow-unsafe-end-portal-teleportation: true", StringComparison.Ordinal) < 0) throw new InvalidOperationException("중력 블록 복사 설정이 저장되지 않았습니다.");
+		if (configured.IndexOf("skip-tripwire-hook-placement-validation: true", StringComparison.Ordinal) < 0) throw new InvalidOperationException("철사덫 복사 설정이 저장되지 않았습니다.");
+		if (configured.IndexOf("perform-username-validation: true", StringComparison.Ordinal) < 0 || configured.IndexOf("watchdog:", StringComparison.Ordinal) < 0) throw new InvalidOperationException("관련 없는 Paper 설정이 손실되었습니다.");
+
+		object state = Invoke("GetDuplicationSettingsState", new object[] { paper, "paper", "1.21.11", false, false, false });
+		Equal(true, GetField(state, "Supported"), "Paper 복사 설정 지원");
+		Equal(true, GetField(state, "PistonDuplicationSupported"), "현대 Paper 피스톤 복사 지원");
+		Equal(true, GetField(state, "GravityBlockDuplicationSupported"), "현대 Paper 중력 블록 복사 지원");
+		Equal(true, GetField(state, "TripwireDuplicationSupported"), "현대 Paper 철사덫 복사 지원");
+		Equal(true, GetField(state, "PistonDuplication"), "TNT 복사 설정 다시 읽기");
+		Equal(true, GetField(state, "GravityBlockDuplication"), "중력 블록 복사 설정 다시 읽기");
+		Equal(true, GetField(state, "TripwireDuplication"), "철사덫 복사 설정 다시 읽기");
+
+		Invoke("ApplyDuplicationSettings", new object[] { paper, "paper", "1.21.11", false, false, false });
+		configured = File.ReadAllText(modernPath, Encoding.UTF8);
+		if (Regex.Matches(configured, @"(?m)^\s*allow-piston-duplication:").Count != 1) throw new InvalidOperationException("TNT 복사 설정이 중복 저장되었습니다.");
+		if (configured.IndexOf("allow-piston-duplication: false", StringComparison.Ordinal) < 0) throw new InvalidOperationException("복사 설정 비활성화가 저장되지 않았습니다.");
+		string backupDirectory = Path.Combine(paper, ".mineharbor", "configuration-backups");
+		if (!Directory.Exists(backupDirectory) || Directory.GetFiles(backupDirectory, "paper-global.yml-*.bak").Length == 0) throw new InvalidOperationException("Paper 설정 변경 전 백업이 없습니다.");
+		int backupCount = Directory.GetFiles(backupDirectory, "paper-global.yml-*.bak").Length;
+		Invoke("ApplyDuplicationSettings", new object[] { paper, "paper", "1.21.11", false, false, false });
+		Equal(backupCount, Directory.GetFiles(backupDirectory, "paper-global.yml-*.bak").Length, "변경 없는 시작에서 중복 설정 백업 방지");
+
+		Dictionary<string, string> oldProfile = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+		{
+			{ "profile-name", "기존 서버" },
+			{ "server-type", "paper" },
+			{ "minecraft-version", "1.21.11" },
+			{ "memory-gb", "4" }
+		};
+		object legacyOptions = Invoke("ReadLauncherOptionsFromProperties", new object[] { root, oldProfile, "기존 서버", 4, true });
+		Equal(false, GetField(legacyOptions, "ManageDuplicationSettings"), "기존 프로필의 수동 Paper 설정 자동 덮어쓰기 방지");
+
+		string legacy = Path.Combine(root, "duplication-legacy");
+		Directory.CreateDirectory(legacy);
+		string legacyPath = Path.Combine(legacy, "paper.yml");
+		File.WriteAllText(
+			legacyPath,
+			"config-version: 20\r\nsettings:\r\n  verbose: false\r\n  unsupported-settings:\r\n    allow-piston-duplication: false # 구형 주석\r\n  velocity-support:\r\n    enabled: false\r\n\r\ntimings:\r\n  enabled: true\r\n",
+			new UTF8Encoding(false));
+		string appliedLegacyPath = Convert.ToString(Invoke("ApplyDuplicationSettings", new object[] { legacy, "purpur", "1.18.2", true, false, false }));
+		Equal(legacyPath, appliedLegacyPath, "구형 Purpur paper.yml 적용 경로");
+		Equal(true, File.Exists(legacyPath), "구형 Paper 설정 생성");
+		string legacyContent = File.ReadAllText(legacyPath, Encoding.UTF8);
+		if (!Regex.IsMatch(legacyContent, @"(?m)^\s{2}unsupported-settings:\s*$\r?\n\s{4}allow-piston-duplication: true # 구형 주석\s*$"))
+		{
+			throw new InvalidOperationException("구형 Paper 설정은 settings.unsupported-settings 아래에 저장되어야 합니다.");
+		}
+		if (legacyContent.IndexOf("velocity-support:", StringComparison.Ordinal) < 0 || legacyContent.IndexOf("timings:", StringComparison.Ordinal) < 0)
+		{
+			throw new InvalidOperationException("구형 Paper의 관련 없는 설정이 손실되었습니다.");
+		}
+		object legacyState = Invoke("GetDuplicationSettingsState", new object[] { legacy, "purpur", "1.18.2", false, false, false });
+		Equal(true, GetField(legacyState, "PistonDuplicationSupported"), "구형 Paper 피스톤 복사 지원");
+		Equal(false, GetField(legacyState, "GravityBlockDuplicationSupported"), "구형 Paper에 존재하지 않는 중력 블록 키 차단");
+		Equal(false, GetField(legacyState, "TripwireDuplicationSupported"), "구형 Paper에 존재하지 않는 철사덫 키 차단");
+		ExpectFailure(delegate { Invoke("ApplyDuplicationSettings", new object[] { legacy, "purpur", "1.18.2", true, true, false }); }, "구형 Paper에 신형 복사 키 강제 적용 차단");
+
+		string legacyNew = Path.Combine(root, "duplication-legacy-new");
+		Directory.CreateDirectory(legacyNew);
+		string legacyNewPath = Convert.ToString(Invoke("ApplyDuplicationSettings", new object[] { legacyNew, "paper", "1.18.2", true, false, false }));
+		string legacyNewContent = File.ReadAllText(legacyNewPath, Encoding.UTF8);
+		if (!Regex.IsMatch(legacyNewContent, @"(?m)^settings:\s*$\r?\n\s{2}unsupported-settings:\s*$\r?\n\s{4}allow-piston-duplication: true\s*$"))
+		{
+			throw new InvalidOperationException("새 구형 Paper 서버에 중첩 설정 구조가 생성되지 않았습니다.");
+		}
+
+		string versionProbe = Path.Combine(root, "duplication-version-probe");
+		Directory.CreateDirectory(versionProbe);
+		object paper119 = Invoke("GetDuplicationSettingsState", new object[] { versionProbe, "paper", "1.19.4", false, false, false });
+		Equal(false, GetField(paper119, "GravityBlockDuplicationSupported"), "Paper 1.19에서 후대 중력 블록 키 숨김");
+		object paper1204 = Invoke("GetDuplicationSettingsState", new object[] { versionProbe, "paper", "1.20.4", false, false, false });
+		Equal(true, GetField(paper1204, "GravityBlockDuplicationSupported"), "Paper 1.20.4 중력 블록 키 지원");
+		Equal(false, GetField(paper1204, "TripwireDuplicationSupported"), "Paper 1.20.4에서 후대 철사덫 키 숨김");
+		object paper1214 = Invoke("GetDuplicationSettingsState", new object[] { versionProbe, "paper", "1.21.4", false, false, false });
+		Equal(true, GetField(paper1214, "TripwireDuplicationSupported"), "Paper 1.21.4 철사덫 키 지원");
+
+		string spigot = Path.Combine(root, "duplication-spigot");
+		Directory.CreateDirectory(spigot);
+		object[] spigotProbe = { spigot, "spigot", "1.21.11", null, false };
+		Equal(false, Invoke("TryGetDuplicationConfigurationPath", spigotProbe), "Spigot에 Paper 전용 설정 미적용");
+		Equal(null, Invoke("ApplyDuplicationSettings", new object[] { spigot, "spigot", "1.21.11", false, false, false }), "Spigot 기본 동작 유지");
+		ExpectFailure(delegate { Invoke("ApplyDuplicationSettings", new object[] { spigot, "spigot", "1.21.11", true, false, false }); }, "Spigot에 Paper 설정 강제 적용 차단");
+
+		string custom = Path.Combine(root, "duplication-custom");
+		Directory.CreateDirectory(Path.Combine(custom, "config"));
+		File.WriteAllText(Path.Combine(custom, "config", "paper-global.yml"), "unsupported-settings:\r\n  allow-piston-duplication: false\r\n", new UTF8Encoding(false));
+		object customState = Invoke("GetDuplicationSettingsState", new object[] { custom, "custom", "unknown", false, false, false });
+		Equal(true, GetField(customState, "Supported"), "Paper 계열 직접 JAR 설정 감지");
+		Equal(true, GetField(customState, "PistonDuplicationSupported"), "직접 JAR에서 감지된 기본 Paper 키 지원");
+		Equal(false, GetField(customState, "GravityBlockDuplicationSupported"), "직접 JAR에 없는 신형 키 추정 금지");
+		Equal(false, GetField(customState, "TripwireDuplicationSupported"), "직접 JAR에 없는 철사덫 키 추정 금지");
+
+		string corrupt = Path.Combine(root, "duplication-corrupt");
+		Directory.CreateDirectory(Path.Combine(corrupt, "config"));
+		string corruptPath = Path.Combine(corrupt, "config", "paper-global.yml");
+		string corruptContent = "unsupported-settings:\r\n  allow-piston-duplication: false\r\nunsupported-settings:\r\n  allow-piston-duplication: true\r\n";
+		File.WriteAllText(corruptPath, corruptContent, new UTF8Encoding(false));
+		ExpectFailure(delegate { Invoke("ApplyDuplicationSettings", new object[] { corrupt, "paper", "1.21.11", true, true, true }); }, "중복된 Paper 설정 구역 덮어쓰기 차단");
+		Equal(corruptContent, File.ReadAllText(corruptPath, Encoding.UTF8), "손상된 Paper 설정 원본 보존");
+
+		string duplicateKey = Path.Combine(root, "duplication-duplicate-key");
+		Directory.CreateDirectory(Path.Combine(duplicateKey, "config"));
+		string duplicateKeyPath = Path.Combine(duplicateKey, "config", "paper-global.yml");
+		string duplicateKeyContent = "unsupported-settings:\r\n  allow-piston-duplication: false\r\n  allow-piston-duplication: true\r\n";
+		File.WriteAllText(duplicateKeyPath, duplicateKeyContent, new UTF8Encoding(false));
+		ExpectFailure(delegate { Invoke("ApplyDuplicationSettings", new object[] { duplicateKey, "paper", "1.21.11", true, false, false }); }, "중복된 Paper 복사 키 덮어쓰기 차단");
+		Equal(duplicateKeyContent, File.ReadAllText(duplicateKeyPath, Encoding.UTF8), "중복 키가 있는 설정 원본 보존");
+
+		string invalidValue = Path.Combine(root, "duplication-invalid-value");
+		Directory.CreateDirectory(Path.Combine(invalidValue, "config"));
+		string invalidValuePath = Path.Combine(invalidValue, "config", "paper-global.yml");
+		string invalidValueContent = "unsupported-settings:\r\n  allow-piston-duplication: enabled\r\n";
+		File.WriteAllText(invalidValuePath, invalidValueContent, new UTF8Encoding(false));
+		ExpectFailure(delegate { Invoke("ApplyDuplicationSettings", new object[] { invalidValue, "paper", "1.21.11", true, false, false }); }, "잘못된 Paper 불리언 값 덮어쓰기 차단");
+		Equal(invalidValueContent, File.ReadAllText(invalidValuePath, Encoding.UTF8), "잘못된 불리언 설정 원본 보존");
+
+		for (int index = 0; index < 8; index++)
+		{
+			Invoke("ApplyDuplicationSettings", new object[] { paper, "paper", "1.21.11", index % 2 == 0, false, false });
+		}
+		Equal(5, Directory.GetFiles(backupDirectory, "paper-global.yml-*.bak").Length, "Paper 설정 백업 5개 보존");
+
+		Type optionsType = launcher.GetNestedType("LauncherOptions", BindingFlags.NonPublic);
+		object savedOptions = Activator.CreateInstance(optionsType, true);
+		SetPublic(savedOptions, "ProfileName", "복사 설정 저장");
+		SetPublic(savedOptions, "ServerType", "paper");
+		SetPublic(savedOptions, "MinecraftVersion", "1.21.11");
+		SetPublic(savedOptions, "ManualJarPath", string.Empty);
+		SetPublic(savedOptions, "OwnerName", "Owner");
+		SetPublic(savedOptions, "ManageDuplicationSettings", true);
+		SetPublic(savedOptions, "AllowPistonDuplication", true);
+		SetPublic(savedOptions, "AllowGravityBlockDuplication", true);
+		SetPublic(savedOptions, "AllowTripwireDuplication", true);
+		string optionsPath = Path.Combine(root, "duplication-options.properties");
+		Invoke("WriteLauncherOptions", new object[] { optionsPath, savedOptions });
+		Dictionary<string, string> savedProperties = (Dictionary<string, string>)Invoke("ReadSimpleProperties", new object[] { optionsPath });
+		object roundTripOptions = Invoke("ReadLauncherOptionsFromProperties", new object[] { root, savedProperties, "복사 설정 저장", 4, true });
+		Equal(true, GetField(roundTripOptions, "ManageDuplicationSettings"), "복사 설정 관리 플래그 왕복 저장");
+		Equal(true, GetField(roundTripOptions, "AllowPistonDuplication"), "피스톤 복사 설정 왕복 저장");
+		Equal(true, GetField(roundTripOptions, "AllowGravityBlockDuplication"), "중력 블록 복사 설정 왕복 저장");
+		Equal(true, GetField(roundTripOptions, "AllowTripwireDuplication"), "철사덫 복사 설정 왕복 저장");
 		Pass();
 	}
 

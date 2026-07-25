@@ -1026,7 +1026,7 @@ internal static partial class Launcher
 
 			{
 
-				setup = new ServerSetupForm(settings, recommendedMemory, maximumMemory, File.Exists(markerPath), Directory.Exists(Path.Combine(currentOptions.ServerDirectory, "world")));
+				setup = new ServerSetupForm(settings, recommendedMemory, maximumMemory, File.Exists(markerPath), Directory.Exists(Path.Combine(currentOptions.ServerDirectory, "world")), currentOptions.ServerDirectory);
 
 				dialogResult = setup.ShowDialog(launcherForm);
 
@@ -1116,6 +1116,17 @@ internal static partial class Launcher
 
 		Directory.CreateDirectory(currentOptions.ServerDirectory);
 
+		if (currentOptions.ManageDuplicationSettings)
+		{
+			ApplyDuplicationSettings(
+				currentOptions.ServerDirectory,
+				currentOptions.ServerType,
+				currentOptions.MinecraftVersion,
+				currentOptions.AllowPistonDuplication,
+				currentOptions.AllowGravityBlockDuplication,
+				currentOptions.AllowTripwireDuplication);
+		}
+
 		string propertiesPath = Path.Combine(currentOptions.ServerDirectory, "server.properties");
 
 		BackupConfigurationFile(propertiesPath);
@@ -1195,6 +1206,19 @@ internal static partial class Launcher
 		settings.AutoUpdate = options.AutoUpdate;
 
 		settings.OwnerName = options.OwnerName;
+
+		settings.ManageDuplicationSettings = options.ManageDuplicationSettings;
+
+		DuplicationSettingsState duplication = GetDuplicationSettingsState(
+			serverDirectory,
+			settings.ServerType,
+			settings.MinecraftVersion,
+			options.AllowPistonDuplication,
+			options.AllowGravityBlockDuplication,
+			options.AllowTripwireDuplication);
+		settings.AllowPistonDuplication = duplication.PistonDuplication;
+		settings.AllowGravityBlockDuplication = duplication.GravityBlockDuplication;
+		settings.AllowTripwireDuplication = duplication.TripwireDuplication;
 
 
 
@@ -5523,6 +5547,16 @@ internal static partial class Launcher
 
 		private readonly CheckBox autoUpdateBox;
 
+		private readonly CheckBox pistonDuplicationBox;
+
+		private readonly CheckBox gravityBlockDuplicationBox;
+
+		private readonly CheckBox tripwireDuplicationBox;
+
+		private readonly ModernGroupBox duplicationGroup;
+
+		private readonly Label duplicationStatusLabel;
+
 		private readonly TextBox ownerBox;
 
 		private readonly Panel advancedPanel;
@@ -5544,6 +5578,8 @@ internal static partial class Launcher
 		private readonly Label rulesLabel;
 
 		private readonly bool worldExists;
+
+		private readonly string serverDirectory;
 
 				private int versionLoadRequest;
 
@@ -5569,7 +5605,7 @@ internal static partial class Launcher
 
 
 
-		public ServerSetupForm(ServerSettings current, int recommendedMemory, int safeMaximumMemory, bool editing, bool existingWorld)
+		public ServerSetupForm(ServerSettings current, int recommendedMemory, int safeMaximumMemory, bool editing, bool existingWorld, string configuredServerDirectory)
 
 		{
 
@@ -5580,6 +5616,8 @@ internal static partial class Launcher
 			maximumMemory = safeMaximumMemory;
 
 			worldExists = existingWorld;
+
+			serverDirectory = Path.GetFullPath(configuredServerDirectory);
 
 			Text = Localization.T(editing ? "Setup.Title.Edit" : "Setup.Title.New");
 
@@ -5632,7 +5670,7 @@ internal static partial class Launcher
 
 			body.AutoScroll = true;
 
-			body.AutoScrollMinSize = new Size(0, 704);
+			body.AutoScrollMinSize = new Size(0, 714);
 
 			Controls.Add(body);
 
@@ -6002,9 +6040,9 @@ internal static partial class Launcher
 
 			advancedPanel = new Panel();
 
-			advancedPanel.Location = new Point(0, 618);
+			advancedPanel.Location = new Point(0, 472);
 
-			advancedPanel.Size = new Size(700, 84);
+			advancedPanel.Size = new Size(700, 90);
 
 			advancedPanel.Visible = true;
 
@@ -6112,6 +6150,43 @@ internal static partial class Launcher
 
 			advancedPanel.Controls.Add(ownerBox);
 
+			duplicationGroup = new ModernGroupBox();
+			duplicationGroup.Text = Localization.T("Setup.DuplicationTitle");
+			duplicationGroup.Location = new Point(0, 574);
+			duplicationGroup.Size = new Size(700, 130);
+			duplicationGroup.TabStop = false;
+			body.Controls.Add(duplicationGroup);
+
+			pistonDuplicationBox = NewCheckBox(Localization.T("Setup.PistonDuplication"), current.AllowPistonDuplication);
+			pistonDuplicationBox.AutoSize = false;
+			pistonDuplicationBox.Size = new Size(310, 34);
+			pistonDuplicationBox.Location = new Point(16, 24);
+			pistonDuplicationBox.TabIndex = 31;
+			duplicationGroup.Controls.Add(pistonDuplicationBox);
+
+			gravityBlockDuplicationBox = NewCheckBox(Localization.T("Setup.GravityDuplication"), current.AllowGravityBlockDuplication);
+			gravityBlockDuplicationBox.AutoSize = false;
+			gravityBlockDuplicationBox.Size = new Size(350, 34);
+			gravityBlockDuplicationBox.Location = new Point(334, 24);
+			gravityBlockDuplicationBox.TabIndex = 32;
+			duplicationGroup.Controls.Add(gravityBlockDuplicationBox);
+
+			tripwireDuplicationBox = NewCheckBox(Localization.T("Setup.TripwireDuplication"), current.AllowTripwireDuplication);
+			tripwireDuplicationBox.AutoSize = false;
+			tripwireDuplicationBox.Size = new Size(310, 34);
+			tripwireDuplicationBox.Location = new Point(16, 62);
+			tripwireDuplicationBox.TabIndex = 33;
+			duplicationGroup.Controls.Add(tripwireDuplicationBox);
+
+			duplicationStatusLabel = NewLabel(string.Empty, 8.5F, false);
+			duplicationStatusLabel.AutoSize = false;
+			duplicationStatusLabel.Location = new Point(338, 62);
+			duplicationStatusLabel.Size = new Size(344, 50);
+			duplicationStatusLabel.ForeColor = setupPalette.Muted;
+			duplicationStatusLabel.TextAlign = ContentAlignment.MiddleLeft;
+			duplicationStatusLabel.AccessibleRole = AccessibleRole.StaticText;
+			duplicationGroup.Controls.Add(duplicationStatusLabel);
+
 
 
 			validationLabel = NewLabel(string.Empty, 9F, false);
@@ -6188,15 +6263,27 @@ internal static partial class Launcher
 
 				UpdateManualJarControls();
 
+				UpdateDuplicationControls();
+
 			};
 
 			includeSnapshotsBox.CheckedChanged += delegate { RefreshVersionChoices(null); };
 
 			manualJarBox.CheckedChanged += delegate { UpdateManualJarControls(); };
 
+			versionBox.SelectedIndexChanged += delegate { UpdateDuplicationControls(); };
+
+			pistonDuplicationBox.CheckedChanged += delegate { UpdateDuplicationControls(); };
+
+			gravityBlockDuplicationBox.CheckedChanged += delegate { UpdateDuplicationControls(); };
+
+			tripwireDuplicationBox.CheckedChanged += delegate { UpdateDuplicationControls(); };
+
 			Shown += delegate { BeginVersionChoiceLoad(null); };
 
 			UpdateManualJarControls();
+
+			UpdateDuplicationControls();
 
 			string levelValue = string.IsNullOrWhiteSpace(current.LevelType) ? "minecraft:normal" : current.LevelType.ToLowerInvariant();
 
@@ -6265,6 +6352,14 @@ internal static partial class Launcher
 			ConfigureAccessibleField(simulationBox, Localization.T("Setup.SimulationDistance"), korean ? "몹과 레드스톤이 동작하는 청크 범위입니다." : "Chunk radius where mobs and redstone remain active.");
 
 			ConfigureAccessibleField(ownerBox, Localization.T("Setup.Owner"), korean ? "자동 OP를 받을 Minecraft 사용자 이름입니다." : "Minecraft username that receives owner operator access.");
+
+			ConfigureAccessibleField(pistonDuplicationBox, Localization.T("Setup.PistonDuplication"), korean ? "Paper 또는 Purpur에서 TNT, 양탄자와 레일 복사 장치를 허용합니다." : "Allow TNT, carpet, and rail duplicators on Paper or Purpur.");
+
+			ConfigureAccessibleField(gravityBlockDuplicationBox, Localization.T("Setup.GravityDuplication"), korean ? "엔드 차원문을 이용한 모래 등 중력 블록 복사를 허용합니다." : "Allow gravity block duplication through end portals.");
+
+			ConfigureAccessibleField(tripwireDuplicationBox, Localization.T("Setup.TripwireDuplication"), korean ? "Paper 계열 서버에서 철사덫 갈고리 복사를 허용합니다." : "Allow tripwire hook duplication on Paper-family servers.");
+
+			duplicationStatusLabel.AccessibleName = Localization.T("Setup.DuplicationStatus");
 
 		}
 
@@ -6640,6 +6735,83 @@ internal static partial class Launcher
 
 
 
+		private void UpdateDuplicationControls()
+
+		{
+
+			string[] values = GetServerTypeValues();
+
+			string serverType = values[Math.Max(0, Math.Min(serverTypeBox.SelectedIndex, values.Length - 1))];
+
+			string minecraftVersion = versionBox.SelectedItem == null ? source.MinecraftVersion : Convert.ToString(versionBox.SelectedItem);
+
+			DuplicationSettingsState support = GetDuplicationSettingsState(
+				serverDirectory,
+				serverType,
+				minecraftVersion,
+				pistonDuplicationBox.Checked,
+				gravityBlockDuplicationBox.Checked,
+				tripwireDuplicationBox.Checked);
+
+			pistonDuplicationBox.Enabled = support.PistonDuplicationSupported;
+
+			gravityBlockDuplicationBox.Enabled = support.GravityBlockDuplicationSupported;
+
+			tripwireDuplicationBox.Enabled = support.TripwireDuplicationSupported;
+
+			bool anyEnabled = pistonDuplicationBox.Enabled && pistonDuplicationBox.Checked
+				|| gravityBlockDuplicationBox.Enabled && gravityBlockDuplicationBox.Checked
+				|| tripwireDuplicationBox.Enabled && tripwireDuplicationBox.Checked;
+
+			if (support.Supported)
+
+			{
+
+				string relativePath = support.UsesModernPaperConfiguration ? @"config\paper-global.yml" : "paper.yml";
+
+				bool allSupported = support.PistonDuplicationSupported
+					&& support.GravityBlockDuplicationSupported
+					&& support.TripwireDuplicationSupported;
+				duplicationStatusLabel.Text = Localization.F(allSupported ? "Setup.DuplicationSupported" : "Setup.DuplicationPartiallySupported", relativePath);
+
+				duplicationStatusLabel.ForeColor = anyEnabled ? setupPalette.Warning : setupPalette.Muted;
+
+			}
+
+			else if (serverType == "custom")
+
+			{
+
+				duplicationStatusLabel.Text = Localization.T("Setup.DuplicationCustomUnavailable");
+
+				duplicationStatusLabel.ForeColor = setupPalette.Muted;
+
+			}
+
+			else
+
+			{
+
+				duplicationStatusLabel.Text = Localization.T("Setup.DuplicationUnavailable");
+
+				duplicationStatusLabel.ForeColor = setupPalette.Muted;
+
+			}
+
+			duplicationStatusLabel.AccessibleDescription = duplicationStatusLabel.Text;
+
+			setupToolTip.SetToolTip(duplicationGroup, duplicationStatusLabel.Text);
+
+			setupToolTip.SetToolTip(pistonDuplicationBox, Localization.T("Setup.DuplicationRiskHint"));
+
+			setupToolTip.SetToolTip(gravityBlockDuplicationBox, Localization.T("Setup.DuplicationRiskHint"));
+
+			setupToolTip.SetToolTip(tripwireDuplicationBox, Localization.T("Setup.DuplicationRiskHint"));
+
+		}
+
+
+
 		private void SelectComboValues(ServerSettings settings)
 
 		{
@@ -6728,6 +6900,16 @@ internal static partial class Launcher
 
 			}
 
+			bool enablesNewDuplication = pistonDuplicationBox.Enabled
+				&& (pistonDuplicationBox.Checked && !source.AllowPistonDuplication
+					|| gravityBlockDuplicationBox.Checked && !source.AllowGravityBlockDuplication
+					|| tripwireDuplicationBox.Checked && !source.AllowTripwireDuplication);
+			if (enablesNewDuplication)
+			{
+				DialogResult risk = ShowMineHarborDialog(this, Localization.T("Setup.DuplicationWarning"), Localization.T("Setup.DuplicationWarningTitle"), MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
+				if (risk != DialogResult.Yes) return;
+			}
+
 			ServerSettings settings = new ServerSettings();
 
 			settings.ProfileName = profileBox.Text.Trim();
@@ -6775,6 +6957,16 @@ internal static partial class Launcher
 			settings.OnlineMode = onlineModeBox.Checked;
 
 			settings.AutoUpdate = autoUpdateBox.Enabled && autoUpdateBox.Checked;
+
+			settings.ManageDuplicationSettings = pistonDuplicationBox.Enabled
+				|| gravityBlockDuplicationBox.Enabled
+				|| tripwireDuplicationBox.Enabled;
+
+			settings.AllowPistonDuplication = pistonDuplicationBox.Enabled && pistonDuplicationBox.Checked;
+
+			settings.AllowGravityBlockDuplication = gravityBlockDuplicationBox.Enabled && gravityBlockDuplicationBox.Checked;
+
+			settings.AllowTripwireDuplication = tripwireDuplicationBox.Enabled && tripwireDuplicationBox.Checked;
 
 			settings.OwnerName = ownerBox.Text.Trim();
 

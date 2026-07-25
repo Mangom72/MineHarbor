@@ -1,18 +1,22 @@
-# CODEX_HANDOFF.md
+﻿# CODEX_HANDOFF.md
 
-## 0. Current implementation state (v1.7.5 released)
+## 0. Current implementation state (v1.8.0 release candidate)
 
-- Release-state branch: `codex/v1.7.5-release-state` (feature branch: `codex/fix-quick-command-layout-v1.7.5`)
-- Version source of truth: `version.json` = 1.7.5 / build 26.2.45.70
+- Feature branch: `codex/duplication-settings-v1.8.0`
+- Version source of truth: `version.json` = 1.8.0 / build 26.2.45.71
+- Server settings expose three independent Paper-compatible controls: piston/TNT/rail/carpet duplication, gravity-block end-portal duplication, and tripwire-hook duplication.
+- Paper/Purpur 1.19+ uses top-level `unsupported-settings` in `config/paper-global.yml`; older versions use nested `settings.unsupported-settings` in `paper.yml`. Gravity-block controls require 1.20.4+, tripwire controls require 1.21.4+, and custom JARs expose newer controls only for keys already generated. Spigot, Vanilla, Fabric, Forge, and NeoForge never receive Paper-only keys.
+- Existing profiles keep `manage-duplication-settings=false` until the settings dialog is saved, preventing a version upgrade from silently overwriting manually maintained YAML.
+- YAML writes reject malformed or ambiguous managed sections, path escapes, and reparse points; effective changes create at most five `.mineharbor/configuration-backups` copies per target filename.
+- The setup dialog uses the existing themed group and check boxes, removes its former 146px empty region, and avoids scrolling at normal size. Static UI validation covers standard controls and DPI scaling across all 22 forms.
 - New per-server state: `.mineharbor/content-manifest.json` and `.mineharbor/automation.json`
 - New user areas: installed content/Modrinth/data packs, backup schedules and commands, and a live server status dashboard
 - New service boundaries: `ContentManagementServices.cs`, `ServerAutomation.cs`, and the UI integration in `ContentManagementUi.cs` / `ServerManagementFeatures.cs`
 - Tool-window title-bar closes retain a short coordinate-scoped input guard, so mouse double-click chatter cannot immediately activate an overlapping launcher control while deliberate clicks elsewhere remain available.
 - User-initiated launcher close now always asks for confirmation. Idle close exits directly without invoking server termination; active work and a running server use separate Korean/English wording and retain deferred or safe-stop behavior.
 - The quick-command card now remains in a fixed legacy-width right column. The console uses a separate left column, so toggling it no longer moves the card or leaves console content hidden behind it.
-- CI: `.github/workflows/ci.yml` validates PRs and main separately from `.github/workflows/build-release.yml`; both build the SDK-style `net48` project and the legacy Portable path. PR [#20](https://github.com/Mangom72/MineHarbor/pull/20) was merged as `c6bbd29`; both PR and main CI passed before the [v1.7.5 release workflow](https://github.com/Mangom72/MineHarbor/actions/runs/30119473148) published the [stable release](https://github.com/Mangom72/MineHarbor/releases/tag/v1.7.5).
-- Local v1.7.5 validation passed 26 launcher test groups, 10 bridge protocol cases, Portable smoke/version, UI scan, security regression scan, and seven self-signed release artifacts. The Korean dark-theme console closed/open/closed sequence was visually checked without starting a server or changing UPnP state. No local .NET SDK is installed, so the SDK-style `net48` build remains a required GitHub CI gate.
-- Seven public assets were downloaded and independently checked for hashes, versions, self-signed Authenticode integrity, and archive structure. The public v1.7.4 launcher updated to v1.7.5 through the published metadata (`PUBLIC_AUTO_UPDATE_OK=1.7.4->1.7.5`), and the updated launcher passed the complete test suite again.
+- Local v1.8.0 validation passed 27 launcher test groups, 10 bridge protocol cases, Portable smoke/version, static UI and security scans, and seven ephemeral self-signed release artifacts. No real server, router, port mapping, or foreground UI was changed. No local .NET SDK is installed, so the SDK-style `net48` build remains a required GitHub CI gate.
+- CI: `.github/workflows/ci.yml` validates PRs and main separately from `.github/workflows/build-release.yml`; both build the SDK-style `net48` project and the legacy Portable path. The immediately preceding v1.7.5 release passed PR/main CI, seven-asset release verification, and public v1.7.4-to-v1.7.5 auto-update regression.
 - The default runtime remains .NET Framework 4.8. `MineHarbor.csproj` is the migration bridge; do not switch to .NET 10 until updater, COM/UPnP, WinForms, installer, and Portable compatibility tests are equivalent.
 - Do not infer dashboard values. Paper/Purpur TPS/MSPT is shown only when the local bridge reports it; unsupported or disconnected values remain explicit.
 
