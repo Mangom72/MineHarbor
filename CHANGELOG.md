@@ -4,6 +4,18 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.8.1] - 2026-07-25
+
+### Korean
+
+- **보조 창 닫기 입력 관통 보강**: 보조 창의 제목 표시줄 닫기 버튼을 누른 뒤 포인터를 빠르게 움직여도 같은 물리 입력의 마우스 해제가 메인 창 컨트롤에 전달되지 않습니다. 이후 추가 클릭은 기존처럼 닫기 지점 주변에서만 잠시 차단하므로 다른 위치의 의도적인 조작은 유지됩니다.
+- **실사용 중 검증 안정화**: 마우스를 사용하는 컴퓨터에서도 회귀 검사가 외부 포인터 이동에 흔들리지 않도록, 닫기 누름과 해제 사이에 포인터가 보호 반경 밖으로 이동하는 실패 경로를 명시적으로 검사합니다.
+
+### English
+
+- **Stronger tool-window close-through protection**: Releasing the same physical close click can no longer reach a launcher control even when the pointer moves quickly after pressing a tool window's title-bar close button. Subsequent clicks remain briefly guarded only near the close point, preserving deliberate interaction elsewhere.
+- **Stable verification on an active desktop**: The regression test now explicitly moves the pointer state outside the guard radius between close press and release, avoiding dependence on incidental real-pointer movement while the computer is in use.
+
 ## [1.8.0] - 2026-07-25
 
 ### Korean

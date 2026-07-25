@@ -1,9 +1,10 @@
 ﻿# CODEX_HANDOFF.md
 
-## 0. Current implementation state (v1.8.0 release candidate)
+## 0. Current implementation state (v1.8.1 hotfix candidate)
 
-- Feature branch: `codex/duplication-settings-v1.8.0`
-- Version source of truth: `version.json` = 1.8.0 / build 26.2.45.71
+- Hotfix branch: `codex/input-guard-v1.8.1` (feature branch: `codex/duplication-settings-v1.8.0`)
+- Version source of truth: `version.json` = 1.8.1 / build 26.2.45.72
+- The v1.8.0 public update path succeeded, but a repeated full-suite run while the desktop was in use exposed that the close-release guard still depended on the live pointer remaining within 64px. The paired release is now consumed regardless of pointer movement; only subsequent presses remain coordinate-scoped.
 - Server settings expose three independent Paper-compatible controls: piston/TNT/rail/carpet duplication, gravity-block end-portal duplication, and tripwire-hook duplication.
 - Paper/Purpur 1.19+ uses top-level `unsupported-settings` in `config/paper-global.yml`; older versions use nested `settings.unsupported-settings` in `paper.yml`. Gravity-block controls require 1.20.4+, tripwire controls require 1.21.4+, and custom JARs expose newer controls only for keys already generated. Spigot, Vanilla, Fabric, Forge, and NeoForge never receive Paper-only keys.
 - Existing profiles keep `manage-duplication-settings=false` until the settings dialog is saved, preventing a version upgrade from silently overwriting manually maintained YAML.
