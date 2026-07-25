@@ -28,6 +28,8 @@
 
 현재 소스 버전은 `v1.10.0`, 내부 빌드는 `26.2.45.74`입니다. MineHarbor 이름으로 배포된 Portable EXE는 같은 링크에서 계속 최신 파일을 받을 수 있습니다. 기존 설치의 `%LOCALAPPDATA%\MinecraftServerLauncher` 데이터는 자동으로 찾아 그대로 사용하며, 새 사용자 데이터 경로는 `%LOCALAPPDATA%\MineHarbor`입니다.
 
+이 README는 로드맵이 아니라 현재 `v1.9.0` 소스와 자동 테스트, 공개 Release 자산에서 확인한 기능만 설명합니다. 서버 종류나 브리지 연결처럼 조건에 따라 달라지는 기능과 지원되지 않는 상태는 아래에 따로 표시합니다.
+
 > [!WARNING]
 > 현재 릴리스 실행 파일은 요청된 자체서명 인증서로 무결성을 표시하지만 공개 인증 기관이 신뢰한 배포자 서명은 아닙니다. 따라서 Windows SmartScreen 경고가 나타날 수 있습니다. Release의 `SHA256SUMS.txt`와 GitHub 출처를 함께 확인해 주세요.
 
@@ -49,7 +51,7 @@ Paper, Vanilla, Purpur부터 모드 서버까지 지원하면서도 자주 쓰�
 2. 데이터 위치와 서버 종류, Minecraft 버전, 프리셋, 메모리를 선택하고 Minecraft EULA에 동의합니다.
 3. `서버 시작`을 누른 뒤 화면에 표시된 주소를 친구에게 전달합니다.
 
-메인 창은 먼저 표시되고 업데이트, 프로필, 최신 버전 목록은 백그라운드에서 불러옵니다. Java 준비, 파일 다운로드, 서버 시작, 포트 확인처럼 시간이 걸리는 작업은 현재 단계와 진행률을 화면에 표시합니다.
+메인 창은 먼저 표시되고 업데이트, 프로필, 최신 버전 목록은 백그라운드에서 불러옵니다. Java 준비, 파일 다운로드, 서버 시작, 포트 확인처럼 시간이 걸리는 작업은 현재 단계와 진행률을 화면에 표시하며, 콘텐츠 작업은 취소할 수 있습니다.
 
 ## 지원 범위
 
@@ -76,6 +78,7 @@ Minecraft 및 서버 종류에 맞춰 Java 8·11·16·17·21·25 중 필요한 �
 | 항목 | 요구 사항 |
 | --- | --- |
 | 운영체제 | Windows 10 또는 Windows 11 x64 |
+| 런타임 | .NET Framework 4.8 |
 | 메모리 | 서버 규모에 따라 선택, 기본 추천 4GB |
 | 인터넷 | 최초 Java·서버 파일 준비, 업데이트, 콘텐츠 검색, 외부 접속 검사에 필요 |
 | 저장 공간 | 서버 파일, 월드, 플러그인·모드와 백업 크기에 따라 달라짐 |
@@ -103,7 +106,7 @@ Paper/Purpur의 복사 옵션은 서버가 공식적으로 지원하지 않는 �
 - 서버 파일 자동 업데이트 옵션과 수동 `서버 업글`
 - 서버 종류·Minecraft 버전 변경 전 호환성 경고와 백업
 - 전체 프로필 수동 백업, 보존 개수 설정, 내보내기와 외부 백업 가져오기
-- 서버별 정기 백업, 시작 전·종료 후 백업, 예약 시작·종료·재시작·명령 실행
+- 서버별 정기 백업, 시작 전·종료 후 백업, 반복 간격 또는 매일 시각을 지정한 예약 시작·종료·재시작·명령 실행과 즉시 실행
 - 예약 재시작 전 플레이어 공지, 다음 실행 시각과 최근 결과, 개수·기간·총용량 백업 보존 정책
 - 일정은 MineHarbor 관리 창이 실행 중일 때 평가되며 별도 Windows 백그라운드 서비스는 설치하지 않음
 - SHA-256 무결성 확인과 임시 폴더 검증 후 안전 복원
@@ -118,17 +121,20 @@ Paper/Purpur의 복사 옵션은 서버가 공식적으로 지원하지 않는 �
 
 - 설치된 플러그인·모드·데이터팩을 MineHarbor 관리 파일과 수동 설치 파일로 구분
 - 개별·일괄 업데이트 확인, 활성화·비활성화, 복구 가능한 제거와 서버별 manifest 저장
-- 콘텐츠 첫 화면에 인기 플러그인·모드 표시
-- 선택한 콘텐츠의 아이콘, 제작자, 다운로드 수와 설명 제공
-- 현재 버전과 로더에 맞는 Modrinth 플러그인·모드·데이터팩 검색
+- 현재 버전과 로더에 맞는 Modrinth 플러그인·모드·데이터팩 검색. 빈 검색어로 인기순 결과를 조회하고 제작자·다운로드 수·설명을 함께 표시
+- 로컬 JAR·데이터팩 ZIP 파일을 검사한 뒤 선택한 서버나 월드에 직접 설치
 - Modrinth 필수 의존성·순환 의존성, Minecraft 버전·로더 호환성 검사
-- 선택한 월드의 `world/datapacks`에 설치하고 루트 `pack.mcmeta`, 압축 경로·크기를 검증
+- 선택한 월드의 `<월드 이름>/datapacks`에 설치하고 루트 `pack.mcmeta`, 압축 경로·중복 항목·파일 수·해제 크기를 검증
 - 다운로드 크기와 SHA-512/SHA-1 검증 후 설치, 기존 파일 자동 백업
+- 검색·설치·업데이트 진행률과 취소 기능, 창을 닫은 뒤 비동기 UI 콜백 차단
 - 온라인 플레이어 이름 자동완성을 지원하는 화이트리스트, OP·DEOP, 추방, 차단·해제 플레이어 관리
 - 검색 → 로그 분류 → 줄 바꿈 순서로 정리한 콘솔 도구막대와 일반 경고·호환성·오류 필터
 - 읽던 위치를 유지하고 맨 아래를 볼 때만 새 로그를 따라가는 콘솔
 - 개인정보를 가린 로그·설정·크래시 보고서 진단 묶음
 - 다크·라이트 테마에 맞춘 제목 표시줄, 콘솔·목록 스크롤바, 둥근 입력·그룹 테두리, 드롭다운, 체크박스와 탭
+- 창 크기·DPI에 맞춘 반응형 배치, 작은 화면에서만 필요한 스크롤, 키보드 포커스와 스크린 리더 설명
+- 보조 창 X 입력이 뒤의 메인 버튼에 전달되지 않도록 같은 클릭과 닫기 지점 주변의 반복 클릭을 차단하고, 떨어진 위치의 의도적인 클릭은 즉시 허용
+- X·Alt+F4로 런처를 닫을 때 항상 확인. 유휴 상태는 서버 종료 절차 없이 닫고, 작업 중에는 완료 대기, 서버 실행 중에는 안전 종료 후 닫기
 
 ### 서버 대시보드
 
@@ -181,10 +187,22 @@ flowchart TD
 - 일반 외부 검사는 TCP 포트가 열렸는지만 알 수 있으므로 Minecraft 서버 일치 여부를 확정하지 않습니다. 응답이 있으면 후보 주소와 `서버 일치 미확인`을 함께 표시하고 공유기 설정은 변경하지 않습니다.
 - MineHarbor가 만든 UPnP 매핑을 다시 검사해 응답한 경우에만 대시보드에 `확인됨`으로 표시합니다.
 - 다른 내부 PC가 같은 외부 포트를 사용하면 덮어쓰지 않고 충돌로 알립니다.
+- 직접 SSDP/SOAP 방식을 우선 사용하고 Windows COM을 백업 경로로 시도하며, 기본 외부 포트가 충돌하면 최대 8개의 대체 포트를 확인합니다.
 - 기본 TCP 매핑과 Minecraft Query 사용 시 필요한 UDP 매핑만 시도합니다.
 - 서버가 끝나면 현재 런처 세션이 만들고 기록과 정확히 일치하는 매핑만 삭제합니다.
 - 최종 실패 시 내부 IPv4, 기본 게이트웨이, 포트, 공유기 관리 주소, 방화벽 및 이중 NAT·CGNAT 가능성을 안내합니다.
 - 외부 검사 서비스 자체가 응답하지 않으면 접속 실패로 단정하거나 UPnP를 실행하지 않습니다.
+
+## 현재 범위와 제한
+
+| 기능 | 현재 범위 |
+| --- | --- |
+| 운영체제와 런타임 | Windows 10/11 x64 및 .NET Framework 4.8. SDK 스타일 프로젝트도 호환성 검증용 `net48`을 유지합니다. |
+| 콘텐츠 공급자 | 자동 검색·의존성 해결·업데이트는 Modrinth를 사용합니다. 다른 출처의 JAR·ZIP은 파일 설치와 수동 파일 관리로 다룹니다. |
+| 일정 실행 | MineHarbor의 메인 창 또는 여러 서버 관리 창이 실행 중일 때만 평가됩니다. 별도 Windows 서비스는 설치하지 않습니다. |
+| 실시간 서버 정보 | 명령 브리지의 라이브 플레이어·TPS·MSPT·플러그인 명령은 Paper/Purpur 1.13 이상에서 선택적으로 지원합니다. 나머지 서버는 로컬 명령 자동완성을 사용하며 얻을 수 없는 지표는 `지원되지 않음`으로 표시합니다. |
+| 외부 접속 판정 | 일반 TCP 응답만으로 Minecraft 서버가 맞다고 확정하지 않습니다. MineHarbor가 만든 매핑의 사후 검사만 `확인됨`으로 표시합니다. |
+| 코드 서명 | 릴리스마다 자체서명하며 공개 인증 기관의 신뢰 서명은 제공하지 않습니다. |
 
 ## 데이터와 개인정보
 
@@ -202,7 +220,7 @@ flowchart TD
 
 ## 안전하게 설계된 부분
 
-- Java, 서버 파일, 콘텐츠, 브리지와 런처 업데이트의 크기·해시 검증
+- Java, 서버 파일, 콘텐츠, 브리지와 런처 업데이트의 HTTPS·허용 호스트·리디렉션·크기·해시 검증
 - 기존 포트포워딩과 다른 기기의 UPnP 매핑을 덮어쓰지 않음
 - 자동 OP는 정품 계정 인증이 켜졌을 때만 동작해 닉네임 사칭 위험 완화
 - 브리지의 루프백 전용 통신, 실행별 임시 토큰과 외부 포트 미사용
@@ -237,13 +255,19 @@ dotnet build .\MineHarbor.csproj -c Release
 
 설치 프로그램 빌드는 Inno Setup 6.7 이상이 필요합니다. 릴리스 워크플로는 Portable EXE·ZIP, 설치 프로그램, Paper/Purpur 명령 브리지, `SHA256SUMS.txt`와 `update.json`을 만듭니다. 빌드 원칙과 테스트 방법은 [CONTRIBUTING.md](CONTRIBUTING.md)를 확인해 주세요.
 
+PR과 `main` 푸시의 일반 CI는 버전·문서 일치, SDK 스타일 `net48` 경고 없는 빌드, Portable EXE·ZIP, 명령 브리지와 실패 경로·UI 회귀를 검사합니다. 별도 릴리스 워크플로는 외부 Action을 전체 커밋 SHA로 고정하고, 릴리스 자산·SHA-256 목록·업데이트 메타데이터·자체서명 무결성과 임시 인증서 정리를 검증하며, 직전 공개 런처를 통한 자동 업데이트도 다시 확인합니다.
+
 ## 프로젝트 문서
 
 - [변경 기록](CHANGELOG.md)
 - [기여 안내](CONTRIBUTING.md)
 - [개인정보 처리 안내](PRIVACY.md)
 - [보안 정책](SECURITY.md)
+- [콘텐츠·자동화 구조](docs/architecture/CONTENT_AUTOMATION.md)
+- [Paper/Purpur 복사 설정 호환성](docs/architecture/DUPLICATION_COMPATIBILITY.md)
+- [빠른 명령 호환성](docs/architecture/QUICK_COMMAND_COMPATIBILITY.md)
 - [.NET 현대화 검토](docs/architecture/DOTNET_MODERNIZATION.md)
+- [전체 UI·UX·보안·UPnP 감사](docs/audits/FULL_UI_UX_SECURITY_UPNP_AUDIT.md)
 - [MIT License](LICENSE)
 
 ---
@@ -259,6 +283,8 @@ dotnet build .\MineHarbor.csproj -c Release
 | **Portable ZIP** | Keep the launcher, README, and license together | **[Open the latest release](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 
 Current source version: `v1.10.0` · internal build: `26.2.45.74`. MineHarbor releases keep the same permanent Portable URL. Existing data under `%LOCALAPPDATA%\MinecraftServerLauncher` is detected and preserved; new user-data installations use `%LOCALAPPDATA%\MineHarbor`.
+
+This README documents shipped behavior verified against the current `v1.9.0` source, automated tests, and public release assets—not roadmap items. Conditional and unsupported behavior is called out explicitly below.
 
 > [!WARNING]
 > Release executables carry the requested self-signed integrity signature, not a publisher identity trusted by a public certificate authority. Windows SmartScreen can therefore still warn. Verify the GitHub source and the release `SHA256SUMS.txt`.
@@ -278,21 +304,32 @@ MineHarbor — Minecraft Server Launcher is a Windows desktop app for creating a
 2. Choose a data location, server type, Minecraft version, preset, and memory, then accept the Minecraft EULA.
 3. Press `Start server` and share the address shown by the launcher.
 
-The main window appears first while update, profile, and current version data load in the background. Long operations report their current stage and progress.
+The main window appears first while update, profile, and current version data load in the background. Long operations report their current stage and progress, and content operations can be cancelled.
+
+### System requirements
+
+| Item | Requirement |
+| --- | --- |
+| Operating system | Windows 10 or Windows 11 x64 |
+| Runtime | .NET Framework 4.8 |
+| Memory | Depends on server size; 4 GB is the default recommendation |
+| Internet | Required for initial Java/server preparation, updates, content search, and external-access checks |
+| Storage | Depends on server files, worlds, plugins/mods, data packs, and backups |
 
 ## Highlights
 
-- **Server profiles:** create, clone, import, rename, archive, select, run, and safely stop isolated servers; port conflicts can be reassigned after confirmation, and each address has a one-click copy action.
+- **Server profiles:** create, clone, import, rename, archive, select, run, and safely stop isolated servers; port conflicts can be reassigned after confirmation, and each address has a one-click copy action. Deleted server folders remain recoverable in Trash for 30 days. Exact-name entry is required only when moving a server to Trash; permanent deletion inside Trash uses a three-second locked confirmation.
 - **Presets and settings:** survival difficulties, hardcore, normal or flat creative worlds, common `server.properties` controls, and version-aware Paper/Purpur switches for TNT/carpet/rail, gravity-block, and tripwire-hook duplication. Modern servers use `config/paper-global.yml`; legacy servers use nested `settings.unsupported-settings` in `paper.yml`. Paper-only keys are not written to Spigot, Vanilla, or modded servers; custom JARs require detected Paper keys. Changes preserve unrelated YAML and keep pre-change backups under `.mineharbor/configuration-backups`.
 - **Compatible runtimes:** automatic Java 8/11/16/17/21/25 selection and download; explicit Java selection for custom JARs.
 - **Updates and backups:** optional server auto-update, manual upgrades, staged profile restore, SHA-256 verification, export, scheduled or start/stop-hook backups, and count/day/size retention.
-- **Scheduling:** per-server backup, start, stop, restart, and command jobs with player warnings, execution leases, next-run times, and latest results.
+- **Scheduling:** per-server backup, start, stop, restart, and command jobs on an interval or at a daily local time, with Run now, player warnings, execution leases, next-run times, and latest results.
 - **Scheduling scope:** jobs are evaluated while a MineHarbor management window is running; this release does not install a separate Windows background service.
-- **Content:** installed plugin/mod/data-pack inventory, managed/manual distinction, compatibility and dependency checks, individual or batch updates, enable/disable/remove, verified Modrinth search, and world-targeted data-pack installation.
+- **Content:** installed plugin/mod/data-pack inventory, managed/manual distinction, compatibility and dependency checks, individual or batch updates, enable/disable/recoverable removal, verified Modrinth search, and local-file or world-targeted data-pack installation. Blank searches return popular results with author, download count, and description. Data packs are installed under the selected `<world>/datapacks` folder after root `pack.mcmeta`, path, duplicate-entry, entry-count, and expanded-size checks.
 - **Dashboard:** status, uptime, Java CPU/memory/version, players, storage, warnings/errors, verified external access, next schedule, and bridge-provided TPS/MSPT without guessed values.
 - **Operations:** online-player autocomplete for whitelist, OP, kick and ban controls; command/player suggestions in the main and managed consoles; time-independent command suggestions in the scheduler; plus search → category → word-wrap console tools with separate warning, compatibility, and error filters.
 - **Diagnostics:** common startup-cause summaries and exportable bundles with paths, IP addresses, owner names, and secrets redacted.
-- **Interface:** Korean/English, dark/light themed title bars, console/list scrollbars, rounded input/group frames, dropdowns, checkboxes, tabs and list surfaces, responsive windows, restrained scrolling, concise tooltips, background loading, and visible progress.
+- **Interface:** Korean/English, dark/light themed title bars, console/list scrollbars, rounded input/group frames, dropdowns, checkboxes, tabs and list surfaces, responsive windows, restrained scrolling, concise tooltips, keyboard/screen-reader metadata, background loading, visible progress, and cancellation for content operations.
+- **Close safety:** closing a modeless tool window consumes the matching pointer release and briefly suppresses repeated clicks near its title-bar X without blocking deliberate clicks elsewhere. Closing the launcher always asks first; idle exits immediately without a server-stop path, active work waits, and a running server is stopped safely before exit.
 
 ## Quick commands and live suggestions
 
@@ -314,15 +351,26 @@ The bridge binds only to `127.0.0.1`, uses a new random token and temporary port
 
 ## External access flow
 
-The launcher checks the local TCP listener and current external TCP reachability before touching UPnP. A generic port check cannot prove that the responding service is this Minecraft server, so an open result is shown as `server identity unverified` and router settings are left unchanged. After a confirmed closed-port result, it discovers UPnP, detects collisions, creates only the required TCP mapping and optional Query UDP mapping, then tests again. Only a successful post-check of a mapping created by MineHarbor is shown as verified.
+The launcher checks the local TCP listener and current external TCP reachability before touching UPnP. A generic port check cannot prove that the responding service is this Minecraft server, so an open result is shown as `server identity unverified` and router settings are left unchanged. After a confirmed closed-port result, it discovers UPnP through direct SSDP/SOAP first and Windows COM as a fallback, detects collisions, checks up to eight alternate external ports, creates only the required TCP mapping and optional Query UDP mapping, then tests again. Only a successful post-check of a mapping created by MineHarbor is shown as verified.
 
 If access still fails, the manual guide shows the PC IPv4 address, default gateway, internal and external ports, router page, firewall status, and possible double NAT or CGNAT. On shutdown, only mappings created by the current launcher session and still matching its exact record are removed. An unavailable external check service is not treated as a closed port and does not trigger UPnP.
+
+## Current scope and limitations
+
+| Area | Current scope |
+| --- | --- |
+| OS and runtime | Windows 10/11 x64 and .NET Framework 4.8. The parallel SDK-style project remains on `net48` for compatibility verification. |
+| Content providers | Automatic search, dependency resolution, and updates use Modrinth. JAR/ZIP files from other sources can be installed from file and are tracked separately. |
+| Scheduling | Jobs are evaluated only while the MineHarbor main or multi-server management window is running; no Windows background service is installed. |
+| Live server data | Live players, TPS/MSPT, and plugin commands require the optional bridge on Paper/Purpur 1.13+. Other server types retain local completion, and unavailable metrics are shown as unsupported rather than estimated. |
+| External reachability | A generic TCP response does not prove Minecraft server identity. Only the post-check of a mapping created by MineHarbor is marked verified. |
+| Code signing | Releases are self-signed per build and do not carry a public-CA trusted publisher signature. |
 
 ## Data, privacy, and safety
 
 Choose user data (`%LOCALAPPDATA%\MineHarbor`), Portable data (`Minecraft-Servers-Data` beside the EXE), or a writable custom folder. Existing data under the legacy `%LOCALAPPDATA%\MinecraftServerLauncher` path is detected and reused without automatic moves, deletion, or overwrites.
 
-The launcher collects no analytics or usage telemetry and never uploads logs or diagnostic bundles automatically. Downloads are checked by size and available hashes; existing router mappings are preserved; diagnostic bundles redact sensitive values; and automatic owner OP is disabled when online authentication is off. See the [privacy notice](PRIVACY.md) and [security policy](SECURITY.md) for details.
+The launcher collects no analytics or usage telemetry and never uploads logs or diagnostic bundles automatically. Downloads enforce HTTPS, allowed hosts and redirects, bounded sizes, and available hashes; existing router mappings are preserved; diagnostic bundles redact sensitive values; and automatic owner OP is disabled when online authentication is off. See the [privacy notice](PRIVACY.md) and [security policy](SECURITY.md) for details.
 
 ## Build and test
 
@@ -332,9 +380,12 @@ Build on Windows 10/11 x64 with PowerShell 5.1 or newer and the .NET Framework 4
 .\scripts\Prepare-BuildResources.ps1
 .\build.ps1
 .\test.ps1
+dotnet build .\MineHarbor.csproj -c Release
 ```
 
 Installer builds require Inno Setup 6.7 or newer. See [CONTRIBUTING.md](CONTRIBUTING.md) for build rules, tests, and the release workflow.
+
+General CI on pull requests and `main` pushes checks version/document consistency, the warning-free SDK-style `net48` build, Portable EXE/ZIP, the command bridge, failure paths, and UI regressions. The separate release workflow pins external Actions to full commit SHAs and verifies release assets, the SHA-256 list, update metadata, self-signed integrity, temporary-certificate cleanup, and automatic updating through the previous public launcher.
 
 ## Support and policies
 
@@ -343,4 +394,9 @@ Installer builds require Inno Setup 6.7 or newer. See [CONTRIBUTING.md](CONTRIBU
 - [Contributing](CONTRIBUTING.md)
 - [Privacy](PRIVACY.md)
 - [Security](SECURITY.md)
+- [Content and automation architecture](docs/architecture/CONTENT_AUTOMATION.md)
+- [Paper/Purpur duplication compatibility](docs/architecture/DUPLICATION_COMPATIBILITY.md)
+- [Quick-command compatibility](docs/architecture/QUICK_COMMAND_COMPATIBILITY.md)
+- [.NET modernization review](docs/architecture/DOTNET_MODERNIZATION.md)
+- [Full UI/UX, security, and UPnP audit](docs/audits/FULL_UI_UX_SECURITY_UPNP_AUDIT.md)
 - [MIT License](LICENSE)
