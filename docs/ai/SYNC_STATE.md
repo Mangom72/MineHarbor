@@ -1,5 +1,16 @@
 ﻿# AI Agent Synchronization State
 
+## Codex Paper/Purpur Duplication Compatibility and UI Audit - 2026-07-25
+
+- **Current Version**: 1.8.0 (build 26.2.45.71)
+- **Branch**: `codex/duplication-settings-v1.8.0`
+- **Status**: Paper/Purpur 복사 동작 호환 설정, 설정 창 레이아웃 정리, 전체 WinForms 디자인 회귀 검사를 구현하고 정식 릴리스 검증 중
+- 서버별 설정 탭에 피스톤 기반(TNT·레일·양탄자), 엔드 포털 중력 블록, 철사 덫 갈고리 복사 동작을 각각 제어하는 현대식 체크박스와 접근성 설명을 추가했습니다.
+- Paper/Purpur 1.19 이상은 `config/paper-global.yml`, 이전 버전은 `paper.yml`의 중첩된 `settings.unsupported-settings`를 사용합니다. 신형 키는 도입 버전 또는 실제 생성 여부를 확인하고, 직접 JAR·Spigot/Vanilla 및 비 Paper 계열에 호환되지 않는 키를 기록하지 않습니다.
+- 기존 프로필은 새 설정을 한 번 저장하기 전까지 Paper YAML을 자동 변경하지 않습니다. 실제 변경 전 서버별 `.mineharbor/configuration-backups`에 최대 5개의 백업을 남기며, 손상·중복 키, 탭 들여쓰기, 심볼릭 링크 및 서버 폴더 밖 경로는 거부합니다.
+- 설정 창의 146px 불필요한 공백을 제거하고 일반 창 크기에서는 스크롤이 나타나지 않도록 재배치했습니다. 전체 22개 Form의 DPI 설정과 기본 Button·ComboBox·CheckBox·TrackBar·스크롤바 사용 금지를 자동 검사합니다.
+- 로컬 빌드와 27개 테스트 그룹, Portable 실행·버전, 명령 브리지 10개, 현대식 대화상자 및 보안 회귀 검사가 통과했습니다. 실제 사용자 서버·UPnP·공유기 설정과 현재 사용 중인 화면은 건드리지 않았습니다.
+
 ## Codex Fixed Quick-Command and Console Workspace - 2026-07-25
 
 - **Current Version**: 1.7.5 (build 26.2.45.70)

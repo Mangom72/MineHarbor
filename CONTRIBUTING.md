@@ -32,7 +32,7 @@ dotnet build .\MineHarbor.csproj -c Release
 
 테스트는 임시 폴더를 사용해야 하며 실제 서버 데이터, 공유기 UPnP 매핑 또는 외부 포트 설정을 변경해서는 안 됩니다.
 
-`test.ps1`은 버전·문서 일치, Portable EXE 버전, 콘텐츠 manifest와 데이터팩 실패 경로, 자동화 실행 임대, 백업 보존, 비동기 UI 종료 및 Paper/Purpur 브리지 프로토콜을 함께 검사합니다. PR과 `main` push는 `.github/workflows/ci.yml`, 태그와 수동 릴리스는 별도 `build-release.yml`에서 검증합니다.
+`test.ps1`은 버전·문서 일치, Portable EXE 버전, 콘텐츠 manifest와 데이터팩 실패 경로, 자동화 실행 임대, 백업 보존, Paper/Purpur 복사 설정 YAML의 보존·백업·실패 경로, 비동기 UI 종료 및 Paper/Purpur 브리지 프로토콜을 함께 검사합니다. PR과 `main` push는 `.github/workflows/ci.yml`, 태그와 수동 릴리스는 별도 `build-release.yml`에서 검증합니다.
 
 릴리스 워크플로는 실행마다 임시 RSA-3072/SHA-256 자체서명 인증서와 난수 PFX 비밀번호를 만들고 Portable EXE와 설치 프로그램을 서명한 뒤 인증서와 PFX를 항상 삭제합니다. 자체서명은 파일 무결성 표시는 제공하지만 공개 신뢰나 SmartScreen 평판은 제공하지 않습니다. 외부 코드 서명 비밀을 이 경로에 추가하지 마세요.
 
@@ -52,9 +52,10 @@ dotnet build .\MineHarbor.csproj -c Release
 - UI 문구는 한국어와 영어를 함께 갱신합니다.
 - 관련 없는 대규모 포맷팅을 피하고 한 변경에는 한 목적만 담습니다.
 - 콘텐츠와 자동화 설정은 `.mineharbor` 아래에 원자적으로 저장하고, 손상된 원본을 자동으로 덮어쓰지 않습니다.
+- Paper/Purpur 설정은 지원되는 서버 종류와 버전 경로에서만 수정하고, 기존 YAML 주석·관련 없는 항목·수동 설정 마이그레이션 보호와 변경 전 백업을 유지합니다.
 - 장시간 작업은 `Task`/`async`와 `CancellationToken`을 사용하고, 닫힌 폼에 완료 콜백을 보내지 않는 테스트를 추가합니다.
 - `build.ps1`과 `MineHarbor.csproj`의 명시적 소스 목록을 함께 갱신합니다.
 
 ## English
 
-Build on Windows with PowerShell and the .NET Framework compiler. Run `scripts\Prepare-BuildResources.ps1`, `build.ps1`, and `test.ps1`; with the .NET 10 SDK installed, also run `dotnet build MineHarbor.csproj -c Release` for the SDK-style `net48` compatibility path. Inno Setup 6.7 or newer is required for installer builds. Each release uses an ephemeral RSA-3072/SHA-256 self-signed certificate and random PFX password, signs the Portable EXE and installer, and always removes the certificate material. This provides an integrity signature, not public publisher trust or SmartScreen reputation. After publishing, the release workflow downloads all public assets, verifies their self-signed subject and integrity, uses the immediately preceding stable launcher's real update parser and download routine, and runs the full regression suite against that downloaded EXE. Keep `version.json` as the single version source, keep `build.ps1` and project source lists synchronized, never mutate real server/router data in tests, preserve corrupt manifests instead of overwriting them, cancel long-running UI work safely, verify downloads, and update Korean and English UI/documentation together.
+Build on Windows with PowerShell and the .NET Framework compiler. Run `scripts\Prepare-BuildResources.ps1`, `build.ps1`, and `test.ps1`; with the .NET 10 SDK installed, also run `dotnet build MineHarbor.csproj -c Release` for the SDK-style `net48` compatibility path. Inno Setup 6.7 or newer is required for installer builds. Each release uses an ephemeral RSA-3072/SHA-256 self-signed certificate and random PFX password, signs the Portable EXE and installer, and always removes the certificate material. This provides an integrity signature, not public publisher trust or SmartScreen reputation. After publishing, the release workflow downloads all public assets, verifies their self-signed subject and integrity, uses the immediately preceding stable launcher's real update parser and download routine, and runs the full regression suite against that downloaded EXE. Keep `version.json` as the single version source, keep `build.ps1` and project source lists synchronized, never mutate real server/router data in tests, preserve corrupt manifests and Paper/Purpur YAML instead of overwriting them, keep pre-change configuration backups, cancel long-running UI work safely, verify downloads, and update Korean and English UI/documentation together.

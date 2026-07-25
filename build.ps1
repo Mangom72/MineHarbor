@@ -34,6 +34,7 @@ $sources = @(
     'RoundedProgressBar.cs',
     'ModernLauncherGui.cs',
 	'ModernDialogs.cs',
+	'DuplicationSettings.cs',
     'RuntimeCompatibility.cs',
     'UpnpExternalAccess.cs',
     'BackupAndProfileTools.cs',

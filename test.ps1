@@ -38,10 +38,20 @@ $uiSources = @(
     Get-ChildItem -LiteralPath $projectRoot -File -Filter '*.cs'
     Get-ChildItem -LiteralPath (Join-Path $projectRoot 'decompiled') -File -Filter '*.cs'
 )
+$uiText = [Text.StringBuilder]::new()
 foreach ($source in $uiSources) {
     $text = Get-Content -LiteralPath $source.FullName -Raw
+    [void]$uiText.AppendLine($text)
     if ($text -match 'MessageBox\s*\.\s*Show\s*\(') { throw "Windows 기본 알림창 호출이 남아 있습니다: $($source.Name)" }
     if ($text -match 'new\s+(?:System\.Windows\.Forms\.)?Button\s*\(') { throw "네모난 표준 버튼 생성이 남아 있습니다: $($source.Name)" }
+    if ($text -match 'new\s+(?:System\.Windows\.Forms\.)?(?:ComboBox|CheckBox|TrackBar|HScrollBar|VScrollBar)\s*\(') {
+        throw "테마를 우회하는 기본 선택·드래그 컨트롤이 남아 있습니다: $($source.Name)"
+    }
+}
+$formCount = [regex]::Matches($uiText.ToString(), '\bclass\s+\w+\s*:\s*Form\b').Count
+$dpiFormCount = [regex]::Matches($uiText.ToString(), 'AutoScaleMode\s*=\s*AutoScaleMode\.Dpi').Count
+if ($formCount -gt 0 -and $dpiFormCount -lt $formCount) {
+    throw "DPI 배율이 적용되지 않은 창이 있을 수 있습니다: forms=$formCount, dpi=$dpiFormCount"
 }
 Write-Host 'MODERN_DIALOG_SCAN_OK'
 

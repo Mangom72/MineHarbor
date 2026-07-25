@@ -86,18 +86,34 @@ internal static partial class Launcher
 
 		public bool CommandBlock;
 
-		public bool OnlineMode;
+		public bool OnlineMode;
+
+		public bool ManageDuplicationSettings;
+
+		public bool AllowPistonDuplication;
+
+		public bool AllowGravityBlockDuplication;
+
+		public bool AllowTripwireDuplication;
 
 		public int MemoryGb;
 
-		public bool AutoUpdate;
+		public bool AutoUpdate;
 
 		public string OwnerName;
 	}
 
-	private sealed class LauncherOptions
+	private sealed class LauncherOptions
 	{
-		public string ServerDirectory;
+		public bool ManageDuplicationSettings;
+
+		public bool AllowPistonDuplication;
+
+		public bool AllowGravityBlockDuplication;
+
+		public bool AllowTripwireDuplication;
+
+		public string ServerDirectory;
 
 		public string ProfileName;
 
@@ -1195,7 +1211,21 @@ internal static partial class Launcher
 			ReportLauncherLoading(LauncherUiText("서버 파일 업데이트를 확인하고 있습니다…", "Checking server file updates…"), 75);
 			UpgradeServerRuntime(serverDirectory, launcherOptions, text4, serverRuntime, false);
 		}
-		EnsureCommandBridgeChoiceAndInstallation(text, launcherOptions);
+		EnsureCommandBridgeChoiceAndInstallation(text, launcherOptions);
+
+		string duplicationConfigurationPath = launcherOptions.ManageDuplicationSettings
+			? ApplyDuplicationSettings(
+				serverDirectory,
+				launcherOptions.ServerType,
+				launcherOptions.MinecraftVersion,
+				launcherOptions.AllowPistonDuplication,
+				launcherOptions.AllowGravityBlockDuplication,
+				launcherOptions.AllowTripwireDuplication)
+			: null;
+		if (!string.IsNullOrEmpty(duplicationConfigurationPath))
+		{
+			Console.WriteLine("복사 동작 설정 확인: " + duplicationConfigurationPath);
+		}
 		int memoryGb = launcherOptions.MemoryGb;
 		Console.WriteLine();
 		Console.WriteLine("서버 프로필: " + launcherOptions.ProfileName);
@@ -1605,7 +1635,15 @@ internal static partial class Launcher
 		options.ManualJarPath = settings.ManualJarPath ?? string.Empty;
 		options.CustomJavaMajor = settings.CustomJavaMajor >= 8 && settings.CustomJavaMajor <= 30 ? settings.CustomJavaMajor : 25;
 		options.MemoryGb = settings.MemoryGb;
-		options.AutoUpdate = settings.AutoUpdate;
+		options.AutoUpdate = settings.AutoUpdate;
+
+		options.ManageDuplicationSettings = settings.ManageDuplicationSettings;
+
+		options.AllowPistonDuplication = settings.AllowPistonDuplication;
+
+		options.AllowGravityBlockDuplication = settings.AllowGravityBlockDuplication;
+
+		options.AllowTripwireDuplication = settings.AllowTripwireDuplication;
 		options.OwnerName = IsValidOwnerName(settings.OwnerName) ? settings.OwnerName : GetDefaultOwnerName();
 		return options;
 	}
@@ -1628,7 +1666,23 @@ internal static partial class Launcher
 		int memory;
 		options.MemoryGb = properties.ContainsKey("memory-gb") && int.TryParse(properties["memory-gb"], out memory) ? memory : fallbackMemory;
 		bool autoUpdate;
-		options.AutoUpdate = properties.ContainsKey("auto-update") && bool.TryParse(properties["auto-update"], out autoUpdate) && autoUpdate;
+		options.AutoUpdate = properties.ContainsKey("auto-update") && bool.TryParse(properties["auto-update"], out autoUpdate) && autoUpdate;
+
+		bool manageDuplicationSettings;
+
+		options.ManageDuplicationSettings = properties.ContainsKey("manage-duplication-settings") && bool.TryParse(properties["manage-duplication-settings"], out manageDuplicationSettings) && manageDuplicationSettings;
+
+		bool allowPistonDuplication;
+
+		options.AllowPistonDuplication = properties.ContainsKey("allow-piston-duplication") && bool.TryParse(properties["allow-piston-duplication"], out allowPistonDuplication) && allowPistonDuplication;
+
+		bool allowGravityBlockDuplication;
+
+		options.AllowGravityBlockDuplication = properties.ContainsKey("allow-gravity-block-duplication") && bool.TryParse(properties["allow-gravity-block-duplication"], out allowGravityBlockDuplication) && allowGravityBlockDuplication;
+
+		bool allowTripwireDuplication;
+
+		options.AllowTripwireDuplication = properties.ContainsKey("allow-tripwire-duplication") && bool.TryParse(properties["allow-tripwire-duplication"], out allowTripwireDuplication) && allowTripwireDuplication;
 		string ownerName = properties.ContainsKey("owner-name") ? properties["owner-name"] : string.Empty;
 		options.OwnerName = IsValidOwnerName(ownerName) ? ownerName : GetDefaultOwnerName();
 		return options;
@@ -1870,7 +1924,7 @@ internal static partial class Launcher
 
 	private static void WriteLauncherOptions(string path, LauncherOptions options)
 	{
-		string contents = "launcher-settings-version=6\r\nprofile-name=" + options.ProfileName + "\r\nserver-type=" + options.ServerType + "\r\nminecraft-version=" + options.MinecraftVersion + "\r\ninclude-snapshots=" + options.IncludeSnapshots.ToString().ToLowerInvariant() + "\r\nuse-manual-jar=" + options.UseManualJar.ToString().ToLowerInvariant() + "\r\nmanual-jar-path=" + options.ManualJarPath + "\r\ncustom-java-major=" + options.CustomJavaMajor + "\r\nmemory-gb=" + options.MemoryGb + "\r\nauto-update=" + options.AutoUpdate.ToString().ToLowerInvariant() + "\r\nowner-name=" + options.OwnerName + "\r\n";
+		string contents = "launcher-settings-version=7\r\nprofile-name=" + options.ProfileName + "\r\nserver-type=" + options.ServerType + "\r\nminecraft-version=" + options.MinecraftVersion + "\r\ninclude-snapshots=" + options.IncludeSnapshots.ToString().ToLowerInvariant() + "\r\nuse-manual-jar=" + options.UseManualJar.ToString().ToLowerInvariant() + "\r\nmanual-jar-path=" + options.ManualJarPath + "\r\ncustom-java-major=" + options.CustomJavaMajor + "\r\nmemory-gb=" + options.MemoryGb + "\r\nauto-update=" + options.AutoUpdate.ToString().ToLowerInvariant() + "\r\nmanage-duplication-settings=" + options.ManageDuplicationSettings.ToString().ToLowerInvariant() + "\r\nallow-piston-duplication=" + options.AllowPistonDuplication.ToString().ToLowerInvariant() + "\r\nallow-gravity-block-duplication=" + options.AllowGravityBlockDuplication.ToString().ToLowerInvariant() + "\r\nallow-tripwire-duplication=" + options.AllowTripwireDuplication.ToString().ToLowerInvariant() + "\r\nowner-name=" + options.OwnerName + "\r\n";
 		File.WriteAllText(path, contents, new UTF8Encoding(false));
 	}
 

@@ -26,7 +26,7 @@
 | **Windows 설치 프로그램** | 시작 메뉴, 선택적 바탕화면 바로가기, 제거 기능 사용 | **[최신 Release 열기](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 | **Portable ZIP** | README와 라이선스를 포함한 묶음 보관 | **[최신 Release 열기](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 
-현재 소스 버전은 `v1.7.5`, 내부 빌드는 `26.2.45.70`입니다. MineHarbor 이름으로 배포된 Portable EXE는 같은 링크에서 계속 최신 파일을 받을 수 있습니다. 기존 설치의 `%LOCALAPPDATA%\MinecraftServerLauncher` 데이터는 자동으로 찾아 그대로 사용하며, 새 사용자 데이터 경로는 `%LOCALAPPDATA%\MineHarbor`입니다.
+현재 소스 버전은 `v1.8.0`, 내부 빌드는 `26.2.45.71`입니다. MineHarbor 이름으로 배포된 Portable EXE는 같은 링크에서 계속 최신 파일을 받을 수 있습니다. 기존 설치의 `%LOCALAPPDATA%\MinecraftServerLauncher` 데이터는 자동으로 찾아 그대로 사용하며, 새 사용자 데이터 경로는 `%LOCALAPPDATA%\MineHarbor`입니다.
 
 > [!WARNING]
 > 현재 릴리스 실행 파일은 요청된 자체서명 인증서로 무결성을 표시하지만 공개 인증 기관이 신뢰한 배포자 서명은 아닙니다. 따라서 Windows SmartScreen 경고가 나타날 수 있습니다. Release의 `SHA256SUMS.txt`와 GitHub 출처를 함께 확인해 주세요.
@@ -87,6 +87,7 @@ Minecraft 및 서버 종류에 맞춰 Java 8·11·16·17·21·25 중 필요한 �
 - 평화로움·쉬움·보통·어려움·하드코어 야생 프리셋
 - 일반 지형·평지 크리에이티브 월드 프리셋
 - 게임 모드, 난이도, PvP, 화이트리스트, 명령 블록, 정품 인증, 거리 설정 직접 편집
+- Paper/Purpur에서 TNT·양탄자·레일, 중력 블록, 철사덫 갈고리 복사를 서버별로 선택 허용
 - 프로필 생성, 복제, 폴더 가져오기, 이름 변경, 안전 보관과 기본 서버 선택
 - 삭제한 서버를 30일간 보관하는 휴지통과 복구·영구 삭제 관리. 휴지통으로 보낼 때만 서버 이름을 입력하고 영구 삭제는 3초 안전 확인 사용
 - 프로필별 월드·설정·플러그인·모드 분리
@@ -94,6 +95,8 @@ Minecraft 및 서버 종류에 맞춰 Java 8·11·16·17·21·25 중 필요한 �
 - 서버별 접속 주소와 바로 옆 복사 기호, 외부 접속 실패 시 `접속 불가` 상태 표시
 - 관리 도구 창을 열어 둔 상태에서도 메인 창의 상태·콘솔·주소 확인 가능
 - 비정상 종료 자동 재시작 및 10분 안에 3번 연속 실패하면 중단
+
+Paper/Purpur의 복사 옵션은 서버가 공식적으로 지원하지 않는 호환 설정입니다. 1.19 이상은 `config/paper-global.yml`, 이전 버전은 `paper.yml`의 `settings.unsupported-settings`에 저장되며 서버를 다시 시작한 뒤 적용됩니다. 피스톤 복사는 지원되는 모든 Paper 세대에 제공하고, 중력 블록은 1.20.4 이상, 철사덫 갈고리는 1.21.4 이상 또는 실제 생성된 키가 확인된 서버에서만 활성화합니다. Spigot·Vanilla·모드 서버에는 Paper 전용 키를 쓰지 않고 각 서버의 기본 동작을 유지합니다. 직접 JAR은 기존 Paper 설정 파일과 해당 키를 감지한 범위에서만 옵션을 제공합니다. MineHarbor는 YAML의 다른 항목과 주석을 보존하고 변경 전 파일을 `.mineharbor/configuration-backups`에 보관하지만, 중요한 월드는 별도로 백업해 주세요.
 
 ### 업데이트와 백업
 
@@ -249,7 +252,7 @@ dotnet build .\MineHarbor.csproj -c Release
 | **Windows installer** | Start Menu, optional desktop shortcut, and uninstall support | **[Open the latest release](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 | **Portable ZIP** | Keep the launcher, README, and license together | **[Open the latest release](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 
-Current source version: `v1.7.5` · internal build: `26.2.45.70`. MineHarbor releases keep the same permanent Portable URL. Existing data under `%LOCALAPPDATA%\MinecraftServerLauncher` is detected and preserved; new user-data installations use `%LOCALAPPDATA%\MineHarbor`.
+Current source version: `v1.8.0` · internal build: `26.2.45.71`. MineHarbor releases keep the same permanent Portable URL. Existing data under `%LOCALAPPDATA%\MinecraftServerLauncher` is detected and preserved; new user-data installations use `%LOCALAPPDATA%\MineHarbor`.
 
 > [!WARNING]
 > Release executables carry the requested self-signed integrity signature, not a publisher identity trusted by a public certificate authority. Windows SmartScreen can therefore still warn. Verify the GitHub source and the release `SHA256SUMS.txt`.
@@ -274,7 +277,7 @@ The main window appears first while update, profile, and current version data lo
 ## Highlights
 
 - **Server profiles:** create, clone, import, rename, archive, select, run, and safely stop isolated servers; port conflicts can be reassigned after confirmation, and each address has a one-click copy action.
-- **Presets and settings:** survival difficulties, hardcore, normal or flat creative worlds, plus GUI controls for common `server.properties` options.
+- **Presets and settings:** survival difficulties, hardcore, normal or flat creative worlds, common `server.properties` controls, and version-aware Paper/Purpur switches for TNT/carpet/rail, gravity-block, and tripwire-hook duplication. Modern servers use `config/paper-global.yml`; legacy servers use nested `settings.unsupported-settings` in `paper.yml`. Paper-only keys are not written to Spigot, Vanilla, or modded servers; custom JARs require detected Paper keys. Changes preserve unrelated YAML and keep pre-change backups under `.mineharbor/configuration-backups`.
 - **Compatible runtimes:** automatic Java 8/11/16/17/21/25 selection and download; explicit Java selection for custom JARs.
 - **Updates and backups:** optional server auto-update, manual upgrades, staged profile restore, SHA-256 verification, export, scheduled or start/stop-hook backups, and count/day/size retention.
 - **Scheduling:** per-server backup, start, stop, restart, and command jobs with player warnings, execution leases, next-run times, and latest results.

@@ -4,6 +4,24 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.8.0] - 2026-07-25
+
+### Korean
+
+- **Paper/Purpur 복사 동작 설정**: 설정 화면에서 TNT·양탄자·레일, 엔드 차원문 중력 블록, 철사덫 갈고리 복사를 각각 허용할 수 있습니다. Paper/Purpur 1.19 이상은 `config/paper-global.yml`, 구버전은 `paper.yml`의 중첩된 `settings.unsupported-settings`를 사용하며, 서버 버전에 존재하는 항목만 활성화합니다.
+- **안전한 서버별 적용**: Spigot·Vanilla·Fabric·Forge·NeoForge에는 Paper 전용 키를 쓰지 않으며, 직접 JAR은 기존 Paper 설정 파일을 감지한 경우에만 옵션을 활성화합니다. 기존 프로필은 사용자가 새 설정 화면에서 저장하기 전까지 수동 설정을 덮어쓰지 않습니다.
+- **설정 무결성과 복구**: YAML의 주석과 관련 없는 항목을 보존해 원자적으로 저장하고, 변경 전 파일은 서버별 `.mineharbor/configuration-backups`에 보관합니다. 중복 구역·중복 키·잘못된 값·인라인 구조·탭 들여쓰기·연결 경로·과대 파일은 원본을 변경하지 않고 거부합니다.
+- **설정 화면 UX 정리**: 서버 규칙 아래의 과도한 빈 공간을 제거하고 현대형 그룹 카드와 테마 체크박스로 복사 호환성 옵션을 배치했습니다. 한국어·영어 안내, 위험 확인, 지원 상태, 키보드·스크린 리더 정보와 작은 화면에서만 나타나는 세로 스크롤을 제공합니다.
+- **전체 UI 회귀 게이트**: 제품 창의 DPI 설정을 점검하고 기본 Windows 버튼·드롭다운·체크박스·트랙바·스크롤바 생성이 다시 들어오지 않도록 정적 검사를 강화했습니다. 복사 설정의 경로·보존·백업·중복·Spigot 오적용·구버전 프로필 보호를 포함해 런처 테스트가 27개 그룹으로 늘었습니다.
+
+### English
+
+- **Paper/Purpur duplication controls**: Server Settings can independently allow TNT/carpet/rail duplication, end-portal gravity-block duplication, and tripwire-hook duplication. Paper/Purpur 1.19+ uses `config/paper-global.yml`; older releases use the nested `settings.unsupported-settings` section in `paper.yml`, and only controls present in that server generation are enabled.
+- **Safe per-server targeting**: Paper-only keys are never written to Spigot, Vanilla, Fabric, Forge, or NeoForge. A custom JAR enables the controls only after an existing Paper configuration is detected. Existing profiles retain manually edited settings until the user saves through the new UI.
+- **Configuration integrity and recovery**: YAML comments and unrelated entries are preserved during atomic writes, with pre-change copies retained under each server's `.mineharbor/configuration-backups`. Duplicate sections or keys, invalid values, inline maps, tab indentation, linked paths, and oversized files are rejected without changing the source.
+- **Cleaner settings UX**: Excess empty space below the server rules was removed and the compatibility options now use a modern themed group card and checkboxes. Korean/English guidance, risk confirmation, support status, keyboard/screen-reader metadata, and vertical scrolling only on small screens are included.
+- **Full UI regression gate**: Product windows were checked for DPI scaling, and static tests now reject newly introduced default Windows buttons, dropdowns, checkboxes, trackbars, or scrollbars. Launcher coverage grows to 27 groups with path selection, preservation, backup, duplicate rejection, Spigot isolation, and legacy-profile protection.
+
 ## [1.7.5] - 2026-07-25
 
 ### Korean
