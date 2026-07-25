@@ -1,10 +1,11 @@
 ﻿# AI Agent Synchronization State
 
-## Codex Paper/Purpur Duplication Compatibility and UI Audit - 2026-07-25
+## Codex Tool-Window Close Release Guard Hotfix - 2026-07-25
 
-- **Current Version**: 1.8.0 (build 26.2.45.71)
-- **Branch**: `codex/duplication-settings-v1.8.0`
-- **Status**: Paper/Purpur 복사 동작 호환 설정, 설정 창 레이아웃 정리, 전체 WinForms 디자인 회귀 검사를 구현하고 정식 릴리스 검증 중
+- **Current Version**: 1.8.1 (build 26.2.45.72)
+- **Branch**: `codex/input-guard-v1.8.1` (기능 브랜치: `codex/duplication-settings-v1.8.0`)
+- **Status**: Paper/Purpur 복사 설정을 포함한 [v1.8.0 정식 릴리스](https://github.com/Mangom72/MineHarbor/releases/tag/v1.8.0) 게시 후 발견한 보조 창 닫기 해제 입력의 포인터 이동 의존성을 수정하고 핫픽스 검증 중
+- 닫기 누름과 짝인 마우스 해제는 포인터가 보호 반경 밖으로 이동해도 메인 창에 전달하지 않고, 이후 추가 누름만 기존 좌표 범위로 제한합니다. 컴퓨터를 사용하는 동안에도 검사가 실제 포인터 이동에 흔들리지 않도록 반경 밖 이동을 회귀 테스트에 명시했습니다.
 - 서버별 설정 탭에 피스톤 기반(TNT·레일·양탄자), 엔드 포털 중력 블록, 철사 덫 갈고리 복사 동작을 각각 제어하는 현대식 체크박스와 접근성 설명을 추가했습니다.
 - Paper/Purpur 1.19 이상은 `config/paper-global.yml`, 이전 버전은 `paper.yml`의 중첩된 `settings.unsupported-settings`를 사용합니다. 신형 키는 도입 버전 또는 실제 생성 여부를 확인하고, 직접 JAR·Spigot/Vanilla 및 비 Paper 계열에 호환되지 않는 키를 기록하지 않습니다.
 - 기존 프로필은 새 설정을 한 번 저장하기 전까지 Paper YAML을 자동 변경하지 않습니다. 실제 변경 전 서버별 `.mineharbor/configuration-backups`에 최대 5개의 백업을 남기며, 손상·중복 키, 탭 들여쓰기, 심볼릭 링크 및 서버 폴더 밖 경로는 거부합니다.

@@ -1535,6 +1535,7 @@ internal static partial class Launcher
 		private IntPtr ownedWindowCloseHandle;
 		private Form ownedWindowCloseForm;
 		private Point ownedWindowCloseScreenPoint;
+		private bool ownedWindowCloseReleasePending;
 		private bool clickFilterInstalled;
 
 		private readonly ConcurrentQueue<string> consoleQueue = new ConcurrentQueue<string>();
@@ -4025,6 +4026,11 @@ internal static partial class Launcher
 				message == 0x0247;
 		}
 
+		private static bool IsOwnedWindowCloseReleaseMessage(int message)
+		{
+			return message == 0x0202 || message == 0x00A2 || message == 0x0247;
+		}
+
 		private static bool IsTitleBarCloseMessage(int message, IntPtr hitTest)
 		{
 			return message == 0x00A1 && hitTest.ToInt64() == 20;
@@ -4053,6 +4059,7 @@ internal static partial class Launcher
 			ownedWindowCloseHandle = sourceHandle;
 			ownedWindowCloseForm = sourceForm;
 			ownedWindowCloseScreenPoint = Control.MousePosition;
+			ownedWindowCloseReleasePending = true;
 			ExtendOwnedWindowClickGuard();
 		}
 
@@ -4075,6 +4082,7 @@ internal static partial class Launcher
 			ownedWindowCloseHandle = IntPtr.Zero;
 			ownedWindowCloseForm = null;
 			ownedWindowCloseScreenPoint = Point.Empty;
+			ownedWindowCloseReleasePending = false;
 			return false;
 		}
 
@@ -4096,8 +4104,16 @@ internal static partial class Launcher
 
 			if (!IsOwnedWindowClickGuardArmed() || !IsMouseClickMessage(message.Msg)) return false;
 			bool launcherTarget = IsLauncherWindowHandle(message.HWnd);
-			if (IsMouseReleaseMessage(message.Msg)) MarkOwnedWindowClosePointerReleased();
-			return launcherTarget && IsPointWithinOwnedWindowClickGuard(ownedWindowCloseScreenPoint, Control.MousePosition, OwnedWindowCloseClickGuardRadius);
+			if (ownedWindowCloseReleasePending && IsOwnedWindowCloseReleaseMessage(message.Msg))
+			{
+				// 닫기 누름과 짝인 해제는 사용자가 그 사이 마우스를 움직여도 주 창에 전달하지 않습니다.
+				ownedWindowCloseReleasePending = false;
+				MarkOwnedWindowClosePointerReleased();
+				return launcherTarget;
+			}
+			bool withinGuard = IsPointWithinOwnedWindowClickGuard(ownedWindowCloseScreenPoint, Control.MousePosition, OwnedWindowCloseClickGuardRadius);
+			if (withinGuard && IsMouseReleaseMessage(message.Msg)) MarkOwnedWindowClosePointerReleased();
+			return launcherTarget && withinGuard;
 		}
 
 		protected override void WndProc(ref Message message)
