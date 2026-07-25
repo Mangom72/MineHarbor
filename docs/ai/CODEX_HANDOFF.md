@@ -1,17 +1,18 @@
 ﻿# CODEX_HANDOFF.md
 
-## Pending v1.10.0 command-builder state
+## 0. Current implementation state (v1.10.0 released)
 
-- Feature branch: `codex/command-builder-ux-v1.10.0`
-- Pull request: [#28](https://github.com/Mangom72/MineHarbor/pull/28); initial Windows CI run `30169627138` passed, including the SDK-style `net48` build.
-- Version source of truth on the feature branch: `version.json` = 1.10.0 / build 26.2.45.74
+- Release-state branch: `codex/v1.10.0-release-state` (feature: `codex/command-builder-ux-v1.10.0`)
+- Pull request [#28](https://github.com/Mangom72/MineHarbor/pull/28) is merged. Final PR CI `30169678662`, main CI `30169724770`, and release run `30169793820` passed.
+- Version source of truth: `version.json` = 1.10.0 / build 26.2.45.74
 - The quick-command field is now a step-by-step inline token builder backed by `QuickCommandBuilderState` and `QuickCommandTokenInput`.
 - Templates distinguish required `{player}`, optional `[reason]`, and defaulted optional `[count=1]` arguments. Completion and send availability use required metadata plus value validation, not placeholder appearance.
 - Confirming a candidate advances to the next argument without losing focus. Up/Down, Tab/Enter, Shift+Tab, and Esc support continuous keyboard composition while retaining values and per-command drafts.
 - Player/target selectors, live player names, enum values, numeric/time/coordinate recommendations, and searchable item/effect catalogs are available. Quick-command suggestions expand to 430px/40 candidates; shared completion expands to 380px/20 candidates and avoids the input bounds.
-- Local .NET Framework build and all 27 launcher groups, 10 bridge protocol cases, Portable version/smoke, modern-dialog, and security scans pass. No .NET SDK is installed locally, so the SDK-style `net48` build remains a required PR CI gate.
+- Local and published-update validation passed all 27 launcher groups, 10 bridge protocol cases, Portable version/smoke, modern-dialog, and security scans. CI passed the SDK-style `net48` build with warnings as errors.
+- The v1.10.0 release contains seven verified public assets. The release workflow removed its temporary self-signed certificate/PFX, and an independent download confirmed `RELEASE_ARTIFACTS_PASSED=7`, `PUBLISHED_ASSETS_MODE_OK`, and `PUBLIC_AUTO_UPDATE_OK=1.9.0->1.10.0` before rerunning the full suite against the downloaded executable.
 
-## 0. Current implementation state (v1.9.0 released)
+## Previous v1.9.0 release state
 
 - Release-state branch: `codex/v1.9.0-release-state` (feature: `codex/quick-command-safety-v1.9.0`)
 - Version source of truth: `version.json` = 1.9.0 / build 26.2.45.73
