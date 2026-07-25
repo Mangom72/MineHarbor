@@ -1,9 +1,14 @@
 ﻿# CODEX_HANDOFF.md
 
-## 0. Current implementation state (v1.8.1 released)
+## 0. Current implementation state (v1.9.0 release candidate)
 
-- Release-state branch: `codex/v1.8.1-release-state` (hotfix: `codex/input-guard-v1.8.1`, feature: `codex/duplication-settings-v1.8.0`)
-- Version source of truth: `version.json` = 1.8.1 / build 26.2.45.72
+- Release-candidate branch: `codex/quick-command-safety-v1.9.0`
+- Version source of truth: `version.json` = 1.9.0 / build 26.2.45.73
+- The built-in quick-command catalog now contains more than 70 entries, including player/IP sanctions, idle limits, seed/time queries, gamerules, data packs, reload, and read-only experience, world-border, and force-load checks.
+- Templates distinguish required `{player}` arguments from trailing optional `[reason]` arguments. Final reason, message, and command values may consume multiple words, and local completion includes the new address, duration, minutes, percentage, weather, gamerule, datapack, function, dimension, distance, and hide-particles types.
+- Definitions may set minimum and maximum Minecraft versions. Datapack/force-load commands require 1.13, sleeping percentage requires 1.17, and the legacy `time query daytime` suggestion stops after 1.21.11.
+- The declared `Normal`, `Confirm`, and `Dangerous` risk levels now drive picker colors and both quick-command and direct-console confirmation flows. Value-sensitive rules raise `reload`, broad mutations, `keepInventory false`, and `doMobSpawning false`, while read-only `worldborder get` and `forceload query` remain normal.
+- The user-command editor exposes a themed risk selector and accessible version-bound fields. Existing `Confirm` JSON migrates without losing behavior.
 - The v1.8.0 public update path succeeded, but a repeated full-suite run while the desktop was in use exposed that the close-release guard still depended on the live pointer remaining within 64px. The paired release is now consumed regardless of pointer movement; only subsequent presses remain coordinate-scoped.
 - Server settings expose three independent Paper-compatible controls: piston/TNT/rail/carpet duplication, gravity-block end-portal duplication, and tripwire-hook duplication.
 - Paper/Purpur 1.19+ uses top-level `unsupported-settings` in `config/paper-global.yml`; older versions use nested `settings.unsupported-settings` in `paper.yml`. Gravity-block controls require 1.20.4+, tripwire controls require 1.21.4+, and custom JARs expose newer controls only for keys already generated. Spigot, Vanilla, Fabric, Forge, and NeoForge never receive Paper-only keys.
@@ -16,7 +21,7 @@
 - Tool-window title-bar closes retain a short coordinate-scoped input guard, so mouse double-click chatter cannot immediately activate an overlapping launcher control while deliberate clicks elsewhere remain available.
 - User-initiated launcher close now always asks for confirmation. Idle close exits directly without invoking server termination; active work and a running server use separate Korean/English wording and retain deferred or safe-stop behavior.
 - The quick-command card now remains in a fixed legacy-width right column. The console uses a separate left column, so toggling it no longer moves the card or leaves console content hidden behind it.
-- Local v1.8.1 validation passed 27 launcher test groups, three additional repeated launcher-test runs, 10 bridge protocol cases, Portable smoke/version, static UI and security scans, and seven ephemeral self-signed release artifacts. No real server, router, port mapping, or foreground UI was changed. No local .NET SDK is installed, so the SDK-style `net48` build remains a required GitHub CI gate.
+- Final local v1.9.0 validation passed 27 launcher test groups, 10 bridge protocol cases, Portable smoke/version, static UI and security scans. Seven release artifacts passed the ephemeral RSA-3072/SHA-256 self-signing, installer, archive, bridge, and checksum verification path, and the temporary certificate and PFX were removed. GitHub CI is pending. No real server, router, port mapping, or foreground UI was changed. No system-wide .NET SDK is installed, so the SDK-style `net48` build remains a required GitHub CI gate.
 - CI: `.github/workflows/ci.yml` validates PRs and main separately from `.github/workflows/build-release.yml`; both build the SDK-style `net48` project and the legacy Portable path. Feature PR #22 and hotfix PR #23 passed CI. The v1.8.1 main run `30159893607` and release run `30159940514` passed, including certificate cleanup and seven-asset verification. The public v1.8.0 launcher updated to v1.8.1, and the resulting executable passed the same full regression suite.
 - The default runtime remains .NET Framework 4.8. `MineHarbor.csproj` is the migration bridge; do not switch to .NET 10 until updater, COM/UPnP, WinForms, installer, and Portable compatibility tests are equivalent.
 - Do not infer dashboard values. Paper/Purpur TPS/MSPT is shown only when the local bridge reports it; unsupported or disconnected values remain explicit.

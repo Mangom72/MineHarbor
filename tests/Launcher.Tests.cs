@@ -1539,7 +1539,7 @@ internal static class LauncherTests
 		IEnumerable builtIns = (IEnumerable)Invoke("GetBuiltInQuickCommands", new object[0]);
 		List<string> templates = new List<string>();
 		foreach (object item in builtIns) templates.Add(Convert.ToString(GetField(item, "Template")));
-		if (templates.Count < 45 || !templates.Contains("list") || !templates.Contains("save-all flush") || !templates.Contains("whitelist off") || !templates.Contains("datapack list")) throw new InvalidOperationException("기본 빠른 명령 목록이 완전하지 않습니다.");
+		if (templates.Count < 65 || !templates.Contains("list") || !templates.Contains("save-all flush") || !templates.Contains("whitelist off") || !templates.Contains("banlist players") || !templates.Contains("ban-ip {address-or-player} [reason]") || !templates.Contains("gamerule playersSleepingPercentage {percentage}") || !templates.Contains("datapack enable {datapack}") || !templates.Contains("reload")) throw new InvalidOperationException("기본 빠른 명령 목록이 완전하지 않습니다.");
 		Type pickerLocalizationType = launcher.GetNestedType("Localization", BindingFlags.NonPublic);
 		FieldInfo pickerLanguageField = pickerLocalizationType.GetField("CurrentLanguage", BindingFlags.Static | BindingFlags.Public);
 		object originalPickerLanguage = pickerLanguageField.GetValue(null);
@@ -1547,7 +1547,7 @@ internal static class LauncherTests
 		{
 			pickerLanguageField.SetValue(null, "ko");
 			IEnumerable koreanBuiltIns = (IEnumerable)Invoke("GetBuiltInQuickCommands", new object[0]);
-			IEnumerable koreanPickerItems = (IEnumerable)Invoke("BuildQuickCommandPickerItems", new object[] { koreanBuiltIns, "paper" });
+			IEnumerable koreanPickerItems = (IEnumerable)Invoke("BuildQuickCommandPickerItems", new object[] { koreanBuiltIns, "paper", "1.21.11" });
 			object hardPickerItem = FindQuickCommandPickerItem(koreanPickerItems, "difficulty hard");
 			Equal("world", Convert.ToString(GetField(hardPickerItem, "CategoryKey")), "빠른 명령 월드 카테고리");
 			Equal("difficulty", Convert.ToString(GetField(hardPickerItem, "GroupKey")), "난이도 명령 그룹화");
@@ -1563,6 +1563,15 @@ internal static class LauncherTests
 			}
 			Equal(3, weatherCount, "날씨 명령 그룹 개수");
 			Equal(4, difficultyCount, "난이도 명령 그룹 개수");
+			Equal(true, QuickCommandPickerContains(koreanPickerItems, "time query daytime"), "1.21.11 낮 시간 조회 표시");
+			Equal(true, QuickCommandPickerContains(koreanPickerItems, "gamerule playersSleepingPercentage {percentage}"), "1.21.11 수면 비율 명령 표시");
+			IEnumerable legacyPickerItems = (IEnumerable)Invoke("BuildQuickCommandPickerItems", new object[] { koreanBuiltIns, "paper", "1.12.2" });
+			Equal(false, QuickCommandPickerContains(legacyPickerItems, "datapack list enabled"), "1.12 데이터팩 명령 숨김");
+			IEnumerable sixteenPickerItems = (IEnumerable)Invoke("BuildQuickCommandPickerItems", new object[] { koreanBuiltIns, "paper", "1.16.5" });
+			Equal(false, QuickCommandPickerContains(sixteenPickerItems, "gamerule playersSleepingPercentage {percentage}"), "1.16 수면 비율 명령 숨김");
+			IEnumerable currentPickerItems = (IEnumerable)Invoke("BuildQuickCommandPickerItems", new object[] { koreanBuiltIns, "paper", "26.2" });
+			Equal(false, QuickCommandPickerContains(currentPickerItems, "time query daytime"), "26.2 구형 낮 시간 구문 숨김");
+			Equal(true, QuickCommandPickerContains(currentPickerItems, "time query gametime"), "26.2 호환 게임 시간 조회 표시");
 			Dictionary<string, object> bridgeMessage = new Dictionary<string, object>();
 			bridgeMessage["commands"] = new object[]
 			{
@@ -1575,14 +1584,14 @@ internal static class LauncherTests
 			IEnumerable bridgeDefinitions = (IEnumerable)Invoke("BuildBridgeQuickCommandDefinitions", new object[] { parsedBridgeCommands });
 			int bridgeDefinitionCount = 0; foreach (object ignored in bridgeDefinitions) bridgeDefinitionCount++;
 			Equal(1, bridgeDefinitionCount, "소유자 없는 서버 명령 플러그인 목록 중복 차단");
-			IEnumerable pluginPickerItems = (IEnumerable)Invoke("BuildQuickCommandPickerItems", new object[] { bridgeDefinitions, "paper" });
+			IEnumerable pluginPickerItems = (IEnumerable)Invoke("BuildQuickCommandPickerItems", new object[] { bridgeDefinitions, "paper", "1.21.11" });
 			object homePickerItem = FindQuickCommandPickerItem(pluginPickerItems, "home");
 			Equal("plugin", Convert.ToString(GetField(homePickerItem, "CategoryKey")), "외부 명령 플러그인 카테고리");
 			Equal("EssentialsX", Convert.ToString(GetField(homePickerItem, "GroupName")), "외부 명령 플러그인별 그룹화");
 			Equal("플러그인 › EssentialsX › home", Convert.ToString(GetField(homePickerItem, "CategoryName")) + " › " + Convert.ToString(GetField(homePickerItem, "GroupName")) + " › " + Convert.ToString(GetField(homePickerItem, "LeafName")), "외부 명령 계층 경로");
 			pickerLanguageField.SetValue(null, "en");
 			IEnumerable englishBuiltIns = (IEnumerable)Invoke("GetBuiltInQuickCommands", new object[0]);
-			IEnumerable englishPickerItems = (IEnumerable)Invoke("BuildQuickCommandPickerItems", new object[] { englishBuiltIns, "paper" });
+			IEnumerable englishPickerItems = (IEnumerable)Invoke("BuildQuickCommandPickerItems", new object[] { englishBuiltIns, "paper", "1.21.11" });
 			object englishHardPickerItem = FindQuickCommandPickerItem(englishPickerItems, "difficulty hard");
 			Equal("World › Difficulty › Hard", Convert.ToString(GetField(englishHardPickerItem, "CategoryName")) + " › " + Convert.ToString(GetField(englishHardPickerItem, "GroupName")) + " › " + Convert.ToString(GetField(englishHardPickerItem, "LeafName")), "영어 빠른 명령 계층 경로");
 		}
@@ -1599,17 +1608,35 @@ internal static class LauncherTests
 		SetPublic(command, "Name", "테스트 지급");
 		SetPublic(command, "Description", "테스트 설명");
 		SetPublic(command, "Category", "user");
-		SetPublic(command, "Template", "give {online-player} {item} {count}");
+		SetPublic(command, "Template", "give {online-player} {item} [count]");
 		SetPublic(command, "Confirm", false);
 		SetPublic(command, "ServerTypes", new string[] { "paper" });
+		SetPublic(command, "MinimumMinecraftVersion", "1.13");
+		SetPublic(command, "MaximumMinecraftVersion", "1.21.11");
+		Type quickCommandEditorType = launcher.GetNestedType("QuickCommandEditorForm", BindingFlags.NonPublic);
+		using (Form editor = (Form)Activator.CreateInstance(quickCommandEditorType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { command }, null))
+		{
+			Equal(AutoScaleMode.Dpi, editor.AutoScaleMode, "사용자 명령 편집기 DPI 배율");
+			ComboBox riskBox = (ComboBox)GetPrivateField(quickCommandEditorType, editor, "riskBox");
+			Equal("ModernComboBox", riskBox.GetType().Name, "사용자 명령 현대형 위험도 선택");
+			Equal(3, riskBox.Items.Count, "사용자 명령 3단계 위험도");
+			TextBox minimumVersionBox = (TextBox)GetPrivateField(quickCommandEditorType, editor, "minimumVersionBox");
+			TextBox maximumVersionBox = (TextBox)GetPrivateField(quickCommandEditorType, editor, "maximumVersionBox");
+			if (string.IsNullOrWhiteSpace(minimumVersionBox.AccessibleName) || string.IsNullOrWhiteSpace(maximumVersionBox.AccessibleName)) throw new InvalidOperationException("Minecraft 버전 범위 입력의 접근성 이름이 없습니다.");
+		}
 		object[] valid = { command, null };
 		Equal(true, Invoke("ValidateUserQuickCommand", valid), "사용자 명령 템플릿 검증");
 		userCommands.Add(command);
 		string dataRoot = Path.Combine(root, "quick-command-data");
 		Invoke("SaveUserQuickCommands", new object[] { dataRoot, userCommands });
 		IEnumerable loaded = (IEnumerable)Invoke("LoadUserQuickCommands", new object[] { dataRoot });
-		int loadedCount = 0; foreach (object ignored in loaded) loadedCount++;
+		int loadedCount = 0; object loadedCommand = null; foreach (object item in loaded) { loadedCount++; if (loadedCommand == null) loadedCommand = item; }
 		Equal(1, loadedCount, "사용자 명령 저장과 로드");
+		Equal("1.13", GetField(loadedCommand, "MinimumMinecraftVersion"), "사용자 명령 최소 버전 저장");
+		Equal("1.21.11", GetField(loadedCommand, "MaximumMinecraftVersion"), "사용자 명령 최대 버전 저장");
+		Equal(true, Invoke("TemplateMatchesCommand", new object[] { "give {player} {item} [count]", "give Alex minecraft:stone" }), "선택 인수 생략 허용");
+		Equal(true, Invoke("TemplateMatchesCommand", new object[] { "ban {player} [reason]", "ban Alex repeated griefing" }), "선택 사유 여러 토큰 허용");
+		Equal(false, Invoke("TemplateMatchesCommand", new object[] { "give {player} {item} [count]", "give Alex" }), "필수 인수 누락 차단");
 		SetPublic(command, "Description", "수정된 설명");
 		Invoke("SaveUserQuickCommands", new object[] { dataRoot, userCommands });
 		userCommands.Clear();
@@ -1620,21 +1647,36 @@ internal static class LauncherTests
 		SetPublic(command, "Template", "say {unsupported}");
 		object[] invalid = { command, null };
 		Equal(false, Invoke("ValidateUserQuickCommand", invalid), "지원하지 않는 템플릿 매개변수 차단");
+		SetPublic(command, "Template", "test [reason] fixed");
+		invalid = new object[] { command, null };
+		Equal(false, Invoke("ValidateUserQuickCommand", invalid), "선택 인수 뒤 고정 문구 차단");
 
 		object parse = Invoke("ParseCommandInput", new object[] { "say \"hello world\"", 10 });
 		IList tokens = (IList)GetField(parse, "Tokens");
 		Equal(2, tokens.Count, "따옴표 명령 토큰 처리");
-		IEnumerable suggestions = (IEnumerable)Invoke("GetLocalQuickCommandSuggestions", new object[] { "gam", 3, "paper", Activator.CreateInstance(definitionListType), new string[] { "Alex" }, new string[0] });
+		IEnumerable suggestions = (IEnumerable)Invoke("GetLocalQuickCommandSuggestions", new object[] { "gam", 3, "paper", "1.21.11", Activator.CreateInstance(definitionListType), new string[] { "Alex" }, new string[0] });
 		Equal(true, SuggestionContains(suggestions, "gamemode"), "루트 명령 자동완성");
-		suggestions = (IEnumerable)Invoke("GetLocalQuickCommandSuggestions", new object[] { "gamemode c", 10, "paper", Activator.CreateInstance(definitionListType), new string[] { "Alex" }, new string[0] });
+		suggestions = (IEnumerable)Invoke("GetLocalQuickCommandSuggestions", new object[] { "gamemode c", 10, "paper", "1.21.11", Activator.CreateInstance(definitionListType), new string[] { "Alex" }, new string[0] });
 		Equal(true, SuggestionContains(suggestions, "creative"), "하위 명령 자동완성");
-		suggestions = (IEnumerable)Invoke("GetLocalQuickCommandSuggestions", new object[] { "op A", 4, "paper", Activator.CreateInstance(definitionListType), new string[] { "Alex" }, new string[0] });
+		suggestions = (IEnumerable)Invoke("GetLocalQuickCommandSuggestions", new object[] { "op A", 4, "paper", "1.21.11", Activator.CreateInstance(definitionListType), new string[] { "Alex" }, new string[0] });
 		Equal(true, SuggestionContains(suggestions, "Alex"), "온라인 플레이어 후보");
-		suggestions = (IEnumerable)Invoke("GetLocalQuickCommandSuggestions", new object[] { "sa", 2, "paper", Activator.CreateInstance(definitionListType), new string[0], new string[] { "say custom recent" } });
+		suggestions = (IEnumerable)Invoke("GetLocalQuickCommandSuggestions", new object[] { "ban-ip A", 8, "paper", "1.21.11", Activator.CreateInstance(definitionListType), new string[] { "Alex" }, new string[0] });
+		Equal(true, SuggestionContains(suggestions, "Alex"), "IP 차단 플레이어 후보");
+		suggestions = (IEnumerable)Invoke("GetLocalQuickCommandSuggestions", new object[] { "gamerule playersSleepingPercentage ", 39, "paper", "1.21.11", Activator.CreateInstance(definitionListType), new string[0], new string[0] });
+		Equal(true, SuggestionContains(suggestions, "50"), "수면 비율 자동완성");
+		suggestions = (IEnumerable)Invoke("GetLocalQuickCommandSuggestions", new object[] { "time add ", 9, "paper", "1.21.11", Activator.CreateInstance(definitionListType), new string[0], new string[0] });
+		Equal(true, SuggestionContains(suggestions, "10s"), "시간 단위 자동완성");
+		suggestions = (IEnumerable)Invoke("GetLocalQuickCommandSuggestions", new object[] { "sa", 2, "paper", "1.21.11", Activator.CreateInstance(definitionListType), new string[0], new string[] { "say custom recent" } });
 		object historySuggestion = FindSuggestion(suggestions, "say custom recent");
 		Equal(2, Convert.ToInt32(GetField(historySuggestion, "ReplaceLength")), "명령 기록 전체 입력 교체");
 		Equal("say hello", Convert.ToString(Invoke("NormalizeCommandForSend", new object[] { "/say hello\r\n" })), "전송 전 슬래시 제거");
 		Equal(true, Invoke("RequiresQuickCommandConfirmation", new object[] { "whitelist off", Activator.CreateInstance(definitionListType) }), "위험 명령 확인");
+		Equal("Normal", Convert.ToString(Invoke("GetQuickCommandRisk", new object[] { "banlist players", builtIns })), "조회 명령 일반 위험도");
+		Equal("Confirm", Convert.ToString(Invoke("GetQuickCommandRisk", new object[] { "datapack enable vanilla", builtIns })), "데이터팩 변경 확인 위험도");
+		Equal("Dangerous", Convert.ToString(Invoke("GetQuickCommandRisk", new object[] { "reload", builtIns })), "재시작 없는 다시 불러오기 위험 경고");
+		Equal("Dangerous", Convert.ToString(Invoke("GetQuickCommandRisk", new object[] { "gamerule keepInventory false", builtIns })), "아이템 보존 해제 조건부 위험도");
+		Equal("Confirm", Convert.ToString(Invoke("GetQuickCommandRisk", new object[] { "gamerule keepInventory true", builtIns })), "아이템 보존 활성화 확인 위험도");
+		Equal("Normal", Convert.ToString(Invoke("GetQuickCommandRisk", new object[] { "worldborder get", builtIns })), "월드 경계 조회 일반 위험도");
 		Equal(false, Invoke("CanSendQuickCommand", new object[] { false, "list" }), "서버 미실행 명령 차단");
 		Equal(true, Invoke("IsSuggestionGenerationCurrent", new object[] { 4, 4 }), "최신 자동완성 응답 허용");
 		Equal(false, Invoke("IsSuggestionGenerationCurrent", new object[] { 3, 4 }), "오래된 자동완성 응답 무시");
@@ -1746,6 +1788,16 @@ internal static class LauncherTests
 			if (string.Equals(Convert.ToString(GetField(definition, "Template")), template, StringComparison.OrdinalIgnoreCase)) return item;
 		}
 		throw new InvalidOperationException("빠른 명령 선택 항목을 찾지 못했습니다: " + template);
+	}
+
+	private static bool QuickCommandPickerContains(IEnumerable items, string template)
+	{
+		foreach (object item in items)
+		{
+			object definition = GetField(item, "Definition");
+			if (string.Equals(Convert.ToString(GetField(definition, "Template")), template, StringComparison.OrdinalIgnoreCase)) return true;
+		}
+		return false;
 	}
 
 	private static object FindSuggestion(IEnumerable suggestions, string value)

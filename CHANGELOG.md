@@ -4,6 +4,24 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.9.0] - 2026-07-25
+
+### Korean
+
+- **운영 명령 확장**: 플레이어·IP 차단 목록과 IP 차단/해제, 월드 시드, 시간 조회·추가, 유휴 추방 시간, 자주 쓰는 게임 규칙, 데이터팩 목록·활성화·비활성화, `reload`, 경험치·월드 경계·강제 로딩 조회를 추가해 기본 빠른 명령을 70개 이상으로 확장했습니다.
+- **선택 인수와 자동완성**: `ban {player} [reason]`, `give {player} {item} [count]`처럼 대괄호 선택 인수를 지원합니다. 주소·플레이어, 시간 단위, 분, 비율, 날씨, 게임 규칙, 데이터팩, 함수, 차원과 거리 매개변수 후보를 추가했습니다.
+- **Minecraft 버전 호환성**: 명령별 최소·최대 Minecraft 버전을 저장하고 선택된 서버 버전에 맞지 않는 명령을 선택창과 로컬 자동완성에서 제외합니다. 데이터팩은 1.13 이상, `playersSleepingPercentage`는 1.17 이상에서만 표시하며 26.x에서 바뀐 구형 `time query daytime` 구문은 숨깁니다.
+- **실제 3단계 위험도**: 선언만 되어 있던 `Normal`, `Confirm`, `Dangerous`를 기본·사용자·브리지 명령과 직접 콘솔 확인에 연결했습니다. `reload`와 광범위 변경은 빨간 강한 경고를 사용하고, `keepInventory false`와 `doMobSpawning false`는 입력값에 따라 위험도를 높입니다.
+- **편집기 UX**: 사용자 명령 편집기에 현대형 위험도 선택, 최소·최대 Minecraft 버전, 선택 인수 안내와 접근성 정보를 추가하고 기존 `Confirm` JSON을 자동 호환합니다.
+
+### English
+
+- **Expanded operations catalog**: Added player/IP ban lists, IP ban/pardon, world seed, time queries and additions, idle timeout, common game rules, datapack listing and enable/disable, `reload`, and read-only experience, world-border, and force-load queries, growing the built-in quick-command catalog beyond 70 entries.
+- **Optional arguments and completion**: Templates now support optional square-bracket arguments such as `ban {player} [reason]` and `give {player} {item} [count]`. Local candidates cover addresses or players, durations, minutes, percentages, weather, game rules, datapacks, functions, dimensions, and distances.
+- **Minecraft version compatibility**: Definitions retain minimum and maximum Minecraft versions, and incompatible entries are omitted from the picker and local completion. Datapack commands require 1.13, `playersSleepingPercentage` requires 1.17, and the legacy `time query daytime` syntax is hidden on 26.x.
+- **Effective three-level risk model**: The existing `Normal`, `Confirm`, and `Dangerous` levels now drive built-in, user, bridge, and direct-console warnings. `reload` and broad mutations use a stronger red warning, while values such as `keepInventory false` and `doMobSpawning false` raise risk conditionally.
+- **Editor UX**: The user-command editor now provides a modern risk selector, minimum and maximum Minecraft versions, optional-argument guidance, and accessibility metadata while migrating legacy `Confirm` JSON automatically.
+
 ## [1.8.1] - 2026-07-25
 
 ### Korean

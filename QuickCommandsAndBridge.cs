@@ -48,8 +48,12 @@ internal static partial class Launcher
 		public string Category;
 		public string Template;
 		public string[] Parameters;
+		public QuickCommandRisk Risk;
+		// 기존 사용자 JSON과의 호환을 위해 유지합니다. 새 저장에서는 Risk와 함께 동기화합니다.
 		public bool Confirm;
 		public string[] ServerTypes;
+		public string MinimumMinecraftVersion;
+		public string MaximumMinecraftVersion;
 		public string Source;
 
 		public override string ToString() { return Name ?? string.Empty; }
@@ -62,6 +66,7 @@ internal static partial class Launcher
 		public string Description;
 		public string Source;
 		public string Plugin;
+		public QuickCommandRisk Risk;
 		public bool Dangerous;
 		public int ReplaceStart;
 		public int ReplaceLength;
@@ -94,8 +99,9 @@ internal static partial class Launcher
 	{
 		public string Value;
 		public bool Argument;
+		public bool Optional;
 		public string Description;
-		public bool Dangerous;
+		public QuickCommandRisk Risk;
 		public List<CommandTreeNode> Children = new List<CommandTreeNode>();
 		public List<QuickCommandDefinition> Definitions = new List<QuickCommandDefinition>();
 	}
@@ -339,7 +345,7 @@ internal static partial class Launcher
 				{
 					string[] values = BridgeStringArray(message, "suggestions", CommandBridgeMaximumSuggestions);
 					List<QuickCommandSuggestion> result = new List<QuickCommandSuggestion>();
-					for (int i = 0; i < values.Length; i++) result.Add(NewSuggestion(values[i], values[i], LauncherUiText("서버 실시간 후보", "Live server suggestion"), "bridge", IsAdvancedDangerousCommand(values[i])));
+					for (int i = 0; i < values.Length; i++) result.Add(NewRiskSuggestion(values[i], values[i], LauncherUiText("서버 실시간 후보", "Live server suggestion"), "bridge", GetRootQuickCommandRisk(values[i])));
 					ThreadPool.QueueUserWorkItem(delegate { callback(result); });
 				}
 			}
@@ -423,19 +429,26 @@ internal static partial class Launcher
 		AddBuiltIn(commands, "server", "자동 저장 끄기", "Disable saving", "자동 저장을 끕니다.", "Disable automatic saving.", "save-off", true, null);
 		AddBuiltIn(commands, "server", "공지", "Broadcast", "서버 전체에 메시지를 보냅니다.", "Broadcast a message.", "say {message}", false, null);
 		AddBuiltIn(commands, "server", "서버 종료", "Stop server", "월드를 저장하고 서버를 종료합니다.", "Save and stop the server.", "stop", true, null);
+		AddBuiltInRisk(commands, "server", "유휴 추방 시간", "Idle timeout", "아무 동작이 없는 플레이어를 추방할 대기 시간을 분 단위로 설정합니다. 0은 비활성화입니다.", "Set how many idle minutes pass before a player is kicked. Use 0 to disable it.", "setidletimeout {minutes}", QuickCommandRisk.Confirm, null, null, null);
+		AddBuiltInRisk(commands, "server", "서버 다시 불러오기", "Reload server", "데이터팩과 서버 구성을 다시 불러옵니다. 플러그인이나 서버 상태에 문제를 일으킬 수 있습니다.", "Reload datapacks and server configuration. This can disrupt plugins or server state.", "reload", QuickCommandRisk.Dangerous, null, null, null);
 		AddBuiltIn(commands, "player", "게임 모드 변경", "Change game mode", "플레이어 게임 모드를 변경합니다.", "Change a player's game mode.", "gamemode {gamemode} {player}", false, null);
 		AddBuiltIn(commands, "player", "플레이어 텔레포트", "Teleport player", "플레이어를 다른 플레이어에게 이동합니다.", "Teleport to another player.", "tp {player} {target}", false, null);
 		AddBuiltIn(commands, "player", "좌표 텔레포트", "Teleport to coordinates", "플레이어를 좌표로 이동합니다.", "Teleport to coordinates.", "tp {player} {x} {y} {z}", false, null);
-		AddBuiltIn(commands, "player", "아이템 지급", "Give item", "플레이어에게 아이템을 지급합니다.", "Give an item to a player.", "give {player} {item} {count}", false, null);
+		AddBuiltIn(commands, "player", "아이템 지급", "Give item", "플레이어에게 아이템을 지급합니다. 수량은 선택 사항입니다.", "Give an item to a player. The count is optional.", "give {player} {item} [count]", false, null);
 		AddBuiltIn(commands, "player", "레벨 경험치", "Add levels", "경험치 레벨을 추가합니다.", "Add experience levels.", "experience add {player} {amount} levels", false, null);
 		AddBuiltIn(commands, "player", "포인트 경험치", "Add points", "경험치 포인트를 추가합니다.", "Add experience points.", "experience add {player} {amount} points", false, null);
+		AddBuiltIn(commands, "player", "레벨 확인", "Query levels", "플레이어의 현재 경험치 레벨을 확인합니다.", "Query a player's current experience level.", "experience query {player} levels", false, null);
 		AddBuiltIn(commands, "player", "효과 제거", "Clear effects", "모든 상태 효과를 제거합니다.", "Clear status effects.", "effect clear {player}", false, null);
-		AddBuiltIn(commands, "player", "효과 지급", "Give effect", "상태 효과를 적용합니다.", "Apply a status effect.", "effect give {player} {effect} {seconds} {amplifier}", false, null);
-		AddBuiltIn(commands, "player", "플레이어 추방", "Kick player", "플레이어를 서버에서 내보냅니다.", "Kick a player.", "kick {player} {reason}", false, null);
+		AddBuiltIn(commands, "player", "효과 지급", "Give effect", "상태 효과를 적용합니다. 지속 시간과 강도, 입자 숨김은 선택 사항입니다.", "Apply a status effect. Duration, amplifier, and hidden particles are optional.", "effect give {player} {effect} [seconds] [amplifier] [hide-particles]", false, null);
+		AddBuiltIn(commands, "player", "플레이어 추방", "Kick player", "플레이어를 서버에서 내보냅니다. 사유는 선택 사항입니다.", "Kick a player. The reason is optional.", "kick {player} [reason]", false, null);
 		AddBuiltIn(commands, "player", "OP 지급", "Grant OP", "플레이어에게 OP 권한을 줍니다.", "Grant operator access.", "op {player}", true, null);
 		AddBuiltIn(commands, "player", "OP 회수", "Revoke OP", "플레이어 OP 권한을 회수합니다.", "Revoke operator access.", "deop {player}", false, null);
-		AddBuiltIn(commands, "player", "접속 차단", "Ban player", "플레이어 접속을 차단합니다.", "Ban a player.", "ban {player} {reason}", true, null);
+		AddBuiltIn(commands, "player", "접속 차단", "Ban player", "플레이어 접속을 차단합니다. 사유는 선택 사항입니다.", "Ban a player. The reason is optional.", "ban {player} [reason]", true, null);
 		AddBuiltIn(commands, "player", "차단 해제", "Pardon player", "플레이어 차단을 해제합니다.", "Pardon a player.", "pardon {player}", false, null);
+		AddBuiltIn(commands, "player", "플레이어 차단 목록", "Player ban list", "차단된 플레이어 목록을 확인합니다.", "List banned players.", "banlist players", false, null);
+		AddBuiltIn(commands, "player", "IP 차단 목록", "IP ban list", "차단된 IP 주소 목록을 확인합니다.", "List banned IP addresses.", "banlist ips", false, null);
+		AddBuiltInRisk(commands, "player", "IP 접속 차단", "Ban IP", "IP 주소 또는 플레이어의 최근 IP를 차단합니다. 사유는 선택 사항입니다.", "Ban an IP address or a player's last known IP. The reason is optional.", "ban-ip {address-or-player} [reason]", QuickCommandRisk.Confirm, null, null, null);
+		AddBuiltIn(commands, "player", "IP 차단 해제", "Pardon IP", "IP 주소 차단을 해제합니다.", "Remove an IP address ban.", "pardon-ip {address}", false, null);
 		AddBuiltIn(commands, "whitelist", "화이트리스트 켜기", "Enable whitelist", "화이트리스트를 켭니다.", "Enable the whitelist.", "whitelist on", false, null);
 		AddBuiltIn(commands, "whitelist", "화이트리스트 끄기", "Disable whitelist", "화이트리스트를 끕니다.", "Disable the whitelist.", "whitelist off", true, null);
 		AddBuiltIn(commands, "whitelist", "화이트리스트 추가", "Whitelist player", "플레이어를 추가합니다.", "Add a player to the whitelist.", "whitelist add {player}", false, null);
@@ -444,6 +457,9 @@ internal static partial class Launcher
 		AddBuiltIn(commands, "whitelist", "화이트리스트 새로고침", "Reload whitelist", "화이트리스트 파일을 다시 읽습니다.", "Reload the whitelist.", "whitelist reload", false, null);
 		string[] times = new string[] { "day", "noon", "night", "midnight" };
 		for (int i = 0; i < times.Length; i++) AddBuiltIn(commands, "world", "시간: " + times[i], "Time: " + times[i], "월드 시간을 변경합니다.", "Change world time.", "time set " + times[i], false, null);
+		AddBuiltInRisk(commands, "world", "현재 낮 시간", "Query daytime", "현재 낮 주기의 틱을 확인합니다.", "Query the current daytime tick.", "time query daytime", QuickCommandRisk.Normal, null, "1.13", "1.21.11");
+		AddBuiltInRisk(commands, "world", "월드 총 시간", "Query game time", "월드의 누적 게임 틱을 확인합니다.", "Query the world's total game ticks.", "time query gametime", QuickCommandRisk.Normal, null, "1.13", null);
+		AddBuiltInRisk(commands, "world", "시간 더하기", "Add time", "현재 월드 시간에 틱 또는 시간 단위를 더합니다.", "Add ticks or a time unit to the current world time.", "time add {duration}", QuickCommandRisk.Normal, null, null, null);
 		string[] weather = new string[] { "clear", "rain", "thunder" };
 		for (int i = 0; i < weather.Length; i++) AddBuiltIn(commands, "world", "날씨: " + weather[i], "Weather: " + weather[i], "월드 날씨를 변경합니다.", "Change world weather.", "weather " + weather[i], false, null);
 		string[] difficulties = new string[] { "peaceful", "easy", "normal", "hard" };
@@ -451,13 +467,24 @@ internal static partial class Launcher
 		AddBuiltIn(commands, "world", "기본 게임 모드", "Default game mode", "새 플레이어 기본 게임 모드를 변경합니다.", "Change the default game mode.", "defaultgamemode {gamemode}", false, null);
 		AddBuiltIn(commands, "world", "낮밤 순환", "Daylight cycle", "낮밤 순환을 설정합니다.", "Configure daylight cycle.", "gamerule doDaylightCycle {boolean}", false, null);
 		AddBuiltIn(commands, "world", "날씨 순환", "Weather cycle", "날씨 순환을 설정합니다.", "Configure weather cycle.", "gamerule doWeatherCycle {boolean}", false, null);
+		AddBuiltInRisk(commands, "world", "사망 시 아이템 보존", "Keep inventory", "사망한 플레이어의 인벤토리 보존 여부를 설정합니다.", "Choose whether players keep inventory after death.", "gamerule keepInventory {boolean}", QuickCommandRisk.Confirm, null, null, null);
+		AddBuiltInRisk(commands, "world", "몹 지형 변경", "Mob griefing", "크리퍼와 엔더맨 등 몹의 지형 변경 여부를 설정합니다.", "Choose whether mobs such as creepers and endermen can alter terrain.", "gamerule mobGriefing {boolean}", QuickCommandRisk.Confirm, null, null, null);
+		AddBuiltInRisk(commands, "world", "몹 자연 생성", "Mob spawning", "몬스터와 동물의 자연 생성 여부를 설정합니다.", "Choose whether mobs spawn naturally.", "gamerule doMobSpawning {boolean}", QuickCommandRisk.Confirm, null, null, null);
+		AddBuiltInRisk(commands, "world", "수면 필요 비율", "Sleeping percentage", "밤을 넘기기 위해 잠들어야 하는 플레이어 비율을 설정합니다.", "Set the percentage of players who must sleep to skip the night.", "gamerule playersSleepingPercentage {percentage}", QuickCommandRisk.Confirm, null, "1.17", null);
+		AddBuiltIn(commands, "world", "월드 경계 확인", "Query world border", "현재 월드 경계 크기를 확인합니다.", "Query the current world border size.", "worldborder get", false, null);
+		AddBuiltInRisk(commands, "world", "강제 로딩 청크 확인", "Query force-loaded chunks", "현재 강제 로딩 중인 청크를 확인합니다.", "Query currently force-loaded chunks.", "forceload query", QuickCommandRisk.Normal, null, "1.13", null);
 		AddBuiltIn(commands, "world", "월드 스폰", "World spawn", "월드 스폰 좌표를 설정합니다.", "Set world spawn coordinates.", "setworldspawn {x} {y} {z}", false, null);
 		AddBuiltIn(commands, "world", "플레이어 스폰", "Player spawn", "플레이어 스폰 좌표를 설정합니다.", "Set a player's spawn.", "spawnpoint {player} {x} {y} {z}", false, null);
 		AddBuiltIn(commands, "info", "도움말", "Help", "명령 도움말을 표시합니다.", "Show command help.", "help", false, null);
 		AddBuiltIn(commands, "info", "명령 도움말", "Command help", "특정 명령 도움말을 표시합니다.", "Show help for a command.", "help {command}", false, null);
 		AddBuiltIn(commands, "info", "서버 버전", "Server version", "서버 구현 버전을 표시합니다.", "Show server implementation version.", "version", false, new string[] { "paper", "purpur" });
 		AddBuiltIn(commands, "info", "플러그인 목록", "Plugin list", "설치된 플러그인을 표시합니다.", "List installed plugins.", "plugins", false, new string[] { "paper", "purpur" });
-		AddBuiltIn(commands, "info", "데이터팩 목록", "Datapack list", "활성 데이터팩을 표시합니다.", "List datapacks.", "datapack list", false, null);
+		AddBuiltIn(commands, "info", "월드 시드", "World seed", "현재 월드의 시드를 확인합니다.", "Show the current world seed.", "seed", false, null);
+		AddBuiltInRisk(commands, "info", "데이터팩 전체 목록", "All datapacks", "사용 가능한 데이터팩을 모두 표시합니다.", "List all available datapacks.", "datapack list", QuickCommandRisk.Normal, null, "1.13", null);
+		AddBuiltInRisk(commands, "info", "활성 데이터팩", "Enabled datapacks", "현재 활성화된 데이터팩만 표시합니다.", "List only enabled datapacks.", "datapack list enabled", QuickCommandRisk.Normal, null, "1.13", null);
+		AddBuiltInRisk(commands, "info", "비활성 데이터팩", "Available datapacks", "설치됐지만 활성화되지 않은 데이터팩을 표시합니다.", "List installed datapacks that are not enabled.", "datapack list available", QuickCommandRisk.Normal, null, "1.13", null);
+		AddBuiltInRisk(commands, "info", "데이터팩 활성화", "Enable datapack", "선택한 데이터팩을 활성화합니다.", "Enable the selected datapack.", "datapack enable {datapack}", QuickCommandRisk.Confirm, null, "1.13", null);
+		AddBuiltInRisk(commands, "info", "데이터팩 비활성화", "Disable datapack", "선택한 데이터팩을 비활성화합니다.", "Disable the selected datapack.", "datapack disable {datapack}", QuickCommandRisk.Confirm, null, "1.13", null);
 		return commands;
 	}
 
@@ -479,8 +506,11 @@ internal static partial class Launcher
 			definition.Category = "plugin:" + plugin;
 			definition.Template = command;
 			definition.Parameters = new string[0];
-			definition.Confirm = suggestion.Dangerous;
+			definition.Risk = GetSuggestionRisk(suggestion);
+			definition.Confirm = definition.Risk != QuickCommandRisk.Normal;
 			definition.ServerTypes = new string[0];
+			definition.MinimumMinecraftVersion = string.Empty;
+			definition.MaximumMinecraftVersion = string.Empty;
 			definition.Source = "bridge";
 			result.Add(definition);
 		}
@@ -496,8 +526,29 @@ internal static partial class Launcher
 		command.Category = category;
 		command.Template = template;
 		command.Parameters = ExtractTemplateParameters(template).ToArray();
+		command.Risk = confirm ? QuickCommandRisk.Confirm : QuickCommandRisk.Normal;
 		command.Confirm = confirm;
 		command.ServerTypes = serverTypes ?? new string[0];
+		command.MinimumMinecraftVersion = string.Empty;
+		command.MaximumMinecraftVersion = string.Empty;
+		command.Source = "builtin";
+		list.Add(command);
+	}
+
+	private static void AddBuiltInRisk(List<QuickCommandDefinition> list, string category, string koreanName, string englishName, string koreanDescription, string englishDescription, string template, QuickCommandRisk risk, string[] serverTypes, string minimumMinecraftVersion, string maximumMinecraftVersion)
+	{
+		QuickCommandDefinition command = new QuickCommandDefinition();
+		command.Id = "builtin-" + list.Count.ToString(CultureInfo.InvariantCulture);
+		command.Name = LauncherUiText(koreanName, englishName);
+		command.Description = LauncherUiText(koreanDescription, englishDescription);
+		command.Category = category;
+		command.Template = template;
+		command.Parameters = ExtractTemplateParameters(template).ToArray();
+		command.Risk = risk;
+		command.Confirm = risk != QuickCommandRisk.Normal;
+		command.ServerTypes = serverTypes ?? new string[0];
+		command.MinimumMinecraftVersion = minimumMinecraftVersion ?? string.Empty;
+		command.MaximumMinecraftVersion = maximumMinecraftVersion ?? string.Empty;
 		command.Source = "builtin";
 		list.Add(command);
 	}
@@ -542,15 +593,32 @@ internal static partial class Launcher
 	private static bool ValidateUserQuickCommand(QuickCommandDefinition command, out string error)
 	{
 		error = string.Empty;
-		if (command == null) { error = "명령 정보가 없습니다."; return false; }
-		if (string.IsNullOrWhiteSpace(command.Name) || command.Name.Trim().Length > 60) { error = "표시 이름은 1~60자여야 합니다."; return false; }
-		if (string.IsNullOrWhiteSpace(command.Template) || command.Template.Length > 512 || command.Template.IndexOf('\r') >= 0 || command.Template.IndexOf('\n') >= 0) { error = "명령 템플릿은 줄바꿈 없이 1~512자여야 합니다."; return false; }
+		if (command == null) { error = LauncherUiText("명령 정보가 없습니다.", "Command information is missing."); return false; }
+		if (string.IsNullOrWhiteSpace(command.Name) || command.Name.Trim().Length > 60) { error = LauncherUiText("표시 이름은 1~60자여야 합니다.", "The display name must be 1 to 60 characters."); return false; }
+		if (string.IsNullOrWhiteSpace(command.Template) || command.Template.Length > 512 || command.Template.IndexOf('\r') >= 0 || command.Template.IndexOf('\n') >= 0) { error = LauncherUiText("명령 템플릿은 줄바꿈 없이 1~512자여야 합니다.", "The command template must be 1 to 512 characters without line breaks."); return false; }
 		command.Template = NormalizeCommandForSend(command.Template);
-		if (command.Template.Length == 0) { error = "실행할 명령을 입력해 주세요."; return false; }
+		if (command.Template.Length == 0) { error = LauncherUiText("실행할 명령을 입력해 주세요.", "Enter a command to run."); return false; }
 		List<string> parameters;
 		try { parameters = ExtractTemplateParameters(command.Template); }
 		catch (InvalidDataException exception) { error = exception.Message; return false; }
 		command.Parameters = parameters.ToArray();
+		if (!Enum.IsDefined(typeof(QuickCommandRisk), command.Risk)) { error = LauncherUiText("명령 위험도가 올바르지 않습니다.", "The command risk level is invalid."); return false; }
+		if (command.Risk == QuickCommandRisk.Normal && command.Confirm) command.Risk = QuickCommandRisk.Confirm;
+		command.Confirm = command.Risk != QuickCommandRisk.Normal;
+		command.MinimumMinecraftVersion = (command.MinimumMinecraftVersion ?? string.Empty).Trim();
+		command.MaximumMinecraftVersion = (command.MaximumMinecraftVersion ?? string.Empty).Trim();
+		MinecraftNumericVersion minimum;
+		MinecraftNumericVersion maximum;
+		if (command.MinimumMinecraftVersion.Length > 0 && !TryParseMinecraftNumericVersion(command.MinimumMinecraftVersion, out minimum)) { error = LauncherUiText("최소 Minecraft 버전 형식이 올바르지 않습니다.", "The minimum Minecraft version is invalid."); return false; }
+		if (command.MaximumMinecraftVersion.Length > 0 && !TryParseMinecraftNumericVersion(command.MaximumMinecraftVersion, out maximum)) { error = LauncherUiText("최대 Minecraft 버전 형식이 올바르지 않습니다.", "The maximum Minecraft version is invalid."); return false; }
+		if (command.MinimumMinecraftVersion.Length > 0 && command.MaximumMinecraftVersion.Length > 0 &&
+			TryParseMinecraftNumericVersion(command.MinimumMinecraftVersion, out minimum) &&
+			TryParseMinecraftNumericVersion(command.MaximumMinecraftVersion, out maximum) &&
+			CompareMinecraftNumericVersion(minimum, maximum) > 0)
+		{
+			error = LauncherUiText("최소 Minecraft 버전은 최대 버전보다 클 수 없습니다.", "The minimum Minecraft version cannot be greater than the maximum version.");
+			return false;
+		}
 		if (string.IsNullOrWhiteSpace(command.Id)) command.Id = Guid.NewGuid().ToString("N");
 		if (string.IsNullOrWhiteSpace(command.Category)) command.Category = "user";
 		if (command.Description == null) command.Description = string.Empty;
@@ -560,17 +628,26 @@ internal static partial class Launcher
 
 	private static List<string> ExtractTemplateParameters(string template)
 	{
-		HashSet<string> allowed = new HashSet<string>(new string[] { "player", "online-player", "target", "gamemode", "difficulty", "item", "effect", "boolean", "number", "amount", "count", "seconds", "amplifier", "x", "y", "z", "message", "reason", "command" }, StringComparer.OrdinalIgnoreCase);
+		HashSet<string> allowed = new HashSet<string>(new string[] { "player", "online-player", "target", "gamemode", "difficulty", "item", "effect", "boolean", "number", "amount", "count", "seconds", "amplifier", "hide-particles", "x", "y", "z", "message", "reason", "command", "address", "address-or-player", "duration", "minutes", "percentage", "weather", "gamerule", "datapack", "function", "dimension", "distance" }, StringComparer.OrdinalIgnoreCase);
 		List<string> result = new List<string>();
-		for (int i = 0; i < template.Length; i++)
+		bool optionalStarted = false;
+		string[] parts = SplitTemplate(template);
+		for (int i = 0; i < parts.Length; i++)
 		{
-			if (template[i] != '{') { if (template[i] == '}') throw new InvalidDataException("명령 템플릿의 중괄호가 올바르지 않습니다."); continue; }
-			int end = template.IndexOf('}', i + 1);
-			if (end < 0) throw new InvalidDataException("명령 템플릿의 중괄호가 닫히지 않았습니다.");
-			string parameter = template.Substring(i + 1, end - i - 1).Trim();
-			if (!allowed.Contains(parameter)) throw new InvalidDataException("지원하지 않는 매개변수입니다: {" + parameter + "}");
+			string part = parts[i];
+			bool required = IsRequiredTemplateArgument(part);
+			bool optional = IsOptionalTemplateArgument(part);
+			if (!required && !optional)
+			{
+				if (part.IndexOfAny(new char[] { '{', '}', '[', ']' }) >= 0) throw new InvalidDataException(LauncherUiText("명령 템플릿의 괄호가 올바르지 않습니다.", "The command template contains invalid brackets."));
+				if (optionalStarted) throw new InvalidDataException(LauncherUiText("선택 인수 뒤에는 필수 인수나 고정 문구를 둘 수 없습니다.", "Required arguments or literals cannot follow an optional argument."));
+				continue;
+			}
+			if (optional) optionalStarted = true;
+			else if (optionalStarted) throw new InvalidDataException(LauncherUiText("선택 인수 뒤에는 필수 인수를 둘 수 없습니다.", "A required argument cannot follow an optional argument."));
+			string parameter = GetTemplateArgumentName(part);
+			if (!allowed.Contains(parameter)) throw new InvalidDataException(LauncherUiText("지원하지 않는 매개변수입니다: ", "Unsupported parameter: ") + part);
 			if (!result.Contains(parameter, StringComparer.OrdinalIgnoreCase)) result.Add(parameter);
-			i = end;
 		}
 		return result;
 	}
@@ -622,33 +699,37 @@ internal static partial class Launcher
 		return result;
 	}
 
-	private static CommandTreeNode BuildQuickCommandTree(IEnumerable<QuickCommandDefinition> definitions, string serverType)
+	private static CommandTreeNode BuildQuickCommandTree(IEnumerable<QuickCommandDefinition> definitions, string serverType, string minecraftVersion)
 	{
 		CommandTreeNode root = new CommandTreeNode();
 		foreach (QuickCommandDefinition definition in definitions)
 		{
-			if (!QuickCommandSupportsServer(definition, serverType)) continue;
+			if (!QuickCommandSupportsServer(definition, serverType, minecraftVersion)) continue;
 			string[] parts = SplitTemplate(definition.Template);
 			CommandTreeNode current = root;
 			for (int i = 0; i < parts.Length; i++)
 			{
 				string part = parts[i];
-				bool argument = part.StartsWith("{", StringComparison.Ordinal) && part.EndsWith("}", StringComparison.Ordinal);
-				CommandTreeNode child = current.Children.Find(delegate(CommandTreeNode item) { return item.Argument == argument && string.Equals(item.Value, part, StringComparison.OrdinalIgnoreCase); });
-				if (child == null) { child = new CommandTreeNode(); child.Value = part; child.Argument = argument; current.Children.Add(child); }
-				child.Description = definition.Description; child.Dangerous = definition.Confirm; current = child;
+				bool argument = IsTemplateArgument(part);
+				bool optional = IsOptionalTemplateArgument(part);
+				string nodeValue = argument ? "{" + GetTemplateArgumentName(part) + "}" : part;
+				CommandTreeNode child = current.Children.Find(delegate(CommandTreeNode item) { return item.Argument == argument && item.Optional == optional && string.Equals(item.Value, nodeValue, StringComparison.OrdinalIgnoreCase); });
+				if (child == null) { child = new CommandTreeNode(); child.Value = nodeValue; child.Argument = argument; child.Optional = optional; current.Children.Add(child); }
+				child.Description = definition.Description;
+				child.Risk = MaxQuickCommandRisk(child.Risk, GetDefinitionRisk(definition));
+				current = child;
 			}
 			current.Definitions.Add(definition);
 		}
 		return root;
 	}
 
-	private static List<QuickCommandSuggestion> GetLocalQuickCommandSuggestions(string input, int cursor, string serverType, IEnumerable<QuickCommandDefinition> userCommands, IEnumerable<string> onlinePlayers, IEnumerable<string> history)
+	private static List<QuickCommandSuggestion> GetLocalQuickCommandSuggestions(string input, int cursor, string serverType, string minecraftVersion, IEnumerable<QuickCommandDefinition> userCommands, IEnumerable<string> onlinePlayers, IEnumerable<string> history)
 	{
 		List<QuickCommandDefinition> definitions = GetBuiltInQuickCommands();
 		if (userCommands != null) definitions.AddRange(userCommands);
 		CommandParseResult parsed = ParseCommandInput(input, cursor);
-		CommandTreeNode node = BuildQuickCommandTree(definitions, serverType);
+		CommandTreeNode node = BuildQuickCommandTree(definitions, serverType, minecraftVersion);
 		for (int i = 0; i < parsed.CurrentIndex && i < parsed.Tokens.Count; i++)
 		{
 			string value = parsed.Tokens[i].Value;
@@ -665,7 +746,7 @@ internal static partial class Launcher
 			{
 				if (string.IsNullOrEmpty(parsed.Prefix) || value.StartsWith(parsed.Prefix, StringComparison.OrdinalIgnoreCase))
 				{
-					QuickCommandSuggestion suggestion = NewSuggestion(value, GetNodeSyntax(child), child.Description, NodeSource(child), child.Dangerous || IsAdvancedDangerousCommand(value));
+					QuickCommandSuggestion suggestion = NewRiskSuggestion(value, GetNodeSyntax(child), child.Description, NodeSource(child), MaxQuickCommandRisk(child.Risk, GetRootQuickCommandRisk(value)));
 					suggestion.ReplaceStart = parsed.ReplaceStart + (((input ?? string.Empty).StartsWith("/", StringComparison.Ordinal)) ? 1 : 0);
 					suggestion.ReplaceLength = parsed.ReplaceLength;
 					result.Add(suggestion);
@@ -679,7 +760,7 @@ internal static partial class Launcher
 				string normalized = NormalizeCommandForSend(item);
 				if (normalized.StartsWith(parsed.Text, StringComparison.OrdinalIgnoreCase))
 				{
-					QuickCommandSuggestion recent = NewSuggestion(normalized, normalized, LauncherUiText("최근 사용 명령", "Recent command"), "history", IsAdvancedDangerousCommand(normalized));
+					QuickCommandSuggestion recent = NewRiskSuggestion(normalized, normalized, LauncherUiText("최근 사용 명령", "Recent command"), "history", GetQuickCommandRisk(normalized, definitions));
 					recent.ReplaceStart = 0; recent.ReplaceLength = (input ?? string.Empty).Length; result.Add(recent);
 				}
 			}
@@ -734,31 +815,27 @@ internal static partial class Launcher
 
 	private static bool RequiresQuickCommandConfirmation(string command, IEnumerable<QuickCommandDefinition> definitions)
 	{
-		string value = NormalizeCommandForSend(command);
-		string root = value.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
-		if (string.Equals(root, "stop", StringComparison.OrdinalIgnoreCase) || string.Equals(root, "op", StringComparison.OrdinalIgnoreCase) || string.Equals(root, "ban", StringComparison.OrdinalIgnoreCase)) return true;
-		if (value.StartsWith("save-off", StringComparison.OrdinalIgnoreCase) || value.StartsWith("whitelist off", StringComparison.OrdinalIgnoreCase)) return true;
-		if (definitions != null) foreach (QuickCommandDefinition item in definitions) if (item.Confirm && TemplateMatchesCommand(item.Template, value)) return true;
-		return false;
+		return GetQuickCommandRisk(command, definitions) != QuickCommandRisk.Normal;
 	}
 
 	private static bool IsAdvancedDangerousCommand(string command)
 	{
-		string root = NormalizeCommandForSend(command).Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
-		return new HashSet<string>(new string[] { "kill", "clear", "fill", "clone", "setblock", "worldborder", "reload", "execute", "data", "summon", "forceload", "tick" }, StringComparer.OrdinalIgnoreCase).Contains(root);
+		return GetRootQuickCommandRisk(command) == QuickCommandRisk.Dangerous;
 	}
 
 	private static bool PrepareDirectServerCommand(System.Windows.Forms.IWin32Window owner, string input, out string command)
 	{
 		command = NormalizeCommandForSend(input);
 		if (string.IsNullOrWhiteSpace(command)) return false;
-		if (!RequiresQuickCommandConfirmation(command, null) && !IsAdvancedDangerousCommand(command)) return true;
+		QuickCommandRisk risk = GetQuickCommandRisk(command, GetBuiltInQuickCommands());
+		if (risk == QuickCommandRisk.Normal) return true;
+		bool dangerous = risk == QuickCommandRisk.Dangerous;
 		System.Windows.Forms.DialogResult result = ShowMineHarborDialog(owner,
 			string.Equals(Localization.CurrentLanguage, Localization.Korean, StringComparison.OrdinalIgnoreCase)
-				? "다음 명령은 서버 상태나 데이터를 변경할 수 있습니다. 실행하시겠습니까?\r\n\r\n" + command
-				: "This command can change server state or data. Run it?\r\n\r\n" + command,
-			string.Equals(Localization.CurrentLanguage, Localization.Korean, StringComparison.OrdinalIgnoreCase) ? "명령 실행 확인" : "Confirm command",
-			System.Windows.Forms.MessageBoxButtons.YesNo, System.Windows.Forms.MessageBoxIcon.Warning);
+				? (dangerous ? "위험 명령입니다. 서버 상태나 넓은 범위의 데이터에 영향을 줄 수 있습니다. 영향 범위와 인수를 다시 확인한 뒤 실행하시겠습니까?\r\n\r\n" : "다음 명령은 서버 상태를 변경합니다. 실행하시겠습니까?\r\n\r\n") + command
+				: (dangerous ? "This is a dangerous command. It can affect server state or a broad range of data. Review its scope and arguments before running it.\r\n\r\n" : "This command changes server state. Run it?\r\n\r\n") + command,
+			string.Equals(Localization.CurrentLanguage, Localization.Korean, StringComparison.OrdinalIgnoreCase) ? (dangerous ? "위험 명령 확인" : "명령 실행 확인") : (dangerous ? "Confirm dangerous command" : "Confirm command"),
+			System.Windows.Forms.MessageBoxButtons.YesNo, dangerous ? System.Windows.Forms.MessageBoxIcon.Error : System.Windows.Forms.MessageBoxIcon.Warning);
 		return result == System.Windows.Forms.DialogResult.Yes;
 	}
 
@@ -766,27 +843,114 @@ internal static partial class Launcher
 	{
 		if (argument == "gamemode") return new string[] { "survival", "creative", "adventure", "spectator" };
 		if (argument == "difficulty") return new string[] { "peaceful", "easy", "normal", "hard" };
-		if (argument == "boolean") return new string[] { "true", "false" };
-		if (argument == "player" || argument == "online-player" || argument == "target")
+		if (argument == "boolean" || argument == "hide-particles") return new string[] { "true", "false" };
+		if (argument == "player" || argument == "online-player" || argument == "target" || argument == "address-or-player")
 		{
-			List<string> values = new List<string>(new string[] { "@a", "@e", "@p", "@r", "@s" });
+			List<string> values = argument == "address-or-player" ? new List<string>() : new List<string>(new string[] { "@a", "@e", "@p", "@r", "@s" });
 			if (onlinePlayers != null) values.AddRange(onlinePlayers.Where(delegate(string value) { return !string.IsNullOrWhiteSpace(value); }));
+			if (argument == "address-or-player" && values.Count == 0) values.Add("{address}");
 			return values;
 		}
 		if (argument == "item") return new string[] { "minecraft:stone", "minecraft:diamond", "minecraft:oak_log" };
 		if (argument == "effect") return new string[] { "minecraft:speed", "minecraft:strength", "minecraft:regeneration" };
 		if (argument == "x" || argument == "y" || argument == "z") return new string[] { "~", "~1", "0" };
-		if (argument == "count" || argument == "amount" || argument == "number" || argument == "seconds" || argument == "amplifier") return new string[] { "1", "10", "64" };
+		if (argument == "count" || argument == "amount" || argument == "number" || argument == "seconds" || argument == "amplifier" || argument == "distance") return new string[] { "1", "10", "64" };
+		if (argument == "minutes") return new string[] { "0", "5", "15", "30" };
+		if (argument == "percentage") return new string[] { "0", "50", "100" };
+		if (argument == "duration") return new string[] { "1000", "10s", "1d" };
+		if (argument == "weather") return new string[] { "clear", "rain", "thunder" };
+		if (argument == "gamerule") return new string[] { "keepInventory", "mobGriefing", "doMobSpawning", "playersSleepingPercentage" };
+		if (argument == "datapack") return new string[] { "vanilla", "{datapack}" };
+		if (argument == "dimension") return new string[] { "minecraft:overworld", "minecraft:the_nether", "minecraft:the_end" };
+		if (argument == "address") return new string[] { "{address}" };
 		return new string[] { "{" + argument + "}" };
 	}
 
 	private static string[] SplitTemplate(string template) { return (template ?? string.Empty).Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries); }
-	private static bool QuickCommandSupportsServer(QuickCommandDefinition item, string serverType) { return item.ServerTypes == null || item.ServerTypes.Length == 0 || item.ServerTypes.Any(delegate(string value) { return string.Equals(value, NormalizeServerType(serverType), StringComparison.OrdinalIgnoreCase); }); }
-	private static bool TemplateMatchesCommand(string template, string command) { string[] left = SplitTemplate(template); string[] right = SplitTemplate(command); if (left.Length != right.Length) return false; for (int i = 0; i < left.Length; i++) if (!(left[i].StartsWith("{") && left[i].EndsWith("}")) && !string.Equals(left[i], right[i], StringComparison.OrdinalIgnoreCase)) return false; return true; }
+	private static bool IsRequiredTemplateArgument(string value) { return !string.IsNullOrEmpty(value) && value.Length > 2 && value.StartsWith("{", StringComparison.Ordinal) && value.EndsWith("}", StringComparison.Ordinal); }
+	private static bool IsOptionalTemplateArgument(string value) { return !string.IsNullOrEmpty(value) && value.Length > 2 && value.StartsWith("[", StringComparison.Ordinal) && value.EndsWith("]", StringComparison.Ordinal); }
+	private static bool IsTemplateArgument(string value) { return IsRequiredTemplateArgument(value) || IsOptionalTemplateArgument(value); }
+	private static string GetTemplateArgumentName(string value) { return IsTemplateArgument(value) ? value.Substring(1, value.Length - 2).Trim().ToLowerInvariant() : string.Empty; }
+	private static bool IsGreedyTemplateArgument(string value) { string name = GetTemplateArgumentName(value); return name == "message" || name == "reason" || name == "command"; }
+
+	private static bool QuickCommandSupportsServer(QuickCommandDefinition item, string serverType, string minecraftVersion)
+	{
+		if (item == null) return false;
+		bool serverSupported = item.ServerTypes == null || item.ServerTypes.Length == 0 || item.ServerTypes.Any(delegate(string value) { return string.Equals(value, NormalizeServerType(serverType), StringComparison.OrdinalIgnoreCase); });
+		if (!serverSupported) return false;
+		string minimumText = (item.MinimumMinecraftVersion ?? string.Empty).Trim();
+		string maximumText = (item.MaximumMinecraftVersion ?? string.Empty).Trim();
+		if (minimumText.Length == 0 && maximumText.Length == 0) return true;
+		MinecraftNumericVersion current;
+		if (!TryParseMinecraftNumericVersion(minecraftVersion, out current)) return false;
+		MinecraftNumericVersion boundary;
+		if (minimumText.Length > 0 && (!TryParseMinecraftNumericVersion(minimumText, out boundary) || CompareMinecraftNumericVersion(current, boundary) < 0)) return false;
+		if (maximumText.Length > 0 && (!TryParseMinecraftNumericVersion(maximumText, out boundary) || CompareMinecraftNumericVersion(current, boundary) > 0)) return false;
+		return true;
+	}
+
+	private static bool TemplateMatchesCommand(string template, string command)
+	{
+		string[] left = SplitTemplate(template);
+		string[] right = SplitTemplate(command);
+		int commandIndex = 0;
+		for (int templateIndex = 0; templateIndex < left.Length; templateIndex++)
+		{
+			string templatePart = left[templateIndex];
+			bool optional = IsOptionalTemplateArgument(templatePart);
+			bool argument = IsTemplateArgument(templatePart);
+			if (commandIndex >= right.Length)
+			{
+				if (optional) continue;
+				return false;
+			}
+			if (!argument && !string.Equals(templatePart, right[commandIndex], StringComparison.OrdinalIgnoreCase)) return false;
+			if (argument && IsGreedyTemplateArgument(templatePart) && templateIndex == left.Length - 1) return true;
+			commandIndex++;
+		}
+		return commandIndex == right.Length;
+	}
+
+	private static QuickCommandRisk GetDefinitionRisk(QuickCommandDefinition definition)
+	{
+		if (definition == null) return QuickCommandRisk.Normal;
+		if (Enum.IsDefined(typeof(QuickCommandRisk), definition.Risk) && definition.Risk != QuickCommandRisk.Normal) return definition.Risk;
+		return definition.Confirm ? QuickCommandRisk.Confirm : QuickCommandRisk.Normal;
+	}
+
+	private static QuickCommandRisk GetRootQuickCommandRisk(string command)
+	{
+		string value = NormalizeCommandForSend(command);
+		string root = value.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).FirstOrDefault() ?? string.Empty;
+		if (value.Equals("worldborder get", StringComparison.OrdinalIgnoreCase) || value.Equals("forceload query", StringComparison.OrdinalIgnoreCase)) return QuickCommandRisk.Normal;
+		if (new HashSet<string>(new string[] { "kill", "clear", "fill", "clone", "setblock", "worldborder", "reload", "execute", "data", "summon", "forceload", "tick" }, StringComparer.OrdinalIgnoreCase).Contains(root)) return QuickCommandRisk.Dangerous;
+		if (string.Equals(root, "stop", StringComparison.OrdinalIgnoreCase) || string.Equals(root, "op", StringComparison.OrdinalIgnoreCase) || string.Equals(root, "ban", StringComparison.OrdinalIgnoreCase) || string.Equals(root, "ban-ip", StringComparison.OrdinalIgnoreCase)) return QuickCommandRisk.Confirm;
+		if (value.StartsWith("save-off", StringComparison.OrdinalIgnoreCase) || value.StartsWith("whitelist off", StringComparison.OrdinalIgnoreCase) || value.StartsWith("datapack enable ", StringComparison.OrdinalIgnoreCase) || value.StartsWith("datapack disable ", StringComparison.OrdinalIgnoreCase)) return QuickCommandRisk.Confirm;
+		if (value.Equals("gamerule keepInventory false", StringComparison.OrdinalIgnoreCase) || value.Equals("gamerule doMobSpawning false", StringComparison.OrdinalIgnoreCase)) return QuickCommandRisk.Dangerous;
+		return QuickCommandRisk.Normal;
+	}
+
+	private static QuickCommandRisk GetQuickCommandRisk(string command, IEnumerable<QuickCommandDefinition> definitions)
+	{
+		string value = NormalizeCommandForSend(command);
+		QuickCommandRisk risk = GetRootQuickCommandRisk(value);
+		if (definitions != null)
+		{
+			foreach (QuickCommandDefinition item in definitions)
+			{
+				if (item != null && TemplateMatchesCommand(item.Template, value)) risk = MaxQuickCommandRisk(risk, GetDefinitionRisk(item));
+			}
+		}
+		return risk;
+	}
+
+	private static QuickCommandRisk MaxQuickCommandRisk(QuickCommandRisk left, QuickCommandRisk right) { return (QuickCommandRisk)Math.Max((int)left, (int)right); }
+	private static QuickCommandRisk GetSuggestionRisk(QuickCommandSuggestion suggestion) { return suggestion == null ? QuickCommandRisk.Normal : suggestion.Risk != QuickCommandRisk.Normal ? suggestion.Risk : suggestion.Dangerous ? QuickCommandRisk.Dangerous : QuickCommandRisk.Normal; }
 	private static string GetNodeSyntax(CommandTreeNode node) { return node.Definitions.Count > 0 ? node.Definitions[0].Template : node.Value; }
 	private static string NodeSource(CommandTreeNode node) { return node.Definitions.Count > 0 ? node.Definitions[0].Source : "builtin"; }
 	private static int SourceRank(string source) { return string.Equals(source, "bridge", StringComparison.OrdinalIgnoreCase) ? 0 : string.Equals(source, "user", StringComparison.OrdinalIgnoreCase) ? 1 : string.Equals(source, "builtin", StringComparison.OrdinalIgnoreCase) ? 2 : 3; }
-	private static QuickCommandSuggestion NewSuggestion(string value, string syntax, string description, string source, bool dangerous) { QuickCommandSuggestion item = new QuickCommandSuggestion(); item.Value = value; item.Syntax = syntax; item.Description = description ?? string.Empty; item.Source = source; item.Dangerous = dangerous; return item; }
+	private static QuickCommandSuggestion NewSuggestion(string value, string syntax, string description, string source, bool dangerous) { return NewRiskSuggestion(value, syntax, description, source, dangerous ? QuickCommandRisk.Dangerous : QuickCommandRisk.Normal); }
+	private static QuickCommandSuggestion NewRiskSuggestion(string value, string syntax, string description, string source, QuickCommandRisk risk) { QuickCommandSuggestion item = new QuickCommandSuggestion(); item.Value = value; item.Syntax = syntax; item.Description = description ?? string.Empty; item.Source = source; item.Risk = risk; item.Dangerous = risk != QuickCommandRisk.Normal; return item; }
 
 	private static bool IsCommandBridgeSupported(string serverType, string minecraftVersion)
 	{
@@ -1042,7 +1206,7 @@ internal static partial class Launcher
 			if (command == null) continue;
 			string name = new string(BridgeString(command, "name").Where(delegate(char value) { return !char.IsControl(value); }).Take(128).ToArray()).Trim();
 			if (string.IsNullOrWhiteSpace(name)) continue;
-			QuickCommandSuggestion suggestion = NewSuggestion(name, BridgeString(command, "usage"), BridgeString(command, "description"), "bridge", IsAdvancedDangerousCommand(name));
+			QuickCommandSuggestion suggestion = NewRiskSuggestion(name, BridgeString(command, "usage"), BridgeString(command, "description"), "bridge", GetRootQuickCommandRisk(name));
 			string plugin = new string(BridgeString(command, "plugin").Where(delegate(char value) { return !char.IsControl(value); }).Take(80).ToArray()).Trim();
 			suggestion.Plugin = plugin;
 			result.Add(suggestion);
