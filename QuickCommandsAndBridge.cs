@@ -59,6 +59,170 @@ internal static partial class Launcher
 		public override string ToString() { return Name ?? string.Empty; }
 	}
 
+	private sealed class QuickCommandTemplatePart
+	{
+		public string Literal;
+		public string Name;
+		public string DefaultValue;
+		public bool Argument;
+		public bool Required;
+		public bool Greedy;
+		public string Value;
+
+		public bool HasValue
+		{
+			get { return !string.IsNullOrWhiteSpace(Value); }
+		}
+	}
+
+	private sealed class QuickCommandBuilderState
+	{
+		public string Key;
+		public string Template;
+		public string DisplayName;
+		public QuickCommandRisk Risk;
+		public List<QuickCommandTemplatePart> Parts = new List<QuickCommandTemplatePart>();
+		public int ActivePartIndex = -1;
+
+		public bool HasArguments
+		{
+			get { return Parts.Any(delegate(QuickCommandTemplatePart part) { return part.Argument; }); }
+		}
+
+		public QuickCommandTemplatePart ActivePart
+		{
+			get
+			{
+				return ActivePartIndex >= 0 && ActivePartIndex < Parts.Count && Parts[ActivePartIndex].Argument
+					? Parts[ActivePartIndex]
+					: null;
+			}
+		}
+
+		public bool IsComplete
+		{
+			get
+			{
+				for (int i = 0; i < Parts.Count; i++)
+				{
+					QuickCommandTemplatePart part = Parts[i];
+					if (!part.Argument) continue;
+					if (part.Required && !part.HasValue) return false;
+					if (part.HasValue && !ValidateQuickCommandArgumentValue(part.Name, part.Value)) return false;
+				}
+				return true;
+			}
+		}
+
+		public int FindFirstIncompleteRequired()
+		{
+			for (int i = 0; i < Parts.Count; i++)
+			{
+				QuickCommandTemplatePart part = Parts[i];
+				if (part.Argument && part.Required && (!part.HasValue || !ValidateQuickCommandArgumentValue(part.Name, part.Value))) return i;
+			}
+			return -1;
+		}
+
+		public int FindFirstInvalidArgument()
+		{
+			for (int i = 0; i < Parts.Count; i++)
+			{
+				QuickCommandTemplatePart part = Parts[i];
+				if (part.Argument && part.HasValue && !ValidateQuickCommandArgumentValue(part.Name, part.Value)) return i;
+			}
+			return -1;
+		}
+
+		public void SetValue(int partIndex, string value)
+		{
+			if (partIndex < 0 || partIndex >= Parts.Count || !Parts[partIndex].Argument) return;
+			string normalized = (value ?? string.Empty).Replace("\r", string.Empty).Replace("\n", string.Empty);
+			Parts[partIndex].Value = Parts[partIndex].Greedy ? normalized.TrimStart() : normalized.Trim();
+		}
+
+		public bool Activate(int partIndex)
+		{
+			if (partIndex < 0 || partIndex >= Parts.Count || !Parts[partIndex].Argument) return false;
+			ActivePartIndex = partIndex;
+			return true;
+		}
+
+		public bool MoveNext(bool includeOptional)
+		{
+			QuickCommandTemplatePart active = ActivePart;
+			if (active != null &&
+				((active.Required && !active.HasValue) ||
+				(active.HasValue && !ValidateQuickCommandArgumentValue(active.Name, active.Value))))
+			{
+				return true;
+			}
+			for (int i = Math.Max(-1, ActivePartIndex) + 1; i < Parts.Count; i++)
+			{
+				if (Parts[i].Argument && (includeOptional || Parts[i].Required))
+				{
+					ActivePartIndex = i;
+					return true;
+				}
+			}
+			int incomplete = FindFirstIncompleteRequired();
+			if (incomplete >= 0)
+			{
+				ActivePartIndex = incomplete;
+				return true;
+			}
+			int invalid = FindFirstInvalidArgument();
+			if (invalid >= 0)
+			{
+				ActivePartIndex = invalid;
+				return true;
+			}
+			ActivePartIndex = -1;
+			return false;
+		}
+
+		public bool MovePrevious()
+		{
+			int start = ActivePartIndex < 0 ? Parts.Count : ActivePartIndex;
+			for (int i = start - 1; i >= 0; i--)
+			{
+				if (!Parts[i].Argument) continue;
+				ActivePartIndex = i;
+				return true;
+			}
+			return false;
+		}
+
+		public string BuildCommand()
+		{
+			List<string> tokens = new List<string>();
+			for (int i = 0; i < Parts.Count; i++)
+			{
+				QuickCommandTemplatePart part = Parts[i];
+				if (!part.Argument)
+				{
+					if (!string.IsNullOrWhiteSpace(part.Literal)) tokens.Add(part.Literal);
+					continue;
+				}
+				if (part.HasValue) tokens.Add(part.Value.Trim());
+			}
+			return NormalizeCommandForSend(string.Join(" ", tokens.ToArray()));
+		}
+
+		public string BuildAccessiblePreview()
+		{
+			List<string> tokens = new List<string>();
+			for (int i = 0; i < Parts.Count; i++)
+			{
+				QuickCommandTemplatePart part = Parts[i];
+				if (!part.Argument) tokens.Add(part.Literal);
+				else if (part.HasValue) tokens.Add(part.Value.Trim());
+				else tokens.Add(part.Required ? "{" + GetQuickCommandArgumentDisplayName(part.Name, false) + "}" : "[" + GetQuickCommandArgumentDisplayName(part.Name, true) + "]");
+			}
+			return string.Join(" ", tokens.Where(delegate(string token) { return !string.IsNullOrWhiteSpace(token); }).ToArray());
+		}
+	}
+
 	private sealed class QuickCommandSuggestion
 	{
 		public string Value;
@@ -434,7 +598,7 @@ internal static partial class Launcher
 		AddBuiltIn(commands, "player", "게임 모드 변경", "Change game mode", "플레이어 게임 모드를 변경합니다.", "Change a player's game mode.", "gamemode {gamemode} {player}", false, null);
 		AddBuiltIn(commands, "player", "플레이어 텔레포트", "Teleport player", "플레이어를 다른 플레이어에게 이동합니다.", "Teleport to another player.", "tp {player} {target}", false, null);
 		AddBuiltIn(commands, "player", "좌표 텔레포트", "Teleport to coordinates", "플레이어를 좌표로 이동합니다.", "Teleport to coordinates.", "tp {player} {x} {y} {z}", false, null);
-		AddBuiltIn(commands, "player", "아이템 지급", "Give item", "플레이어에게 아이템을 지급합니다. 수량은 선택 사항입니다.", "Give an item to a player. The count is optional.", "give {player} {item} [count]", false, null);
+		AddBuiltIn(commands, "player", "아이템 지급", "Give item", "플레이어에게 아이템을 지급합니다. 수량은 선택 사항이며 기본값은 1입니다.", "Give an item to a player. The optional count defaults to 1.", "give {player} {item} [count=1]", false, null);
 		AddBuiltIn(commands, "player", "레벨 경험치", "Add levels", "경험치 레벨을 추가합니다.", "Add experience levels.", "experience add {player} {amount} levels", false, null);
 		AddBuiltIn(commands, "player", "포인트 경험치", "Add points", "경험치 포인트를 추가합니다.", "Add experience points.", "experience add {player} {amount} points", false, null);
 		AddBuiltIn(commands, "player", "레벨 확인", "Query levels", "플레이어의 현재 경험치 레벨을 확인합니다.", "Query a player's current experience level.", "experience query {player} levels", false, null);
@@ -626,6 +790,51 @@ internal static partial class Launcher
 		return true;
 	}
 
+	private static QuickCommandBuilderState CreateQuickCommandBuilderState(QuickCommandDefinition definition)
+	{
+		if (definition == null) throw new ArgumentNullException("definition");
+		QuickCommandBuilderState state = new QuickCommandBuilderState();
+		state.Key = GetQuickCommandBuilderKey(definition);
+		state.Template = NormalizeCommandForSend(definition.Template);
+		state.DisplayName = definition.Name ?? string.Empty;
+		state.Risk = GetDefinitionRisk(definition);
+		string[] tokens = SplitTemplate(state.Template);
+		for (int i = 0; i < tokens.Length; i++)
+		{
+			string token = tokens[i];
+			QuickCommandTemplatePart part = new QuickCommandTemplatePart();
+			part.Argument = IsTemplateArgument(token);
+			if (part.Argument)
+			{
+				part.Name = GetTemplateArgumentName(token);
+				part.DefaultValue = GetTemplateArgumentDefault(token);
+				part.Required = IsRequiredTemplateArgument(token);
+				part.Greedy = IsGreedyTemplateArgument(token);
+			}
+			else part.Literal = token;
+			state.Parts.Add(part);
+		}
+		int firstRequired = state.FindFirstIncompleteRequired();
+		if (firstRequired >= 0) state.ActivePartIndex = firstRequired;
+		else
+		{
+			for (int i = 0; i < state.Parts.Count; i++)
+			{
+				if (!state.Parts[i].Argument) continue;
+				state.ActivePartIndex = i;
+				break;
+			}
+		}
+		return state;
+	}
+
+	private static string GetQuickCommandBuilderKey(QuickCommandDefinition definition)
+	{
+		if (definition == null) return string.Empty;
+		return (definition.Source ?? string.Empty).Trim().ToLowerInvariant() + ":" +
+			(string.IsNullOrWhiteSpace(definition.Id) ? NormalizeCommandForSend(definition.Template).ToLowerInvariant() : definition.Id.Trim().ToLowerInvariant());
+	}
+
 	private static List<string> ExtractTemplateParameters(string template)
 	{
 		HashSet<string> allowed = new HashSet<string>(new string[] { "player", "online-player", "target", "gamemode", "difficulty", "item", "effect", "boolean", "number", "amount", "count", "seconds", "amplifier", "hide-particles", "x", "y", "z", "message", "reason", "command", "address", "address-or-player", "duration", "minutes", "percentage", "weather", "gamerule", "datapack", "function", "dimension", "distance" }, StringComparer.OrdinalIgnoreCase);
@@ -647,6 +856,9 @@ internal static partial class Launcher
 			else if (optionalStarted) throw new InvalidDataException(LauncherUiText("선택 인수 뒤에는 필수 인수를 둘 수 없습니다.", "A required argument cannot follow an optional argument."));
 			string parameter = GetTemplateArgumentName(part);
 			if (!allowed.Contains(parameter)) throw new InvalidDataException(LauncherUiText("지원하지 않는 매개변수입니다: ", "Unsupported parameter: ") + part);
+			if (required && GetTemplateArgumentDefault(part).Length > 0) throw new InvalidDataException(LauncherUiText("기본값은 선택 인수에만 지정할 수 있습니다: ", "A default value can only be assigned to an optional argument: ") + part);
+			string defaultValue = GetTemplateArgumentDefault(part);
+			if (optional && defaultValue.Length > 0 && !ValidateQuickCommandArgumentValue(parameter, defaultValue)) throw new InvalidDataException(LauncherUiText("선택 인수 기본값이 올바르지 않습니다: ", "The optional argument default is invalid: ") + part);
 			if (!result.Contains(parameter, StringComparer.OrdinalIgnoreCase)) result.Add(parameter);
 		}
 		return result;
@@ -765,7 +977,7 @@ internal static partial class Launcher
 				}
 			}
 		}
-		return SortAndLimitSuggestions(result, parsed.Prefix, 10);
+		return SortAndLimitSuggestions(result, parsed.Prefix, 40);
 	}
 
 	private static List<QuickCommandSuggestion> MergeQuickCommandSuggestions(IEnumerable<QuickCommandSuggestion> bridge, IEnumerable<QuickCommandSuggestion> local, int maximum)
@@ -848,11 +1060,27 @@ internal static partial class Launcher
 		{
 			List<string> values = argument == "address-or-player" ? new List<string>() : new List<string>(new string[] { "@a", "@e", "@p", "@r", "@s" });
 			if (onlinePlayers != null) values.AddRange(onlinePlayers.Where(delegate(string value) { return !string.IsNullOrWhiteSpace(value); }));
-			if (argument == "address-or-player" && values.Count == 0) values.Add("{address}");
 			return values;
 		}
-		if (argument == "item") return new string[] { "minecraft:stone", "minecraft:diamond", "minecraft:oak_log" };
-		if (argument == "effect") return new string[] { "minecraft:speed", "minecraft:strength", "minecraft:regeneration" };
+		if (argument == "item") return new string[]
+		{
+			"minecraft:stone", "minecraft:cobblestone", "minecraft:dirt", "minecraft:grass_block", "minecraft:oak_log", "minecraft:oak_planks",
+			"minecraft:glass", "minecraft:torch", "minecraft:chest", "minecraft:furnace", "minecraft:crafting_table", "minecraft:iron_ingot",
+			"minecraft:gold_ingot", "minecraft:diamond", "minecraft:emerald", "minecraft:netherite_ingot", "minecraft:coal", "minecraft:redstone",
+			"minecraft:lapis_lazuli", "minecraft:quartz", "minecraft:iron_sword", "minecraft:diamond_sword", "minecraft:netherite_sword",
+			"minecraft:bow", "minecraft:crossbow", "minecraft:shield", "minecraft:arrow", "minecraft:elytra", "minecraft:trident",
+			"minecraft:golden_apple", "minecraft:enchanted_golden_apple", "minecraft:ender_pearl", "minecraft:ender_eye", "minecraft:experience_bottle",
+			"minecraft:water_bucket", "minecraft:lava_bucket", "minecraft:totem_of_undying", "minecraft:firework_rocket", "minecraft:command_block"
+		};
+		if (argument == "effect") return new string[]
+		{
+			"minecraft:speed", "minecraft:slowness", "minecraft:haste", "minecraft:mining_fatigue", "minecraft:strength", "minecraft:instant_health",
+			"minecraft:instant_damage", "minecraft:jump_boost", "minecraft:nausea", "minecraft:regeneration", "minecraft:resistance",
+			"minecraft:fire_resistance", "minecraft:water_breathing", "minecraft:invisibility", "minecraft:blindness", "minecraft:night_vision",
+			"minecraft:hunger", "minecraft:weakness", "minecraft:poison", "minecraft:wither", "minecraft:health_boost", "minecraft:absorption",
+			"minecraft:saturation", "minecraft:glowing", "minecraft:levitation", "minecraft:luck", "minecraft:slow_falling",
+			"minecraft:conduit_power", "minecraft:dolphins_grace", "minecraft:bad_omen", "minecraft:hero_of_the_village", "minecraft:darkness"
+		};
 		if (argument == "x" || argument == "y" || argument == "z") return new string[] { "~", "~1", "0" };
 		if (argument == "count" || argument == "amount" || argument == "number" || argument == "seconds" || argument == "amplifier" || argument == "distance") return new string[] { "1", "10", "64" };
 		if (argument == "minutes") return new string[] { "0", "5", "15", "30" };
@@ -860,17 +1088,131 @@ internal static partial class Launcher
 		if (argument == "duration") return new string[] { "1000", "10s", "1d" };
 		if (argument == "weather") return new string[] { "clear", "rain", "thunder" };
 		if (argument == "gamerule") return new string[] { "keepInventory", "mobGriefing", "doMobSpawning", "playersSleepingPercentage" };
-		if (argument == "datapack") return new string[] { "vanilla", "{datapack}" };
+		if (argument == "datapack") return new string[] { "vanilla" };
 		if (argument == "dimension") return new string[] { "minecraft:overworld", "minecraft:the_nether", "minecraft:the_end" };
-		if (argument == "address") return new string[] { "{address}" };
-		return new string[] { "{" + argument + "}" };
+		return new string[0];
+	}
+
+	private static List<QuickCommandSuggestion> GetQuickCommandBuilderSuggestions(QuickCommandBuilderState state, IEnumerable<string> onlinePlayers)
+	{
+		List<QuickCommandSuggestion> result = new List<QuickCommandSuggestion>();
+		QuickCommandTemplatePart part = state == null ? null : state.ActivePart;
+		if (part == null) return result;
+		string prefix = (part.Value ?? string.Empty).Trim();
+		List<string> values = new List<string>();
+		if (!string.IsNullOrWhiteSpace(part.DefaultValue)) values.Add(part.DefaultValue);
+		values.AddRange(GetArgumentCandidates(part.Name, onlinePlayers));
+		bool containsSearch = part.Name == "item" || part.Name == "effect" || part.Name == "datapack" || part.Name == "function";
+		foreach (string value in values.Distinct(StringComparer.OrdinalIgnoreCase))
+		{
+			if (string.IsNullOrWhiteSpace(value)) continue;
+			bool matches = prefix.Length == 0 || (containsSearch
+				? value.IndexOf(prefix, StringComparison.OrdinalIgnoreCase) >= 0
+				: value.StartsWith(prefix, StringComparison.OrdinalIgnoreCase));
+			if (!matches) continue;
+			QuickCommandSuggestion suggestion = NewRiskSuggestion(value, state.Template,
+				LauncherUiText("현재 인수: ", "Current argument: ") + GetQuickCommandArgumentDisplayName(part.Name, !part.Required),
+				"builtin", state.Risk);
+			result.Add(suggestion);
+		}
+		return SortAndLimitSuggestions(result, prefix, 40);
+	}
+
+	private static string GetQuickCommandArgumentDisplayName(string argument, bool optional)
+	{
+		string value;
+		switch ((argument ?? string.Empty).ToLowerInvariant())
+		{
+			case "player": value = LauncherUiText("대상 플레이어", "Target player"); break;
+			case "online-player": value = LauncherUiText("온라인 플레이어", "Online player"); break;
+			case "target": value = LauncherUiText("대상", "Target"); break;
+			case "gamemode": value = LauncherUiText("게임 모드", "Game mode"); break;
+			case "difficulty": value = LauncherUiText("난이도", "Difficulty"); break;
+			case "boolean": value = LauncherUiText("참/거짓", "True/false"); break;
+			case "item": value = LauncherUiText("아이템", "Item"); break;
+			case "effect": value = LauncherUiText("효과", "Effect"); break;
+			case "message": value = LauncherUiText("메시지", "Message"); break;
+			case "reason": value = LauncherUiText("사유", "Reason"); break;
+			case "count": value = LauncherUiText("수량", "Count"); break;
+			case "amount": value = LauncherUiText("값", "Amount"); break;
+			case "number": value = LauncherUiText("숫자", "Number"); break;
+			case "seconds": value = LauncherUiText("초", "Seconds"); break;
+			case "minutes": value = LauncherUiText("분", "Minutes"); break;
+			case "duration": value = LauncherUiText("시간", "Duration"); break;
+			case "percentage": value = LauncherUiText("비율", "Percentage"); break;
+			case "x": value = "X"; break;
+			case "y": value = "Y"; break;
+			case "z": value = "Z"; break;
+			case "address": value = LauncherUiText("주소", "Address"); break;
+			case "address-or-player": value = LauncherUiText("주소 또는 플레이어", "Address or player"); break;
+			case "datapack": value = LauncherUiText("데이터팩", "Datapack"); break;
+			case "function": value = LauncherUiText("함수", "Function"); break;
+			case "dimension": value = LauncherUiText("차원", "Dimension"); break;
+			case "distance": value = LauncherUiText("거리", "Distance"); break;
+			case "weather": value = LauncherUiText("날씨", "Weather"); break;
+			case "gamerule": value = LauncherUiText("게임 규칙", "Game rule"); break;
+			case "command": value = LauncherUiText("명령", "Command"); break;
+			default: value = string.IsNullOrWhiteSpace(argument) ? LauncherUiText("인수", "Argument") : argument; break;
+		}
+		return optional ? value + LauncherUiText(" (선택)", " (optional)") : value;
+	}
+
+	private static bool ValidateQuickCommandArgumentValue(string argument, string input)
+	{
+		string value = (input ?? string.Empty).Trim();
+		if (value.Length == 0 || value.IndexOf('\r') >= 0 || value.IndexOf('\n') >= 0) return false;
+		string name = (argument ?? string.Empty).ToLowerInvariant();
+		if (name == "message" || name == "reason" || name == "command") return true;
+		if (name == "gamemode") return new string[] { "survival", "creative", "adventure", "spectator" }.Contains(value, StringComparer.OrdinalIgnoreCase);
+		if (name == "difficulty") return new string[] { "peaceful", "easy", "normal", "hard" }.Contains(value, StringComparer.OrdinalIgnoreCase);
+		if (name == "boolean" || name == "hide-particles") return value == "true" || value == "false";
+		if (name == "weather") return new string[] { "clear", "rain", "thunder" }.Contains(value, StringComparer.OrdinalIgnoreCase);
+		if (name == "x" || name == "y" || name == "z")
+		{
+			string coordinate = value;
+			if (coordinate.StartsWith("~", StringComparison.Ordinal) || coordinate.StartsWith("^", StringComparison.Ordinal)) coordinate = coordinate.Substring(1);
+			double parsedCoordinate;
+			return coordinate.Length == 0 || double.TryParse(coordinate, NumberStyles.Float, CultureInfo.InvariantCulture, out parsedCoordinate);
+		}
+		if (name == "count" || name == "amount" || name == "number" || name == "seconds" || name == "amplifier" || name == "minutes")
+		{
+			long parsedInteger;
+			return long.TryParse(value, NumberStyles.Integer, CultureInfo.InvariantCulture, out parsedInteger);
+		}
+		if (name == "percentage" || name == "distance")
+		{
+			double parsedNumber;
+			return double.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out parsedNumber);
+		}
+		if (name == "duration")
+		{
+			string number = value;
+			char last = value[value.Length - 1];
+			if (char.IsLetter(last)) number = value.Substring(0, value.Length - 1);
+			long parsedDuration;
+			return number.Length > 0 && long.TryParse(number, NumberStyles.Integer, CultureInfo.InvariantCulture, out parsedDuration);
+		}
+		return value.IndexOfAny(new char[] { '{', '}', '[', ']' }) < 0 && (name == "item" || name == "effect" || name == "player" || name == "online-player" || name == "target" || name == "address" || name == "address-or-player" || name == "datapack" || name == "function" || name == "dimension" || name == "gamerule" ? value.IndexOf(' ') < 0 : true);
 	}
 
 	private static string[] SplitTemplate(string template) { return (template ?? string.Empty).Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries); }
 	private static bool IsRequiredTemplateArgument(string value) { return !string.IsNullOrEmpty(value) && value.Length > 2 && value.StartsWith("{", StringComparison.Ordinal) && value.EndsWith("}", StringComparison.Ordinal); }
 	private static bool IsOptionalTemplateArgument(string value) { return !string.IsNullOrEmpty(value) && value.Length > 2 && value.StartsWith("[", StringComparison.Ordinal) && value.EndsWith("]", StringComparison.Ordinal); }
 	private static bool IsTemplateArgument(string value) { return IsRequiredTemplateArgument(value) || IsOptionalTemplateArgument(value); }
-	private static string GetTemplateArgumentName(string value) { return IsTemplateArgument(value) ? value.Substring(1, value.Length - 2).Trim().ToLowerInvariant() : string.Empty; }
+	private static string GetTemplateArgumentName(string value)
+	{
+		if (!IsTemplateArgument(value)) return string.Empty;
+		string body = value.Substring(1, value.Length - 2).Trim();
+		int separator = body.IndexOf('=');
+		return (separator < 0 ? body : body.Substring(0, separator)).Trim().ToLowerInvariant();
+	}
+	private static string GetTemplateArgumentDefault(string value)
+	{
+		if (!IsTemplateArgument(value)) return string.Empty;
+		string body = value.Substring(1, value.Length - 2).Trim();
+		int separator = body.IndexOf('=');
+		return separator < 0 ? string.Empty : body.Substring(separator + 1).Trim();
+	}
 	private static bool IsGreedyTemplateArgument(string value) { string name = GetTemplateArgumentName(value); return name == "message" || name == "reason" || name == "command"; }
 
 	private static bool QuickCommandSupportsServer(QuickCommandDefinition item, string serverType, string minecraftVersion)

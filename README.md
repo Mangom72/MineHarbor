@@ -26,7 +26,7 @@
 | **Windows 설치 프로그램** | 시작 메뉴, 선택적 바탕화면 바로가기, 제거 기능 사용 | **[최신 Release 열기](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 | **Portable ZIP** | README와 라이선스를 포함한 묶음 보관 | **[최신 Release 열기](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 
-현재 소스 버전은 `v1.9.0`, 내부 빌드는 `26.2.45.73`입니다. MineHarbor 이름으로 배포된 Portable EXE는 같은 링크에서 계속 최신 파일을 받을 수 있습니다. 기존 설치의 `%LOCALAPPDATA%\MinecraftServerLauncher` 데이터는 자동으로 찾아 그대로 사용하며, 새 사용자 데이터 경로는 `%LOCALAPPDATA%\MineHarbor`입니다.
+현재 소스 버전은 `v1.10.0`, 내부 빌드는 `26.2.45.74`입니다. MineHarbor 이름으로 배포된 Portable EXE는 같은 링크에서 계속 최신 파일을 받을 수 있습니다. 기존 설치의 `%LOCALAPPDATA%\MinecraftServerLauncher` 데이터는 자동으로 찾아 그대로 사용하며, 새 사용자 데이터 경로는 `%LOCALAPPDATA%\MineHarbor`입니다.
 
 > [!WARNING]
 > 현재 릴리스 실행 파일은 요청된 자체서명 인증서로 무결성을 표시하지만 공개 인증 기관이 신뢰한 배포자 서명은 아닙니다. 따라서 Windows SmartScreen 경고가 나타날 수 있습니다. Release의 `SHA256SUMS.txt`와 GitHub 출처를 함께 확인해 주세요.
@@ -143,14 +143,18 @@ Paper/Purpur의 복사 옵션은 서버가 공식적으로 지원하지 않는 �
 빠른 명령은 `카테고리 → 기능 → 명령` 구조로 정리됩니다. 예를 들어 `월드 → 난이도 → 어려움`, `월드 → 날씨 → 맑음`처럼 찾을 수 있으며 이름, 설명, 경로와 실제 명령어를 한 번에 검색합니다.
 
 - `Ctrl+F`, 방향키, `Enter`, `Esc`로 명령 선택창 조작
-- 커서 위치와 따옴표를 이해하는 자동완성, `Tab`으로 후보 적용
-- `Tab`·`Shift+Tab`으로 자동완성 후보 순환, `Enter`로 선택한 명령 전송
+- 명령 선택 후 필수·선택 인수를 둥근 인라인 토큰으로 표시하는 단계형 명령 빌더
+- 미완성 인수는 회색, 현재 인수는 강조색, 잘못된 값은 위험색으로 표시하고 값 확정 시 다음 인수로 자동 이동
+- `↑`·`↓`로 후보 이동, `Tab` 또는 미완성 상태의 `Enter`로 현재 값을 확정, `Shift+Tab`으로 이전 인수 이동
+- 모든 필수 인수가 유효할 때만 전송 버튼을 활성화하며, 선택 인수가 남았으면 `Enter`로 생략하고 전송 가능
 - `Ctrl+Space`로 후보 다시 열기, `Ctrl+↑`·`Ctrl+↓`로 명령 기록 탐색
+- 후보가 많으면 창의 위·아래 가용 공간 중 넓은 쪽에서 최대 430px까지 확장하고, 적으면 필요한 높이만 사용
 - 빠른 명령 카드는 오른쪽 고정 열을 유지하고, 콘솔은 별도 왼쪽 열에서 겹침 없이 표시
 - 멀티 서버 콘솔에서 기본 명령과 온라인 플레이어 이름 자동완성
 - 메인 콘솔의 기본 명령·연결된 플레이어 인수 자동완성과 예약 명령 편집의 기본 명령 자동완성
 - 제재 목록·IP 차단, 시드·시간 조회, 게임 규칙, 데이터팩 활성화/비활성화와 안전한 조회형 고급 명령을 포함한 70개 이상의 기본 명령
-- `{player}` 같은 필수 인수와 `[reason]` 같은 선택 인수, 주소·시간·비율·날씨·데이터팩 등을 받는 사용자 명령 템플릿
+- `{player}` 같은 필수 인수, `[reason]` 같은 선택 인수와 `[count=1]` 같은 기본값이 있는 선택 인수
+- 온라인 플레이어·선택자·게임 모드·난이도·참/거짓·좌표·시간 추천과 검색 가능한 아이템·효과 후보
 - 서버 Minecraft 버전에 맞지 않는 명령은 목록과 로컬 자동완성에서 제외
 - 일반·확인·위험 3단계 정책을 적용하고 `reload`, 광범위 변경과 조건부 위험 값은 강한 경고로 구분
 - Paper/Purpur 브리지 연결 시 `플러그인 → 플러그인 이름 → 명령어`로 실시간 분류
@@ -254,7 +258,7 @@ dotnet build .\MineHarbor.csproj -c Release
 | **Windows installer** | Start Menu, optional desktop shortcut, and uninstall support | **[Open the latest release](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 | **Portable ZIP** | Keep the launcher, README, and license together | **[Open the latest release](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 
-Current source version: `v1.9.0` · internal build: `26.2.45.73`. MineHarbor releases keep the same permanent Portable URL. Existing data under `%LOCALAPPDATA%\MinecraftServerLauncher` is detected and preserved; new user-data installations use `%LOCALAPPDATA%\MineHarbor`.
+Current source version: `v1.10.0` · internal build: `26.2.45.74`. MineHarbor releases keep the same permanent Portable URL. Existing data under `%LOCALAPPDATA%\MinecraftServerLauncher` is detected and preserved; new user-data installations use `%LOCALAPPDATA%\MineHarbor`.
 
 > [!WARNING]
 > Release executables carry the requested self-signed integrity signature, not a publisher identity trusted by a public certificate authority. Windows SmartScreen can therefore still warn. Verify the GitHub source and the release `SHA256SUMS.txt`.
@@ -294,7 +298,11 @@ The main window appears first while update, profile, and current version data lo
 
 Commands are organized as `Category → Function → Command`, such as `World → Difficulty → Hard` or `World → Weather → Clear`. Search matches display names, descriptions, hierarchy paths, and command text. The picker supports Ctrl+F, arrow keys, Enter, and Esc.
 
-Cursor-aware suggestions, history, and editable templates work locally for every server type. The built-in catalog now contains more than 70 commands, including moderation lookup and IP bans, seed/time queries, common game rules, datapack enable/disable, and safe read-only advanced operations. Required `{player}` and optional `[reason]` arguments are supported, with local candidates for addresses, durations, percentages, weather, datapacks, and other common values.
+Cursor-aware suggestions, history, and editable templates work locally for every server type. The built-in catalog now contains more than 70 commands, including moderation lookup and IP bans, seed/time queries, common game rules, datapack enable/disable, and safe read-only advanced operations.
+
+Choosing a command opens a step-by-step inline builder. Required `{player}`, optional `[reason]`, and defaulted optional `[count=1]` arguments appear as rounded tokens: incomplete values are gray, the active value is accented, and invalid input is highlighted without clearing other arguments. Confirming a value advances directly to the next argument. Up/Down selects candidates, Tab confirms, Shift+Tab returns to the previous argument, and Enter advances while required values are incomplete or sends once they are valid. Optional trailing values can be skipped. The send button remains disabled until every required argument is valid.
+
+Player and target arguments combine connected names with Minecraft selectors; game mode, difficulty, booleans, numbers, time, and coordinates have useful recommendations; item and effect catalogs support substring search. Suggestion lists grow only as needed, up to 430 pixels in the larger available space above or below the input, without covering the input or Send button.
 
 Commands outside the selected server's Minecraft version range are omitted from the picker and local suggestions. Normal, confirmation, and dangerous risk levels are applied consistently; `reload`, broad mutations, and conditionally destructive values receive a stronger warning. When the optional Paper/Purpur bridge is connected, registered plugin commands and live argument candidates also appear under `Plugins → Plugin name → Command`.
 

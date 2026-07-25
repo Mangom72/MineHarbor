@@ -718,8 +718,10 @@ internal static class LauncherTests
 				Panel quickPanel = (Panel)GetPrivateField(formType, form, "quickCommandPanel");
 				Label quickStatus = (Label)GetPrivateField(formType, form, "quickCommandStatus");
 				Label quickSyntax = (Label)GetPrivateField(formType, form, "quickCommandSyntax");
+				Control quickInput = (Control)GetPrivateField(formType, form, "quickCommandBox");
 				Button quickMenu = (Button)GetPrivateField(formType, form, "quickCommandMenuButton");
 				Button quickManage = (Button)GetPrivateField(formType, form, "quickCommandManageButton");
+				ListBox quickSuggestions = (ListBox)GetPrivateField(formType, form, "quickCommandSuggestionList");
 				Panel consolePanel = (Panel)GetPrivateField(formType, form, "consolePanel");
 				TableLayoutPanel workspace = quickPanel.Parent as TableLayoutPanel;
 				object consoleSuggestions = GetPrivateField(formType, form, "consoleCommandSuggestions");
@@ -736,6 +738,30 @@ internal static class LauncherTests
 				AssertButtonTextFits(quickMenu, "영어 빠른 명령 선택");
 				AssertButtonTextFits(quickManage, "영어 명령·브리지 관리");
 				if (consoleSuggestions == null) throw new InvalidOperationException("메인 콘솔 명령 자동완성이 연결되지 않았습니다.");
+				Equal("QuickCommandTokenInput", quickInput.GetType().Name, "인라인 인수 토큰 입력");
+				if (string.IsNullOrWhiteSpace(quickInput.AccessibleName) || string.IsNullOrWhiteSpace(quickInput.AccessibleDescription)) throw new InvalidOperationException("단계형 빠른 명령 입력의 접근성 정보가 없습니다.");
+				Equal(form, quickSuggestions.Parent, "빠른 명령 자동완성의 카드 경계 밖 표시");
+
+				Size compactSize = form.Size;
+				form.Size = new Size(form.Width, Math.Max(900, form.Height));
+				form.PerformLayout();
+				workspace.PerformLayout();
+				Control quickInputSurface = quickInput.Parent;
+				quickInputSurface.CreateControl();
+				for (int suggestionIndex = 0; suggestionIndex < 20; suggestionIndex++) quickSuggestions.Items.Add("suggestion-" + suggestionIndex);
+				formType.GetMethod("LayoutQuickCommandPanel", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(form, null);
+				Point quickInputTop = form.PointToClient(quickInputSurface.PointToScreen(Point.Empty));
+				if (quickSuggestions.Height <= 280) throw new InvalidOperationException("빠른 명령 자동완성 최대 높이가 충분히 확대되지 않았습니다: 높이=" + quickSuggestions.Height + ", 입력 Y=" + quickInputTop.Y + ", 창 높이=" + form.ClientSize.Height + ", 후보=" + quickSuggestions.Items.Count + ", 항목 높이=" + quickSuggestions.ItemHeight + ", 최대 크기=" + quickSuggestions.MaximumSize);
+				if (quickSuggestions.Height > 430) throw new InvalidOperationException("빠른 명령 자동완성이 최대 높이를 넘습니다.");
+				Rectangle quickInputBounds = new Rectangle(quickInputTop, quickInputSurface.Size);
+				if (quickSuggestions.Bounds.IntersectsWith(quickInputBounds)) throw new InvalidOperationException("빠른 명령 자동완성이 입력란을 가립니다.");
+				quickSuggestions.Items.Clear();
+				quickSuggestions.Items.Add("single");
+				formType.GetMethod("LayoutQuickCommandPanel", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(form, null);
+				if (quickSuggestions.Height > quickSuggestions.ItemHeight + 4) throw new InvalidOperationException("후보가 적을 때 자동완성 높이가 불필요하게 큽니다.");
+				form.Size = compactSize;
+				form.PerformLayout();
+				workspace.PerformLayout();
 
 				int quickColumnBefore = workspace.GetColumn(quickPanel);
 				consolePanel.Visible = true;
@@ -1539,7 +1565,7 @@ internal static class LauncherTests
 		IEnumerable builtIns = (IEnumerable)Invoke("GetBuiltInQuickCommands", new object[0]);
 		List<string> templates = new List<string>();
 		foreach (object item in builtIns) templates.Add(Convert.ToString(GetField(item, "Template")));
-		if (templates.Count < 65 || !templates.Contains("list") || !templates.Contains("save-all flush") || !templates.Contains("whitelist off") || !templates.Contains("banlist players") || !templates.Contains("ban-ip {address-or-player} [reason]") || !templates.Contains("gamerule playersSleepingPercentage {percentage}") || !templates.Contains("datapack enable {datapack}") || !templates.Contains("reload")) throw new InvalidOperationException("기본 빠른 명령 목록이 완전하지 않습니다.");
+		if (templates.Count < 65 || !templates.Contains("list") || !templates.Contains("save-all flush") || !templates.Contains("whitelist off") || !templates.Contains("give {player} {item} [count=1]") || !templates.Contains("banlist players") || !templates.Contains("ban-ip {address-or-player} [reason]") || !templates.Contains("gamerule playersSleepingPercentage {percentage}") || !templates.Contains("datapack enable {datapack}") || !templates.Contains("reload")) throw new InvalidOperationException("기본 빠른 명령 목록이 완전하지 않습니다.");
 		Type pickerLocalizationType = launcher.GetNestedType("Localization", BindingFlags.NonPublic);
 		FieldInfo pickerLanguageField = pickerLocalizationType.GetField("CurrentLanguage", BindingFlags.Static | BindingFlags.Public);
 		object originalPickerLanguage = pickerLanguageField.GetValue(null);
@@ -1637,6 +1663,62 @@ internal static class LauncherTests
 		Equal(true, Invoke("TemplateMatchesCommand", new object[] { "give {player} {item} [count]", "give Alex minecraft:stone" }), "선택 인수 생략 허용");
 		Equal(true, Invoke("TemplateMatchesCommand", new object[] { "ban {player} [reason]", "ban Alex repeated griefing" }), "선택 사유 여러 토큰 허용");
 		Equal(false, Invoke("TemplateMatchesCommand", new object[] { "give {player} {item} [count]", "give Alex" }), "필수 인수 누락 차단");
+		Equal("count", Invoke("GetTemplateArgumentName", new object[] { "[count=1]" }), "기본값 선택 인수 이름 분리");
+		Equal("1", Invoke("GetTemplateArgumentDefault", new object[] { "[count=1]" }), "선택 인수 기본값 분리");
+		Equal(true, EnumerableContains((IEnumerable)Invoke("GetArgumentCandidates", new object[] { "player", new string[] { "Alex" } }), "@a"), "플레이어 선택자 후보");
+		Equal(true, EnumerableContains((IEnumerable)Invoke("GetArgumentCandidates", new object[] { "player", new string[] { "Alex" } }), "Alex"), "온라인 플레이어 후보");
+		Equal(true, EnumerableContains((IEnumerable)Invoke("GetArgumentCandidates", new object[] { "difficulty", new string[0] }), "hard"), "난이도 후보");
+		Equal(true, EnumerableContains((IEnumerable)Invoke("GetArgumentCandidates", new object[] { "boolean", new string[0] }), "false"), "불리언 후보");
+		Equal(true, EnumerableContains((IEnumerable)Invoke("GetArgumentCandidates", new object[] { "x", new string[0] }), "~"), "좌표 추천값");
+
+		object gamemodeDefinition = FindQuickCommandDefinition(builtIns, "gamemode {gamemode} {player}");
+		object gamemodeBuilder = Invoke("CreateQuickCommandBuilderState", new object[] { gamemodeDefinition });
+		IList gamemodeParts = (IList)GetField(gamemodeBuilder, "Parts");
+		Equal("gamemode", GetField(gamemodeParts[1], "Name"), "첫 단계 게임 모드 인수");
+		Equal(1, GetField(gamemodeBuilder, "ActivePartIndex"), "첫 필수 인수 자동 활성화");
+		InvokeInstance(gamemodeBuilder, "SetValue", new object[] { 1, "creative" });
+		Equal(true, InvokeInstance(gamemodeBuilder, "MoveNext", new object[] { true }), "값 확정 후 다음 인수 이동");
+		Equal("player", GetField(gamemodeParts[2], "Name"), "다음 플레이어 인수");
+		Equal(2, GetField(gamemodeBuilder, "ActivePartIndex"), "플레이어 단계 자동 활성화");
+		InvokeInstance(gamemodeBuilder, "SetValue", new object[] { 2, "PlayerName" });
+		Equal(false, InvokeInstance(gamemodeBuilder, "MoveNext", new object[] { true }), "마지막 인수 뒤 작성 완료");
+		Equal(true, GetProperty(gamemodeBuilder, "IsComplete"), "필수 인수 완료 판정");
+		Equal("gamemode creative PlayerName", InvokeInstance(gamemodeBuilder, "BuildCommand", new object[0]), "완성 명령 생성");
+		Equal(true, InvokeInstance(gamemodeBuilder, "MovePrevious", new object[0]), "Shift+Tab 이전 인수 이동");
+		Equal("creative", GetField(gamemodeParts[1], "Value"), "이전 단계 이동 후 기존 값 유지");
+		Equal("PlayerName", GetField(gamemodeParts[2], "Value"), "다른 인수 값 유지");
+
+		object giveDefinition = FindQuickCommandDefinition(builtIns, "give {player} {item} [count=1]");
+		object giveBuilder = Invoke("CreateQuickCommandBuilderState", new object[] { giveDefinition });
+		IList giveParts = (IList)GetField(giveBuilder, "Parts");
+		InvokeInstance(giveBuilder, "SetValue", new object[] { 1, "Alex" });
+		InvokeInstance(giveBuilder, "MoveNext", new object[] { true });
+		InvokeInstance(giveBuilder, "SetValue", new object[] { 2, "diam" });
+		IEnumerable itemSuggestions = (IEnumerable)Invoke("GetQuickCommandBuilderSuggestions", new object[] { giveBuilder, new string[] { "Alex" } });
+		Equal(true, SuggestionContains(itemSuggestions, "minecraft:diamond"), "아이템 부분 검색 자동완성");
+		InvokeInstance(giveBuilder, "SetValue", new object[] { 2, "minecraft:diamond" });
+		InvokeInstance(giveBuilder, "MoveNext", new object[] { true });
+		Equal(false, GetField(giveParts[3], "Required"), "수량 선택 인수 구분");
+		Equal("1", GetField(giveParts[3], "DefaultValue"), "수량 기본값 유지");
+		Equal(true, GetProperty(giveBuilder, "IsComplete"), "선택 인수 미입력 전송 허용");
+		Equal("give Alex minecraft:diamond", InvokeInstance(giveBuilder, "BuildCommand", new object[0]), "빈 선택 인수 공백 없이 생략");
+
+		object kickDefinition = FindQuickCommandDefinition(builtIns, "kick {player} [reason]");
+		object kickBuilder = Invoke("CreateQuickCommandBuilderState", new object[] { kickDefinition });
+		InvokeInstance(kickBuilder, "SetValue", new object[] { 1, "Alex" });
+		InvokeInstance(kickBuilder, "MoveNext", new object[] { true });
+		Equal(true, GetProperty(kickBuilder, "IsComplete"), "선택 사유 없이 명령 완료");
+		Equal("kick Alex", InvokeInstance(kickBuilder, "BuildCommand", new object[0]), "선택 사유 생략 명령");
+		InvokeInstance(kickBuilder, "SetValue", new object[] { 2, "repeated griefing" });
+		Equal("kick Alex repeated griefing", InvokeInstance(kickBuilder, "BuildCommand", new object[0]), "여러 단어 선택 사유 유지");
+
+		object invalidBuilder = Invoke("CreateQuickCommandBuilderState", new object[] { gamemodeDefinition });
+		InvokeInstance(invalidBuilder, "SetValue", new object[] { 1, "invalid-mode" });
+		Equal(false, GetProperty(invalidBuilder, "IsComplete"), "잘못된 열거형 인수 차단");
+		Equal(true, InvokeInstance(invalidBuilder, "MoveNext", new object[] { true }), "잘못된 인수에서 작성 단계 유지");
+		Equal(1, GetField(invalidBuilder, "ActivePartIndex"), "잘못된 인수 자동 건너뛰기 차단");
+		InvokeInstance(invalidBuilder, "SetValue", new object[] { 1, "survival" });
+		Equal("survival", GetField(((IList)GetField(invalidBuilder, "Parts"))[1], "Value"), "잘못된 인수만 다시 설정");
 		SetPublic(command, "Description", "수정된 설명");
 		Invoke("SaveUserQuickCommands", new object[] { dataRoot, userCommands });
 		userCommands.Clear();
@@ -1780,6 +1862,12 @@ internal static class LauncherTests
 		return false;
 	}
 
+	private static bool EnumerableContains(IEnumerable values, string expected)
+	{
+		foreach (object value in values) if (string.Equals(Convert.ToString(value), expected, StringComparison.OrdinalIgnoreCase)) return true;
+		return false;
+	}
+
 	private static object FindQuickCommandPickerItem(IEnumerable items, string template)
 	{
 		foreach (object item in items)
@@ -1788,6 +1876,15 @@ internal static class LauncherTests
 			if (string.Equals(Convert.ToString(GetField(definition, "Template")), template, StringComparison.OrdinalIgnoreCase)) return item;
 		}
 		throw new InvalidOperationException("빠른 명령 선택 항목을 찾지 못했습니다: " + template);
+	}
+
+	private static object FindQuickCommandDefinition(IEnumerable definitions, string template)
+	{
+		foreach (object definition in definitions)
+		{
+			if (string.Equals(Convert.ToString(GetField(definition, "Template")), template, StringComparison.OrdinalIgnoreCase)) return definition;
+		}
+		throw new InvalidOperationException("빠른 명령 정의를 찾지 못했습니다: " + template);
 	}
 
 	private static bool QuickCommandPickerContains(IEnumerable items, string template)
@@ -1836,6 +1933,20 @@ internal static class LauncherTests
 		MethodInfo method = launcher.GetMethod(name, BindingFlags.Static | BindingFlags.NonPublic);
 		if (method == null) throw new MissingMethodException(name);
 		return method.Invoke(null, arguments);
+	}
+
+	private static object InvokeInstance(object instance, string name, object[] arguments)
+	{
+		MethodInfo method = instance.GetType().GetMethod(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+		if (method == null) throw new MissingMethodException(instance.GetType().FullName, name);
+		return method.Invoke(instance, arguments);
+	}
+
+	private static object GetProperty(object instance, string name)
+	{
+		PropertyInfo property = instance.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic);
+		if (property == null) throw new MissingMemberException(instance.GetType().FullName, name);
+		return property.GetValue(instance, null);
 	}
 
 	private static object GetField(object instance, string name) { return instance.GetType().GetField(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).GetValue(instance); }

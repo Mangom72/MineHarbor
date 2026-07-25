@@ -1192,7 +1192,9 @@ internal static partial class Launcher
 				ManagedText("위아래 방향키로 이동하고 Tab 또는 Enter로 선택합니다.", "Use Up and Down, then Tab or Enter to select."));
 			commandBox.KeyDown += delegate(object sender, KeyEventArgs eventArgs)
 			{
-				if (eventArgs.KeyCode == Keys.Enter)
+				if (eventArgs.Handled || eventArgs.SuppressKeyPress) return;
+
+				if (eventArgs.KeyCode == Keys.Enter)
 				{
 					SendManagedCommand();
 					eventArgs.SuppressKeyPress = true;

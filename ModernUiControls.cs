@@ -531,7 +531,7 @@ internal static partial class Launcher
 		private void RefreshSuggestions()
 		{
 			IEnumerable<string> provided = provider == null ? null : provider(input.Text ?? string.Empty);
-			string[] values = provided == null ? new string[0] : provided.Where(delegate(string value) { return !string.IsNullOrWhiteSpace(value); }).Distinct(StringComparer.OrdinalIgnoreCase).Take(8).ToArray();
+			string[] values = provided == null ? new string[0] : provided.Where(delegate(string value) { return !string.IsNullOrWhiteSpace(value); }).Distinct(StringComparer.OrdinalIgnoreCase).Take(20).ToArray();
 			list.BeginUpdate();
 			try
 			{
@@ -551,16 +551,19 @@ internal static partial class Launcher
 			{
 				int delta = eventArgs.KeyCode == Keys.Down ? 1 : -1;
 				list.SelectedIndex = Math.Max(0, Math.Min(list.Items.Count - 1, list.SelectedIndex + delta));
+				eventArgs.Handled = true;
 				eventArgs.SuppressKeyPress = true;
 			}
 			else if (eventArgs.KeyCode == Keys.Tab || eventArgs.KeyCode == Keys.Enter)
 			{
 				ApplySelected();
+				eventArgs.Handled = true;
 				eventArgs.SuppressKeyPress = true;
 			}
 			else if (eventArgs.KeyCode == Keys.Escape)
 			{
 				list.Visible = false;
+				eventArgs.Handled = true;
 				eventArgs.SuppressKeyPress = true;
 			}
 		}
@@ -587,9 +590,17 @@ internal static partial class Launcher
 		{
 			if (input.IsDisposed || !input.IsHandleCreated) return;
 			Point inputTop = owner.PointToClient(input.PointToScreen(Point.Empty));
-			int height = Math.Min(8, Math.Max(1, list.Items.Count)) * list.ItemHeight + 2;
-			int y = showAbove ? inputTop.Y - height - 4 : inputTop.Y + input.Height + 4;
-			list.Bounds = new Rectangle(inputTop.X, Math.Max(4, y), Math.Max(180, input.Width), height);
+			int desiredHeight = Math.Min(20, Math.Max(1, list.Items.Count)) * list.ItemHeight + 2;
+			int aboveSpace = Math.Max(0, inputTop.Y - 8);
+			int belowSpace = Math.Max(0, owner.ClientSize.Height - inputTop.Y - input.Height - 8);
+			bool placeAbove = showAbove ? aboveSpace >= list.ItemHeight + 2 || aboveSpace >= belowSpace : !(belowSpace >= list.ItemHeight + 2 || belowSpace >= aboveSpace);
+			int available = placeAbove ? aboveSpace : belowSpace;
+			if (available <= 0) { list.Visible = false; return; }
+			int height = Math.Min(desiredHeight, Math.Min(380, available));
+			int y = placeAbove ? inputTop.Y - height - 4 : inputTop.Y + input.Height + 4;
+			int width = Math.Min(Math.Max(180, input.Width), Math.Max(1, owner.ClientSize.Width - 8));
+			int x = Math.Max(4, Math.Min(inputTop.X, owner.ClientSize.Width - width - 4));
+			list.Bounds = new Rectangle(x, Math.Max(4, y), width, height);
 		}
 
 		public void Dispose()
@@ -607,7 +618,7 @@ internal static partial class Launcher
 	{
 		string prefix = (input ?? string.Empty).Trim();
 		if (players == null) return new string[0];
-		return players.Where(delegate(string player) { return !string.IsNullOrWhiteSpace(player) && (prefix.Length == 0 || player.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)); }).OrderBy(delegate(string player) { return player; }, StringComparer.OrdinalIgnoreCase).ThenBy(delegate(string player) { return player; }, StringComparer.Ordinal).Take(8).ToArray();
+		return players.Where(delegate(string player) { return !string.IsNullOrWhiteSpace(player) && (prefix.Length == 0 || player.StartsWith(prefix, StringComparison.OrdinalIgnoreCase)); }).OrderBy(delegate(string player) { return player; }, StringComparer.OrdinalIgnoreCase).ThenBy(delegate(string player) { return player; }, StringComparer.Ordinal).Take(20).ToArray();
 	}
 
 	private static string[] GetManagedCommandAutoCompleteCandidates(string input, IEnumerable<string> players)
@@ -624,10 +635,10 @@ internal static partial class Launcher
 			{
 				foreach (string player in players.Where(delegate(string player) { return !string.IsNullOrWhiteSpace(player) && player.StartsWith(playerPrefix, StringComparison.OrdinalIgnoreCase); }).OrderBy(delegate(string player) { return player; }, StringComparer.OrdinalIgnoreCase).ThenBy(delegate(string player) { return player; }, StringComparer.Ordinal)) result.Add(playerRoots[i] + player);
 			}
-			return result.Take(8).ToArray();
+			return result.Take(20).ToArray();
 		}
 		for (int i = 0; i < roots.Length; i++) if (value.Length > 0 && roots[i].StartsWith(value, StringComparison.OrdinalIgnoreCase) && !string.Equals(roots[i].TrimEnd(), value.TrimEnd(), StringComparison.OrdinalIgnoreCase)) result.Add(roots[i]);
-		return result.Take(8).ToArray();
+		return result.Take(20).ToArray();
 	}
 
 	private static void ApplyModernControlPalette(Control control, ThemePalette palette)

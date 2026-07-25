@@ -47,6 +47,7 @@
     <Compile Include="ServerTrash.cs" />
     <Compile Include="NetworkAndPlayerTools.cs" />
     <Compile Include="QuickCommandsAndBridge.cs" />
+    <Compile Include="QuickCommandBuilderUi.cs" />
     <Compile Include="QuickCommandUi.cs" />
     <Compile Include="QuickCommandPickerUi.cs" />
     <Compile Include="UpnpCore.cs" />

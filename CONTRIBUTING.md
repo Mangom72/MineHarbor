@@ -32,7 +32,7 @@ dotnet build .\MineHarbor.csproj -c Release
 
 테스트는 임시 폴더를 사용해야 하며 실제 서버 데이터, 공유기 UPnP 매핑 또는 외부 포트 설정을 변경해서는 안 됩니다.
 
-`test.ps1`은 버전·문서 일치, Portable EXE 버전, 콘텐츠 manifest와 데이터팩 실패 경로, 자동화 실행 임대, 백업 보존, Paper/Purpur 복사 설정 YAML의 보존·백업·실패 경로, 빠른 명령 선택 인수·버전 호환성·3단계 위험도, 비동기 UI 종료 및 Paper/Purpur 브리지 프로토콜을 함께 검사합니다. PR과 `main` push는 `.github/workflows/ci.yml`, 태그와 수동 릴리스는 별도 `build-release.yml`에서 검증합니다.
+`test.ps1`은 버전·문서 일치, Portable EXE 버전, 콘텐츠 manifest와 데이터팩 실패 경로, 자동화 실행 임대, 백업 보존, Paper/Purpur 복사 설정 YAML의 보존·백업·실패 경로, 빠른 명령의 필수·선택·기본값 인수와 단계 이동·값 유지·동적 후보 높이, 버전 호환성·3단계 위험도, 비동기 UI 종료 및 Paper/Purpur 브리지 프로토콜을 함께 검사합니다. PR과 `main` push는 `.github/workflows/ci.yml`, 태그와 수동 릴리스는 별도 `build-release.yml`에서 검증합니다.
 
 릴리스 워크플로는 실행마다 임시 RSA-3072/SHA-256 자체서명 인증서와 난수 PFX 비밀번호를 만들고 Portable EXE와 설치 프로그램을 서명한 뒤 인증서와 PFX를 항상 삭제합니다. 자체서명은 파일 무결성 표시는 제공하지만 공개 신뢰나 SmartScreen 평판은 제공하지 않습니다. 외부 코드 서명 비밀을 이 경로에 추가하지 마세요.
 

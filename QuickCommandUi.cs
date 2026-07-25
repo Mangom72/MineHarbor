@@ -16,15 +16,17 @@ internal static partial class Launcher
 		private Label quickCommandTitle;
 		private Label quickCommandStatus;
 		private Label quickCommandSyntax;
-		private TextBox quickCommandBox;
+		private QuickCommandTokenInput quickCommandBox;
 		private Button quickCommandMenuButton;
 		private Button quickCommandManageButton;
 		private Button quickCommandSendButton;
 		private ListBox quickCommandSuggestionList;
 		private System.Windows.Forms.Timer quickCommandDebounceTimer;
 		private readonly List<string> quickCommandHistory = new List<string>();
+		private readonly Dictionary<string, QuickCommandBuilderState> quickCommandDrafts = new Dictionary<string, QuickCommandBuilderState>(StringComparer.OrdinalIgnoreCase);
 		private List<QuickCommandSuggestion> quickCommandSuggestions = new List<QuickCommandSuggestion>();
 		private List<QuickCommandDefinition> quickCommandUsers = new List<QuickCommandDefinition>();
+		private QuickCommandDefinition activeQuickCommandDefinition;
 		private int quickCommandHistoryIndex = -1;
 		private int quickCommandSuggestionGeneration;
 		private string quickCommandServerType = "paper";
@@ -86,14 +88,15 @@ internal static partial class Launcher
 			inputPanel.Size = new Size(378, 40);
 			quickCommandPanel.Controls.Add(inputPanel);
 
-			quickCommandBox = new TextBox();
+			quickCommandBox = new QuickCommandTokenInput();
 			quickCommandBox.Dock = DockStyle.Fill;
 			quickCommandBox.Enabled = false;
 			quickCommandBox.Font = new Font("Pretendard", 11F);
 			quickCommandBox.TextChanged += delegate
 			{
 				quickCommandHistoryIndex = -1;
-				quickCommandSendButton.Enabled = CanSendQuickCommand(serverRunning, quickCommandBox.Text);
+				UpdateQuickCommandSendState();
+				UpdateQuickCommandBuilderStatus();
 				quickCommandDebounceTimer.Stop();
 				quickCommandDebounceTimer.Start();
 			};
@@ -113,11 +116,11 @@ internal static partial class Launcher
 			quickCommandSuggestionList.ItemHeight = 46;
 			quickCommandSuggestionList.IntegralHeight = false;
 			quickCommandSuggestionList.BorderStyle = BorderStyle.FixedSingle;
-			quickCommandSuggestionList.Anchor = AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+			quickCommandSuggestionList.Anchor = AnchorStyles.None;
 			quickCommandSuggestionList.DrawItem += DrawQuickCommandSuggestion;
 			quickCommandSuggestionList.SelectedIndexChanged += delegate { UpdateQuickCommandSyntax(); };
 			quickCommandSuggestionList.DoubleClick += delegate { ApplySelectedQuickCommandSuggestion(); };
-			quickCommandPanel.Controls.Add(quickCommandSuggestionList);
+			Controls.Add(quickCommandSuggestionList);
 			quickCommandSuggestionList.BringToFront();
 
 			quickCommandDebounceTimer = new System.Windows.Forms.Timer();
@@ -129,6 +132,7 @@ internal static partial class Launcher
 			};
 
 			quickCommandPanel.Resize += delegate { LayoutQuickCommandPanel(); };
+			Resize += delegate { LayoutQuickCommandPanel(); };
 			FormClosed += delegate
 			{
 				if (quickCommandDebounceTimer != null) quickCommandDebounceTimer.Dispose();
@@ -180,8 +184,26 @@ internal static partial class Launcher
 			Control input = quickCommandBox.Parent;
 			input.Location = new Point(16, Math.Max(144, quickCommandPanel.ClientSize.Height - 52));
 			input.Size = new Size(width, 40);
-			int popupHeight = Math.Min(140, Math.Max(92, input.Top - 70));
-			quickCommandSuggestionList.Bounds = new Rectangle(16, input.Top - popupHeight - 4, width, popupHeight);
+			if (quickCommandSuggestionList == null) return;
+			Point inputTop = Point.Empty;
+			Control current = input;
+			while (current != null && current != this)
+			{
+				inputTop.Offset(current.Left, current.Top);
+				current = current.Parent;
+			}
+			if (current != this) return;
+			int desiredHeight = Math.Max(1, quickCommandSuggestionList.Items.Count) * quickCommandSuggestionList.ItemHeight + 2;
+			int availableAbove = Math.Max(0, inputTop.Y - 12);
+			int availableBelow = Math.Max(0, ClientSize.Height - inputTop.Y - input.Height - 12);
+			bool placeAbove = availableAbove >= Math.Min(desiredHeight, 430) || availableAbove >= availableBelow;
+			int availableHeight = placeAbove ? availableAbove : availableBelow;
+			int maximumHeight = Math.Min(430, Math.Max(1, availableHeight));
+			int popupHeight = Math.Min(desiredHeight, maximumHeight);
+			int popupWidth = Math.Min(Math.Max(260, input.Width), Math.Max(1, ClientSize.Width - 16));
+			int popupX = Math.Max(8, Math.Min(inputTop.X, ClientSize.Width - popupWidth - 8));
+			int popupY = placeAbove ? Math.Max(8, inputTop.Y - popupHeight - 4) : inputTop.Y + input.Height + 4;
+			quickCommandSuggestionList.Bounds = new Rectangle(popupX, popupY, popupWidth, popupHeight);
 		}
 
 		private static int MeasureQuickCommandButtonWidth(Button button)
@@ -199,8 +221,8 @@ internal static partial class Launcher
 			quickCommandManageButton.Text = QuickText("명령·브리지 관리", "Commands and bridge");
 			quickCommandSendButton.Text = QuickText("전송", "Send");
 			quickCommandSyntax.Text = QuickText("명령을 입력하거나 목록에서 선택하세요.", "Type a command or choose one from the list.");
-			ConfigureAccessibleField(quickCommandBox, QuickText("빠른 서버 명령", "Quick server command"), QuickText("현재 커서 위치에 맞는 후보를 표시합니다. 컨트롤과 스페이스 키로 강제로 열 수 있습니다.", "Shows suggestions for the current cursor. Press Ctrl+Space to force suggestions."));
-			ConfigureAccessibleField(quickCommandSuggestionList, QuickText("명령 자동완성 후보", "Command suggestions"), QuickText("탭 또는 위아래 방향키로 후보를 이동하고 엔터로 선택한 명령을 전송합니다.", "Use Tab or Up and Down to move through suggestions, then press Enter to send the selected command."));
+			ConfigureAccessibleField(quickCommandBox, QuickText("단계형 빠른 서버 명령", "Step-by-step quick server command"), QuickText("회색 인수는 아직 설정되지 않았습니다. 탭 또는 엔터로 값을 확정하고 다음 인수로 이동하며, Shift+Tab으로 이전 인수로 돌아갑니다.", "Gray arguments are not set yet. Use Tab or Enter to confirm a value and advance, or Shift+Tab to return to the previous argument."));
+			ConfigureAccessibleField(quickCommandSuggestionList, QuickText("현재 인수 자동완성 후보", "Current argument suggestions"), QuickText("위아래 방향키로 후보를 이동하고 Tab으로 확정합니다. 모든 필수 인수가 완료된 뒤 Enter를 누르면 전송합니다.", "Use Up and Down to move through candidates and Tab to confirm. Press Enter to send only after all required arguments are complete."));
 			ReloadQuickCommandContext();
 			UpdateQuickCommandBridgeStatus();
 			LayoutQuickCommandPanel();
@@ -210,8 +232,7 @@ internal static partial class Launcher
 		{
 			if (quickCommandBox == null) return;
 			ThemePalette palette = ThemePalette.Create(darkTheme);
-			quickCommandBox.BackColor = palette.CardSecondary;
-			quickCommandBox.ForeColor = palette.Text;
+			quickCommandBox.ApplyPalette(palette);
 			quickCommandSuggestionList.BackColor = palette.Card;
 			quickCommandSuggestionList.ForeColor = palette.Text;
 		}
@@ -243,7 +264,7 @@ internal static partial class Launcher
 				return;
 			}
 			quickCommandBox.Enabled = serverRunning;
-			quickCommandSendButton.Enabled = CanSendQuickCommand(serverRunning, quickCommandBox.Text);
+			UpdateQuickCommandSendState();
 			quickCommandManageButton.Enabled = !workflowRunning && !serverRunning;
 			if (!serverRunning) HideQuickCommandSuggestions();
 			UpdateQuickCommandBridgeStatus();
@@ -295,6 +316,46 @@ internal static partial class Launcher
 			}
 		}
 
+		private void UpdateQuickCommandSendState()
+		{
+			if (quickCommandSendButton == null || quickCommandBox == null) return;
+			quickCommandSendButton.Enabled = CanSendQuickCommand(serverRunning, quickCommandBox.Text) && quickCommandBox.BuilderComplete;
+		}
+
+		private void UpdateQuickCommandBuilderStatus()
+		{
+			if (quickCommandSyntax == null || quickCommandBox == null || !quickCommandBox.BuilderMode) return;
+			QuickCommandBuilderState state = quickCommandBox.BuilderState;
+			if (state == null) return;
+			int missing = state.FindFirstIncompleteRequired();
+			int invalid = state.FindFirstInvalidArgument();
+			if (missing >= 0)
+			{
+				QuickCommandTemplatePart part = state.Parts[missing];
+				quickCommandSyntax.Text = QuickText("다음 필수 인수 · ", "Next required · ") + GetQuickCommandArgumentDisplayName(part.Name, false) + "  ·  " + state.BuildAccessiblePreview();
+			}
+			else if (invalid >= 0)
+			{
+				QuickCommandTemplatePart part = state.Parts[invalid];
+				quickCommandSyntax.Text = QuickText("값을 다시 확인하세요 · ", "Check this value · ") + GetQuickCommandArgumentDisplayName(part.Name, !part.Required) + "  ·  " + state.BuildAccessiblePreview();
+			}
+			else if (state.ActivePart != null && !state.ActivePart.Required)
+			{
+				quickCommandSyntax.Text = QuickText("필수 인수 완료 · 선택 인수를 입력하거나 Enter로 전송 · ", "Required arguments complete · fill the optional argument or press Enter to send · ") + state.BuildAccessiblePreview();
+			}
+			else quickCommandSyntax.Text = QuickText("전송 준비 · ", "Ready to send · ") + state.BuildCommand();
+		}
+
+		private void CancelQuickCommandBuilder()
+		{
+			if (activeQuickCommandDefinition != null) quickCommandDrafts.Remove(GetQuickCommandBuilderKey(activeQuickCommandDefinition));
+			activeQuickCommandDefinition = null;
+			quickCommandBox.Clear();
+			quickCommandBox.FocusEditor();
+			quickCommandSyntax.Text = QuickText("명령 작성을 취소했습니다.", "Command draft cancelled.");
+			UpdateQuickCommandSendState();
+		}
+
 		private void QuickCommandBoxKeyDown(object sender, KeyEventArgs eventArgs)
 		{
 			if (eventArgs.Control && eventArgs.KeyCode == Keys.Space)
@@ -303,9 +364,16 @@ internal static partial class Launcher
 				eventArgs.SuppressKeyPress = true;
 				return;
 			}
-			if (eventArgs.Control && (eventArgs.KeyCode == Keys.Up || eventArgs.KeyCode == Keys.Down))
+			if (!quickCommandBox.BuilderMode && eventArgs.Control && (eventArgs.KeyCode == Keys.Up || eventArgs.KeyCode == Keys.Down))
 			{
 				NavigateQuickCommandHistory(eventArgs.KeyCode == Keys.Up ? -1 : 1);
+				eventArgs.SuppressKeyPress = true;
+				return;
+			}
+			if (quickCommandBox.BuilderMode && eventArgs.KeyCode == Keys.Tab && eventArgs.Shift)
+			{
+				quickCommandBox.MovePreviousArgument();
+				RefreshQuickCommandSuggestions(true);
 				eventArgs.SuppressKeyPress = true;
 				return;
 			}
@@ -317,22 +385,46 @@ internal static partial class Launcher
 				eventArgs.SuppressKeyPress = true;
 				return;
 			}
-			if (quickCommandSuggestionList.Visible && eventArgs.KeyCode == Keys.Tab)
+			if (eventArgs.KeyCode == Keys.Tab)
 			{
-				quickCommandSuggestionList.SelectedIndex = GetNextQuickCommandSuggestionIndex(quickCommandSuggestionList.SelectedIndex, quickCommandSuggestionList.Items.Count, eventArgs.Shift);
+				if (quickCommandSuggestionList.Visible && quickCommandSuggestionList.SelectedIndex >= 0) ApplySelectedQuickCommandSuggestion();
+				else if (quickCommandBox.BuilderMode)
+				{
+					QuickCommandBuilderState state = quickCommandBox.BuilderState;
+					if (state != null && state.ActivePart != null && state.ActivePart.Required && !state.ActivePart.HasValue) RefreshQuickCommandSuggestions(true);
+					else
+					{
+						quickCommandBox.MoveNextArgument(true);
+						RefreshQuickCommandSuggestions(true);
+					}
+				}
 				eventArgs.SuppressKeyPress = true;
 				return;
 			}
 			if (eventArgs.KeyCode == Keys.Enter)
 			{
-				if (quickCommandSuggestionList.Visible && quickCommandSuggestionList.SelectedIndex >= 0) ApplySelectedQuickCommandSuggestion();
-				SendQuickCommand();
+				if (quickCommandBox.BuilderMode)
+				{
+					if (!quickCommandBox.BuilderComplete)
+					{
+						if (quickCommandSuggestionList.Visible && quickCommandSuggestionList.SelectedIndex >= 0) ApplySelectedQuickCommandSuggestion();
+						else
+						{
+							quickCommandBox.ActivateFirstIncompleteArgument();
+							RefreshQuickCommandSuggestions(true);
+						}
+					}
+					else SendQuickCommand();
+				}
+				else if (quickCommandSuggestionList.Visible && quickCommandSuggestionList.SelectedIndex >= 0) ApplySelectedQuickCommandSuggestion();
+				else SendQuickCommand();
 				eventArgs.SuppressKeyPress = true;
 				return;
 			}
 			if (eventArgs.KeyCode == Keys.Escape)
 			{
-				HideQuickCommandSuggestions();
+				if (quickCommandSuggestionList.Visible) HideQuickCommandSuggestions();
+				else if (quickCommandBox.BuilderMode) CancelQuickCommandBuilder();
 				eventArgs.SuppressKeyPress = true;
 			}
 		}
@@ -340,6 +432,14 @@ internal static partial class Launcher
 		private void RefreshQuickCommandSuggestions(bool force)
 		{
 			if (!serverRunning || quickCommandBox == null) return;
+			if (quickCommandBox.BuilderMode)
+			{
+				int builderGeneration = ++quickCommandSuggestionGeneration;
+				CommandBridgeSession builderBridge = GetActiveCommandBridge();
+				string[] builderPlayers = builderBridge == null ? new string[0] : builderBridge.Players;
+				ShowQuickCommandSuggestions(GetQuickCommandBuilderSuggestions(quickCommandBox.BuilderState, builderPlayers), builderGeneration);
+				return;
+			}
 			string input = quickCommandBox.Text;
 			if (!force && string.IsNullOrWhiteSpace(input))
 			{
@@ -364,7 +464,7 @@ internal static partial class Launcher
 				TryPostToUi(this, (MethodInvoker)delegate
 				{
 					if (!IsSuggestionGenerationCurrent(generation, quickCommandSuggestionGeneration)) return;
-					ShowQuickCommandSuggestions(MergeQuickCommandSuggestions(live, local, 10), generation);
+					ShowQuickCommandSuggestions(MergeQuickCommandSuggestions(live, local, 40), generation);
 				});
 			});
 		}
@@ -376,19 +476,21 @@ internal static partial class Launcher
 				HideQuickCommandSuggestions();
 				return;
 			}
-			quickCommandSuggestions = values.Take(10).ToList();
+			quickCommandSuggestions = values.Take(40).ToList();
 			quickCommandSuggestionList.BeginUpdate();
 			quickCommandSuggestionList.Items.Clear();
 			for (int i = 0; i < quickCommandSuggestions.Count; i++) quickCommandSuggestionList.Items.Add(quickCommandSuggestions[i]);
 			quickCommandSuggestionList.SelectedIndex = 0;
 			quickCommandSuggestionList.EndUpdate();
 			quickCommandSuggestionList.Visible = true;
+			LayoutQuickCommandPanel();
 			quickCommandSuggestionList.BringToFront();
 		}
 
 		private void HideQuickCommandSuggestions()
 		{
 			if (quickCommandSuggestionList != null) quickCommandSuggestionList.Visible = false;
+			UpdateQuickCommandBuilderStatus();
 		}
 
 		private void UpdateQuickCommandSyntax()
@@ -425,9 +527,23 @@ internal static partial class Launcher
 		{
 			QuickCommandSuggestion selected = quickCommandSuggestionList.SelectedItem as QuickCommandSuggestion;
 			if (selected == null) return;
+			if (quickCommandBox.BuilderMode)
+			{
+				quickCommandBox.ApplyActiveValue(selected.Value);
+				bool moved = quickCommandBox.MoveNextArgument(true);
+				if (moved) RefreshQuickCommandSuggestions(true);
+				else
+				{
+					HideQuickCommandSuggestions();
+					quickCommandBox.FocusEditor();
+				}
+				UpdateQuickCommandSendState();
+				UpdateQuickCommandBuilderStatus();
+				return;
+			}
 			quickCommandBox.Text = ApplyQuickCommandSuggestion(quickCommandBox.Text, selected);
 			quickCommandBox.SelectionStart = Math.Min(quickCommandBox.TextLength, selected.ReplaceStart + selected.Value.Length);
-			quickCommandBox.Focus();
+			quickCommandBox.FocusEditor();
 			HideQuickCommandSuggestions();
 		}
 
@@ -443,6 +559,13 @@ internal static partial class Launcher
 
 		private void SendQuickCommand()
 		{
+			if (quickCommandBox.BuilderMode && !quickCommandBox.BuilderComplete)
+			{
+				quickCommandBox.ActivateFirstIncompleteArgument();
+				UpdateQuickCommandBuilderStatus();
+				RefreshQuickCommandSuggestions(true);
+				return;
+			}
 			string command = NormalizeCommandForSend(quickCommandBox.Text);
 			if (!CanSendQuickCommand(serverRunning, command))
 			{
@@ -469,6 +592,8 @@ internal static partial class Launcher
 			if (quickCommandHistory.Count == 0 || !string.Equals(quickCommandHistory[quickCommandHistory.Count - 1], command, StringComparison.Ordinal)) quickCommandHistory.Add(command);
 			if (quickCommandHistory.Count > 100) quickCommandHistory.RemoveAt(0);
 			quickCommandHistoryIndex = -1;
+			if (activeQuickCommandDefinition != null) quickCommandDrafts.Remove(GetQuickCommandBuilderKey(activeQuickCommandDefinition));
+			activeQuickCommandDefinition = null;
 			quickCommandBox.Clear();
 			HideQuickCommandSuggestions();
 		}
@@ -484,18 +609,27 @@ internal static partial class Launcher
 			{
 				if (picker.ShowDialog(this) == DialogResult.OK && picker.SelectedCommand != null)
 				{
-					InsertQuickCommandTemplate(picker.SelectedCommand.Template);
+					InsertQuickCommandTemplate(picker.SelectedCommand);
 				}
 			}
 		}
 
-		private void InsertQuickCommandTemplate(string template)
+		private void InsertQuickCommandTemplate(QuickCommandDefinition definition)
 		{
-			quickCommandBox.Text = template ?? string.Empty;
-			int parameter = quickCommandBox.Text.IndexOf('{');
-			quickCommandBox.SelectionStart = parameter < 0 ? quickCommandBox.TextLength : parameter;
-			quickCommandBox.Focus();
+			if (definition == null) return;
+			activeQuickCommandDefinition = definition;
+			string key = GetQuickCommandBuilderKey(definition);
+			QuickCommandBuilderState state;
+			if (!quickCommandDrafts.TryGetValue(key, out state) || !string.Equals(state.Template, NormalizeCommandForSend(definition.Template), StringComparison.Ordinal))
+			{
+				state = CreateQuickCommandBuilderState(definition);
+				quickCommandDrafts[key] = state;
+			}
+			quickCommandBox.SetBuilderState(state);
+			quickCommandBox.FocusEditor();
 			RefreshQuickCommandSuggestions(true);
+			UpdateQuickCommandSendState();
+			UpdateQuickCommandBuilderStatus();
 		}
 
 		private void OpenQuickCommandManager()
@@ -761,7 +895,7 @@ internal static partial class Launcher
 			layout.Controls.Add(new Label { Text = LauncherUiText("지원 서버 종류 (선택하지 않으면 모두)", "Supported server types (none means all)"), AutoSize = true });
 			serverTypes = new CheckedListBox(); serverTypes.Height = 74; serverTypes.Items.AddRange(new object[] { "paper", "purpur", "vanilla", "fabric", "forge", "neoforge", "custom" }); ConfigureAccessibleField(serverTypes, LauncherUiText("지원 서버 종류", "Supported server types"), LauncherUiText("선택하지 않으면 모든 서버 종류에서 명령을 표시합니다.", "Leave all items clear to show the command for every server type.")); layout.Controls.Add(serverTypes);
 			if (value != null && value.ServerTypes != null) for (int i = 0; i < serverTypes.Items.Count; i++) if (value.ServerTypes.Contains(Convert.ToString(serverTypes.Items[i]), StringComparer.OrdinalIgnoreCase)) serverTypes.SetItemChecked(i, true);
-			Label hint = new Label(); hint.Text = LauncherUiText("필수 {player} · 선택 [reason] · 추가: {duration}, {percentage}, {datapack}", "Required {player} · optional [reason] · more: {duration}, {percentage}, {datapack}"); hint.AutoSize = true; layout.Controls.Add(hint);
+			Label hint = new Label(); hint.Text = LauncherUiText("필수 {player} · 선택 [reason] · 기본값 [count=1]", "Required {player} · optional [reason] · default [count=1]"); hint.AutoSize = true; layout.Controls.Add(hint);
 			FlowLayoutPanel buttons = new FlowLayoutPanel(); buttons.FlowDirection = FlowDirection.RightToLeft; buttons.Dock = DockStyle.Fill; layout.Controls.Add(buttons);
 			Button save = new RoundedButton(); save.Text = LauncherUiText("저장", "Save"); save.Size = new Size(110, 40); save.Click += Save; buttons.Controls.Add(save);
 			Button cancel = new RoundedButton(); cancel.Text = LauncherUiText("취소", "Cancel"); cancel.Size = new Size(100, 40); cancel.DialogResult = DialogResult.Cancel; buttons.Controls.Add(cancel);
