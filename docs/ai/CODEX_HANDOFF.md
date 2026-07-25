@@ -3,6 +3,7 @@
 ## Pending v1.10.0 command-builder state
 
 - Feature branch: `codex/command-builder-ux-v1.10.0`
+- Pull request: [#28](https://github.com/Mangom72/MineHarbor/pull/28); initial Windows CI run `30169627138` passed, including the SDK-style `net48` build.
 - Version source of truth on the feature branch: `version.json` = 1.10.0 / build 26.2.45.74
 - The quick-command field is now a step-by-step inline token builder backed by `QuickCommandBuilderState` and `QuickCommandTokenInput`.
 - Templates distinguish required `{player}`, optional `[reason]`, and defaulted optional `[count=1]` arguments. Completion and send availability use required metadata plus value validation, not placeholder appearance.
