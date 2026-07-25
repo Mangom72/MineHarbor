@@ -4,6 +4,24 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.10.0] - 2026-07-26
+
+### Korean
+
+- **단계형 빠른 명령 빌더**: 명령을 선택하면 필수 `{player}`, 선택 `[reason]`, 기본값 선택 `[count=1]` 인수를 인라인 토큰으로 표시합니다. 미완성·현재·완료·잘못된 값을 각각 구분하고 한 값을 확정하면 포커스를 유지한 채 다음 인수로 이동합니다.
+- **완성도 기반 전송**: 필수 인수와 선택 인수를 별도로 판정해 필수 값이 없거나 입력값이 잘못되면 전송을 차단합니다. 선택 인수는 생략할 수 있고 실제 명령에는 플레이스홀더나 불필요한 공백이 남지 않으며, 위험 확인에는 최종 완성 명령만 표시합니다.
+- **키보드와 상태 유지**: 위·아래 방향키, `Tab`/`Enter`, `Shift+Tab`, `Esc`로 후보 선택부터 이전 단계 수정·취소·최종 전송까지 이어집니다. 이전 인수로 돌아가거나 목록을 닫고 다시 열어도 다른 값과 명령별 작성 초안을 유지합니다.
+- **후보와 목록 UX 확대**: 온라인 플레이어·선택자, 게임 모드, 난이도, 불리언, 숫자·시간·좌표 추천과 부분 검색 가능한 아이템·효과 후보를 제공합니다. 후보 목록은 항목 수와 창의 가용 공간에 따라 최대 430px까지 위나 아래로 확장하며 입력란과 전송 버튼을 가리지 않습니다.
+- **자동완성 회귀 방지**: 공통 콘솔·플레이어 자동완성도 최대 20개 후보와 확장 높이를 사용하고, 후보 확정 `Enter`가 동시에 명령 전송으로 이어지지 않게 처리했습니다. 단계 전환, 기본값, 값 유지, 잘못된 인수, 동적 목록 높이와 접근성을 자동 검증합니다.
+
+### English
+
+- **Step-by-step quick-command builder**: Selecting a command renders required `{player}`, optional `[reason]`, and defaulted optional `[count=1]` arguments as inline tokens. Incomplete, active, completed, and invalid states are distinct, and confirming one value advances without losing focus.
+- **Completion-aware sending**: Required and optional arguments are validated independently. Missing or invalid required values block sending, optional values can be omitted, generated commands contain no leftover placeholders or extra spaces, and risk confirmation shows only the final complete command.
+- **Keyboard flow and retained drafts**: Up/Down, `Tab`/`Enter`, `Shift+Tab`, and `Esc` cover candidate selection, backward editing, cancellation, and final sending. Other values and per-command drafts survive moving backward or closing and reopening suggestions.
+- **Richer candidates and taller lists**: Connected players and selectors, game modes, difficulties, booleans, numeric/time/coordinate recommendations, and substring-searchable item/effect catalogs are available. Lists size to their content and use up to 430 pixels in the larger free space above or below the input without covering input controls.
+- **Completion regression protection**: Shared console and player completion now shows up to 20 candidates with expanded height, and accepting a candidate with `Enter` cannot also send the command. Automated coverage verifies transitions, defaults, retained values, invalid arguments, dynamic height, and accessibility.
+
 ## [1.9.0] - 2026-07-25
 
 ### Korean

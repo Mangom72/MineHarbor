@@ -1,5 +1,16 @@
 ﻿# AI Agent Synchronization State
 
+## Codex Step-by-step Command Builder - 2026-07-26
+
+- **Current Version**: 1.10.0 (build 26.2.45.74)
+- **Branch**: `codex/command-builder-ux-v1.10.0`
+- **Status**: 빠른 명령의 필수·선택·기본값 인수를 인라인 토큰으로 작성하는 단계형 빌더를 구현하고 [PR #28](https://github.com/Mangom72/MineHarbor/pull/28) 게시 및 CI 검증 완료
+- 명령 템플릿을 고정 문구와 `{필수}`, `[선택]`, `[선택=기본값]` 인수로 분리합니다. 미완성·현재·완료·잘못된 값을 시각적으로 구분하고 필수 인수의 실제 유효성으로 전송 가능 여부를 판단합니다.
+- 후보를 확정하면 다음 인수로 자동 이동하고 `Shift+Tab`으로 돌아가도 다른 값을 유지합니다. 명령별 초안과 목록을 닫았다 다시 여는 상태를 보존하며, `Esc`로 명시적으로 취소하거나 실제 전송에 성공했을 때만 초기화합니다.
+- 온라인 플레이어·선택자, 게임 모드, 난이도, 불리언, 숫자·시간·좌표, 부분 검색 가능한 아이템·효과 후보를 제공합니다. 빠른 명령 목록은 최대 40개·430px, 공통 자동완성은 최대 20개·380px까지 가용 공간에 맞춰 확장하고 입력 영역과 겹치지 않습니다.
+- 후보 적용 `Enter`가 뒤의 콘솔 전송으로 이어지지 않게 이벤트를 소비하고 관리 콘솔도 처리된 입력을 다시 보내지 않습니다. 위험 명령은 모든 필수 인수가 유효한 최종 전송 시점에만 완성 명령을 보여 주고 확인합니다.
+- `Prepare-BuildResources.ps1`, `build.ps1 -SkipDependencyDownload`, `test.ps1 -LauncherPath artifacts\MineHarbor.exe`가 통과했습니다. 결과는 `VERSION_CONSISTENCY_OK`, `PASSED=27`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`입니다. 로컬에 없는 .NET SDK 검증은 [PR CI](https://github.com/Mangom72/MineHarbor/actions/runs/30169627138)에서 경고=오류 `net48` 빌드, Portable·브리지 빌드, 전체 테스트와 자산 업로드까지 통과했습니다.
+
 ## Codex README Feature Audit - 2026-07-26
 
 - **Current Version**: 1.9.0 (build 26.2.45.73, 문서 전용 변경으로 버전 유지)

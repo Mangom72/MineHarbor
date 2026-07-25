@@ -47,6 +47,7 @@ $sources = @(
 	'ServerTrash.cs',
     'NetworkAndPlayerTools.cs',
 	'QuickCommandsAndBridge.cs',
+	'QuickCommandBuilderUi.cs',
 	'QuickCommandUi.cs',
 	'QuickCommandPickerUi.cs',
 	'UpnpCore.cs',

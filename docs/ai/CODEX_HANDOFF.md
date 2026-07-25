@@ -1,5 +1,16 @@
 ﻿# CODEX_HANDOFF.md
 
+## Pending v1.10.0 command-builder state
+
+- Feature branch: `codex/command-builder-ux-v1.10.0`
+- Pull request: [#28](https://github.com/Mangom72/MineHarbor/pull/28); initial Windows CI run `30169627138` passed, including the SDK-style `net48` build.
+- Version source of truth on the feature branch: `version.json` = 1.10.0 / build 26.2.45.74
+- The quick-command field is now a step-by-step inline token builder backed by `QuickCommandBuilderState` and `QuickCommandTokenInput`.
+- Templates distinguish required `{player}`, optional `[reason]`, and defaulted optional `[count=1]` arguments. Completion and send availability use required metadata plus value validation, not placeholder appearance.
+- Confirming a candidate advances to the next argument without losing focus. Up/Down, Tab/Enter, Shift+Tab, and Esc support continuous keyboard composition while retaining values and per-command drafts.
+- Player/target selectors, live player names, enum values, numeric/time/coordinate recommendations, and searchable item/effect catalogs are available. Quick-command suggestions expand to 430px/40 candidates; shared completion expands to 380px/20 candidates and avoids the input bounds.
+- Local .NET Framework build and all 27 launcher groups, 10 bridge protocol cases, Portable version/smoke, modern-dialog, and security scans pass. No .NET SDK is installed locally, so the SDK-style `net48` build remains a required PR CI gate.
+
 ## 0. Current implementation state (v1.9.0 released)
 
 - Release-state branch: `codex/v1.9.0-release-state` (feature: `codex/quick-command-safety-v1.9.0`)

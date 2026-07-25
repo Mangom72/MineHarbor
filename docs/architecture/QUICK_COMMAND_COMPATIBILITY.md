@@ -2,9 +2,17 @@
 
 ## 명령 정의
 
-기본·사용자·브리지 명령은 같은 `QuickCommandDefinition` 모델을 사용합니다. 템플릿의 `{player}`는 필수 인수이고 `[reason]`은 생략 가능한 선택 인수입니다. 선택 인수는 명령 끝에만 둘 수 있으며 여러 단어를 받는 `reason`, `message`, `command`는 마지막 인수에서 나머지 토큰을 함께 처리합니다.
+기본·사용자·브리지 명령은 같은 `QuickCommandDefinition` 모델을 사용합니다. 템플릿의 `{player}`는 필수 인수이고 `[reason]`은 생략 가능한 선택 인수이며 `[count=1]`은 추천 기본값이 있는 선택 인수입니다. 선택 인수는 명령 끝에만 둘 수 있으며 여러 단어를 받는 `reason`, `message`, `command`는 마지막 인수에서 나머지 토큰을 함께 처리합니다. 기본값은 토큰과 후보에 표시하지만 사용자가 값을 지정하지 않으면 명령에서 생략해 Minecraft의 기본 동작을 사용합니다.
 
 사용자 명령은 `config/quick-commands.json`에 저장합니다. 기존 `Confirm=true` 항목은 읽을 때 `Confirm` 위험도로 승격하며, 새 저장에서는 `Risk`와 호환용 `Confirm`을 함께 동기화합니다. 최소·최대 Minecraft 버전 중 하나라도 지정된 명령은 현재 서버 버전을 정상적으로 해석할 수 있고 범위 안에 있을 때만 선택창과 로컬 자동완성에 나타납니다.
+
+## 단계형 작성 상태
+
+명령 선택 시 템플릿을 고정 문구와 인수로 분리한 `QuickCommandBuilderState`를 만들고 명령별 초안을 유지합니다. 첫 필수 인수부터 시작해 값을 확정할 때 다음 인수로 이동하며, 이전 단계로 돌아가거나 후보 목록을 닫아도 다른 인수 값은 유지합니다. 미완성 인수는 회색 토큰, 현재 인수는 강조 토큰, 잘못된 값은 위험 테두리로 표시합니다.
+
+전송 가능 여부는 토큰 색이나 플레이스홀더 존재 여부가 아니라 각 인수의 `Required`와 값 검증 결과로 계산합니다. 모든 필수 인수가 유효하면 선택 인수를 비운 채 전송할 수 있고, 잘못된 선택 인수를 입력한 경우에는 값을 지우거나 수정할 때까지 전송할 수 없습니다. 명령 선택과 후보 확정은 서버 명령을 실행하지 않으며 최종 전송 동작에서만 위험도를 계산하고 완성 명령을 확인합니다.
+
+후보 목록은 온라인 플레이어와 Minecraft 선택자, 열거형 값, 숫자·시간·좌표 추천, 아이템·효과 부분 검색을 제공합니다. 항목이 적으면 필요한 높이만 사용하고 많으면 창의 위·아래 가용 공간 중 넓은 쪽에서 최대 430px까지 확장합니다. 공통 콘솔·플레이어 자동완성은 같은 비중첩 배치 원칙과 최대 20개 후보를 사용합니다.
 
 ## 위험도
 
@@ -26,6 +34,10 @@
 
 ## English summary
 
-Built-in, user, and bridge commands share one definition model. Curly braces mark required arguments and square brackets mark trailing optional arguments. Legacy `Confirm=true` user JSON migrates to the `Confirm` risk level, while new entries persist an explicit three-level risk and optional Minecraft version range. The picker and local completion omit commands outside the selected server version.
+Built-in, user, and bridge commands share one definition model. Curly braces mark required arguments, square brackets mark trailing optional arguments, and `[count=1]` supplies an optional recommendation while omission preserves Minecraft's default behavior. A per-command builder draft retains values across backward navigation and suggestion closing. Completion depends on required/optional metadata and value validation rather than visual placeholders; selecting a command or candidate never executes it.
+
+Incomplete, active, completed, and invalid arguments are rendered distinctly. Up/Down moves through candidates, Tab confirms and advances, Shift+Tab returns, Esc closes or cancels, and Enter advances while required values are incomplete or sends once they are valid. Suggestions cover connected players/selectors, enum and numeric recommendations, and searchable item/effect catalogs, growing only as needed up to 430 pixels without covering the input.
+
+Legacy `Confirm=true` user JSON migrates to the `Confirm` risk level, while new entries persist an explicit three-level risk and optional Minecraft version range. The picker and local completion omit commands outside the selected server version.
 
 `Normal` commands run immediately, `Confirm` commands use a standard warning, and `Dangerous` commands use a stronger red warning. Static definition risk is combined with root- and value-sensitive classification, while read-only exceptions such as `worldborder get` remain normal. Datapack and force-load commands require 1.13, sleeping percentage requires 1.17, and the legacy daytime-query syntax is hidden after 1.21.11.
