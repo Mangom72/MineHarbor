@@ -3,14 +3,16 @@
 ## Codex Version-aware Quick Commands and Risk Model - 2026-07-25
 
 - **Current Version**: 1.9.0 (build 26.2.45.73)
-- **Branch**: `codex/quick-command-safety-v1.9.0`
-- **Status**: 빠른 명령 확장, 선택 인수, Minecraft 버전 호환성 및 3단계 위험도 구현과 로컬 릴리스 후보 검증 완료, GitHub CI·배포 진행 중
+- **Branch**: `codex/v1.9.0-release-state` (기능 브랜치: `codex/quick-command-safety-v1.9.0`)
+- **Status**: 빠른 명령 확장, 선택 인수, Minecraft 버전 호환성 및 3단계 위험도 구현 후 [v1.9.0 정식 릴리스](https://github.com/Mangom72/MineHarbor/releases/tag/v1.9.0) 게시 및 공개 자동 업데이트 재검증 완료
 - 플레이어·IP 차단 조회/변경, 시드·시간, 유휴 시간, 게임 규칙, 데이터팩, `reload`와 안전한 경험치·월드 경계·강제 로딩 조회를 추가해 기본 명령을 70개 이상으로 확장했습니다.
 - `{player}` 필수 인수와 `[reason]` 선택 인수를 구분하며 마지막 사유·메시지·명령은 여러 단어를 받을 수 있습니다. 주소·시간 단위·분·비율·날씨·게임 규칙·데이터팩·함수·차원·거리 후보를 로컬 자동완성에 추가했습니다.
 - 명령 정의에 최소·최대 Minecraft 버전을 추가했습니다. 데이터팩/강제 로딩은 1.13 이상, 수면 비율은 1.17 이상에서만 표시하고, 26.x에서 변경된 기존 `time query daytime`은 1.21.11까지만 표시합니다.
 - 기존 `QuickCommandRisk`의 `Normal`·`Confirm`·`Dangerous`를 실제 목록 색상과 빠른 명령·직접 콘솔 확인에 연결했습니다. `reload`, 광범위 변경, `keepInventory false`, `doMobSpawning false`는 강한 위험 경고를 사용하고 읽기 전용 `worldborder get`·`forceload query`는 일반으로 유지합니다.
 - 사용자 명령 편집기에 현대형 위험도 선택, 최소·최대 버전, 선택 인수 안내와 접근성 정보를 추가하고 기존 `Confirm` JSON을 자동 호환합니다.
-- 최종 로컬 빌드와 전체 27개 테스트 그룹, Portable 실행·버전, 브리지 10개, 모던 대화상자 및 보안 회귀 검사가 통과했습니다. 임시 RSA-3072/SHA-256 자체서명으로 설치 파일·Portable·브리지·SHA-256 등 릴리스 산출물 7종을 검증한 뒤 인증서와 PFX를 제거했습니다. GitHub CI·공개 릴리스 검증은 진행 예정입니다.
+- 최종 로컬 빌드와 전체 27개 테스트 그룹, Portable 실행·버전, 브리지 10개, 모던 대화상자 및 보안 회귀 검사가 통과했습니다. 임시 RSA-3072/SHA-256 자체서명으로 설치 파일·Portable·브리지·SHA-256 등 릴리스 산출물 7종을 검증한 뒤 인증서와 PFX를 제거했습니다.
+- 기능 [PR #25](https://github.com/Mangom72/MineHarbor/pull/25), [PR CI](https://github.com/Mangom72/MineHarbor/actions/runs/30162595403)와 [v1.9.0 main CI](https://github.com/Mangom72/MineHarbor/actions/runs/30162646922)가 통과했습니다. [릴리스 워크플로](https://github.com/Mangom72/MineHarbor/actions/runs/30162698640)는 .NET SDK 빌드, 전체 테스트, 자체서명 생성·폐기, 설치 파일·Portable·브리지·SHA-256 검증과 이전 런처 업데이트 검증까지 완료했습니다.
+- 공개 자산 7종을 새 임시 폴더에 다시 내려받아 자체서명과 SHA-256 목록을 독립 검증했습니다. 공개 v1.8.1 런처로 `PUBLIC_AUTO_UPDATE_OK=1.8.1->1.9.0`을 확인하고, 업데이트된 공개 실행 파일로 `PASSED=27`, `BRIDGE_PROTOCOL_PASSED=10`, Portable/UI/보안 검사를 다시 통과했습니다. 실제 사용자 서버·UPnP·공유기 설정과 현재 사용 중인 화면은 건드리지 않았습니다.
 
 ## Codex Tool-Window Close Release Guard Hotfix - 2026-07-25
 
