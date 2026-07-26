@@ -1,8 +1,9 @@
 ﻿# CODEX_HANDOFF.md
 
-## 0.0000 Current implementation state (v1.15.0 release candidate)
+## 0.0000 Current implementation state (v1.15.0 released)
 
-- Feature branch: `codex/discord-remote-v1.15.0`
+- Release-state branch: `codex/v1.15.0-release-state` (feature: `codex/discord-remote-v1.15.0`)
+- Pull request [#38](https://github.com/Mangom72/MineHarbor/pull/38) is merged. PR CI `30190800441`, main CI `30190836081`, and release run `30190885852` passed.
 - Version source of truth: `version.json` = 1.15.0 / build 26.2.45.79
 - Discord remote control is a separately opted-in beta owned by the per-user background agent. It opens no inbound listener and uses outbound Discord Gateway/REST connections only.
 - The bot token is protected with current-user Windows DPAPI. Application, guild, channel, user-or-role, profile, replay, and per-user rate checks are applied before every operation.
@@ -12,8 +13,8 @@
 - Local tests cover DPAPI non-plaintext storage, corrupt/future schema preservation, direct-user and role authorization, wrong application/guild/channel/profile rejection, arbitrary command rejection, confirmation expiry/replay/wrong-user rejection, autocomplete scoping, rate limiting, response bounds, and UI accessibility. They do not use a real Discord bot or Minecraft server.
 - `Prepare-BuildResources.ps1`, the framework-compiler build, and the full test suite pass with `VERSION_CONSISTENCY_OK`, 32 launcher groups, Portable version/smoke, 10 bridge protocol cases, modern-dialog scan, and security regression scan.
 - `Publish-LocalRelease.ps1 -NoPublish` passed ephemeral RSA-3072/SHA-256 self-signing and `RELEASE_ARTIFACTS_PASSED=7`, removed the certificate/PFX, and the full suite passed again against the signed Portable EXE.
-- This machine has no .NET SDK, so the warning-as-error SDK-style `net48` build remains a PR CI requirement.
-- Release publication, independent public-asset download, and public `1.14.0 -> 1.15.0` updater verification are pending.
+- PR and main CI passed the .NET 10 SDK warning-as-error `net48` build, Portable/bridge builds, the full suite, and verification-artifact upload.
+- The [v1.15.0 release](https://github.com/Mangom72/MineHarbor/releases/tag/v1.15.0) contains seven verified public assets. The release workflow removed its temporary self-signed certificate/PFX, and an independent download confirmed `RELEASE_ARTIFACTS_PASSED=7`, `PUBLISHED_ASSETS_MODE_OK`, and `PUBLIC_AUTO_UPDATE_OK=1.14.0->1.15.0` before rerunning all 32 launcher groups and 10 bridge cases against the updated public executable.
 
 ## 0.000 Current implementation state (v1.14.0 released)
 
