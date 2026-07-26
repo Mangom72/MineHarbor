@@ -337,8 +337,10 @@ internal static partial class Launcher
 		private readonly ModernTextBox allowedUsersBox;
 		private readonly ModernTextBox allowedRolesBox;
 		private readonly CheckedListBox profilesBox;
+		private readonly Label validationLabel;
 		private readonly Label statusLabel;
 		private readonly Button guideButton;
+		private readonly Button saveButton;
 		private readonly string loadError;
 		private readonly string existingProtectedToken;
 		private bool refreshing;
@@ -370,12 +372,13 @@ internal static partial class Launcher
 				Dock = DockStyle.Fill,
 				Padding = new Padding(24),
 				ColumnCount = 1,
-				RowCount = 6
+				RowCount = 7
 			};
 			root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+			root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			Controls.Add(root);
@@ -400,7 +403,7 @@ internal static partial class Launcher
 			enabledBox = new ModernCheckBox
 			{
 				AutoSize = true,
-				Text = korean ? "Discord 원격 제어 사용 (기본값 꺼짐)" : "Enable Discord remote control (off by default)",
+				Text = korean ? "Discord 원격 제어 사용" : "Enable Discord remote control",
 				Checked = settings.Enabled,
 				Margin = new Padding(0, 2, 0, 12)
 			};
@@ -421,13 +424,17 @@ internal static partial class Launcher
 				Padding = new Padding(16),
 				Margin = new Padding(0, 0, 10, 0)
 			};
-			TableLayoutPanel connection = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 12 };
-			for (int row = 0; row < 12; row++)
-			{
-				if (row % 2 == 0) connection.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-				else if (row >= 9) connection.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-				else connection.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
-			}
+			TableLayoutPanel connection = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 10 };
+			connection.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+			connection.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
+			connection.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+			connection.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+			connection.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
+			connection.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+			connection.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
+			connection.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+			connection.RowStyles.Add(new RowStyle(SizeType.Absolute, 42F));
+			connection.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 			connectionGroup.Controls.Add(connection);
 			columns.Controls.Add(connectionGroup, 0, 0);
 
@@ -443,15 +450,27 @@ internal static partial class Launcher
 			channelIdBox.Text = settings.ChannelId;
 			allowedUsersBox.Text = string.Join(Environment.NewLine, settings.AllowedUserIds.ToArray());
 			allowedRolesBox.Text = string.Join(Environment.NewLine, settings.AllowedRoleIds.ToArray());
+			allowedUsersBox.MinimumSize = new Size(0, 72);
+			allowedRolesBox.MinimumSize = new Size(0, 72);
+
+			removeTokenBox = new ModernCheckBox
+			{
+				AutoSize = true,
+				Text = korean ? "저장된 토큰 제거" : "Remove saved token",
+				Enabled = !string.IsNullOrEmpty(existingProtectedToken),
+				Margin = new Padding(0, 3, 0, 7)
+			};
+			ConfigureAccessibleField(removeTokenBox, removeTokenBox.Text, korean
+				? "저장할 때 암호화된 토큰을 삭제하며 원격 제어도 꺼야 합니다."
+				: "Deletes the encrypted token on save; remote control must also be disabled.");
 
 			AddDiscordField(connection, 0, korean ? "봇 토큰" : "Bot token", tokenBox, korean
 				? "토큰은 현재 Windows 사용자 범위 DPAPI로 암호화해 저장합니다."
 				: "The token is stored with current-user Windows DPAPI encryption.");
-			AddDiscordField(connection, 2, korean ? "애플리케이션 ID" : "Application ID", applicationIdBox, korean ? "Discord Developer Portal의 Application ID입니다." : "The Application ID from the Discord Developer Portal.");
-			AddDiscordField(connection, 4, korean ? "서버 ID" : "Server ID", guildIdBox, korean ? "명령을 등록할 Discord 서버입니다." : "The Discord server where the command is registered.");
-			AddDiscordField(connection, 6, korean ? "채널 ID" : "Channel ID", channelIdBox, korean ? "이 채널에서만 명령을 허용합니다." : "Commands are accepted only in this channel.");
-			AddDiscordField(connection, 8, korean ? "허용 사용자" : "Allowed users", allowedUsersBox, korean ? "사용자 ID를 쉼표 또는 줄바꿈으로 구분합니다." : "Separate user IDs with commas or new lines.");
-			AddDiscordField(connection, 10, korean ? "허용 역할 (선택)" : "Allowed roles (optional)", allowedRolesBox, korean ? "역할 ID를 쉼표 또는 줄바꿈으로 구분합니다." : "Separate role IDs with commas or new lines.");
+			connection.Controls.Add(removeTokenBox, 0, 2);
+			AddDiscordField(connection, 3, korean ? "애플리케이션 ID" : "Application ID", applicationIdBox, korean ? "Discord Developer Portal의 Application ID입니다." : "The Application ID from the Discord Developer Portal.");
+			AddDiscordField(connection, 5, korean ? "서버 ID" : "Server ID", guildIdBox, korean ? "명령을 등록할 Discord 서버입니다." : "The Discord server where the command is registered.");
+			AddDiscordField(connection, 7, korean ? "채널 ID" : "Channel ID", channelIdBox, korean ? "이 채널에서만 명령을 허용합니다." : "Commands are accepted only in this channel.");
 
 			ModernGroupBox authorizationGroup = new ModernGroupBox
 			{
@@ -460,10 +479,11 @@ internal static partial class Launcher
 				Padding = new Padding(16),
 				Margin = new Padding(10, 0, 0, 0)
 			};
-			TableLayoutPanel authorization = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 5 };
+			TableLayoutPanel authorization = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 6 };
 			authorization.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			authorization.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 			authorization.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+			authorization.RowStyles.Add(new RowStyle(SizeType.Absolute, 104F));
 			authorization.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			authorization.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			authorizationGroup.Controls.Add(authorization);
@@ -496,35 +516,64 @@ internal static partial class Launcher
 			profileSurface.Controls.Add(profilesBox);
 			authorization.Controls.Add(profileSurface, 0, 1);
 
-			removeTokenBox = new ModernCheckBox
+			authorization.Controls.Add(new Label
 			{
 				AutoSize = true,
-				Text = korean ? "저장된 봇 토큰 제거" : "Remove the saved bot token",
-				Enabled = !string.IsNullOrEmpty(existingProtectedToken),
-				Margin = new Padding(0, 2, 0, 8)
+				Font = new Font(ThemeFonts.BodySemibold, 10F, FontStyle.Bold),
+				Text = korean ? "접근 허용 · 사용자 또는 역할 중 1개 이상 필수" : "Access allowlist · at least one user or role is required",
+				Margin = new Padding(0, 0, 0, 6)
+			}, 0, 2);
+
+			TableLayoutPanel allowlists = new TableLayoutPanel
+			{
+				Name = "discordAllowlists",
+				Dock = DockStyle.Fill,
+				ColumnCount = 2,
+				RowCount = 1,
+				Margin = new Padding(0, 0, 0, 7)
 			};
-			ConfigureAccessibleField(removeTokenBox, removeTokenBox.Text, korean
-				? "저장할 때 암호화된 토큰을 삭제하며 원격 제어도 꺼야 합니다."
-				: "Deletes the encrypted token on save; remote control must also be disabled.");
-			authorization.Controls.Add(removeTokenBox, 0, 2);
+			allowlists.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+			allowlists.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 50F));
+			allowlists.Controls.Add(CreateDiscordAllowListColumn(
+				korean ? "허용 사용자" : "Allowed users",
+				allowedUsersBox,
+				korean ? "사용자 ID를 쉼표 또는 줄바꿈으로 구분합니다." : "Separate user IDs with commas or new lines.",
+				new Padding(0, 0, 5, 0)), 0, 0);
+			allowlists.Controls.Add(CreateDiscordAllowListColumn(
+				korean ? "허용 역할 (선택)" : "Allowed roles (optional)",
+				allowedRolesBox,
+				korean ? "역할 ID를 쉼표 또는 줄바꿈으로 구분합니다." : "Separate role IDs with commas or new lines.",
+				new Padding(5, 0, 0, 0)), 1, 0);
+			authorization.Controls.Add(allowlists, 0, 3);
+
 			authorization.Controls.Add(new Label
 			{
 				AutoSize = true,
 				MaximumSize = new Size(350, 0),
 				Text = korean
-					? "지원: 상태·플레이어·최근 오류 조회, 시작, 확인형 안전 종료·재시작, 백업\n차단: 임의 콘솔, 셸·파일 실행, 허용되지 않은 서버, 외부 소유 프로세스"
-					: "Allowed: status, players, recent errors, start, confirmed safe stop/restart, backup\nBlocked: arbitrary console, shell/file execution, unapproved servers, externally owned processes",
-				Margin = new Padding(0, 2, 0, 10)
-			}, 0, 3);
-			authorization.Controls.Add(new Label
-			{
-				AutoSize = true,
-				MaximumSize = new Size(350, 0),
-				Text = korean
-					? "봇을 Discord 서버에 bot 및 applications.commands 범위로 설치하세요. 특권 Gateway Intent는 필요하지 않습니다."
-					: "Install the bot to the Discord server with bot and applications.commands scopes. Privileged Gateway Intents are not required.",
-				Margin = new Padding(0)
+					? "내 ID 복사: Discord 사용자 설정 → 고급 → 개발자 모드 → 내 프로필 우클릭 → 사용자 ID 복사"
+					: "Copy your ID: Discord User Settings → Advanced → Developer Mode → right-click your profile → Copy User ID",
+				Margin = new Padding(0, 1, 0, 7),
+				Tag = "muted"
 			}, 0, 4);
+			authorization.Controls.Add(new Label
+			{
+				AutoSize = true,
+				MaximumSize = new Size(350, 0),
+				Text = korean
+					? "선택한 프로필과 허용 목록만 /mineharbor를 사용할 수 있습니다. 임의 콘솔·셸·파일 작업은 차단됩니다."
+					: "Only approved profiles and allowlisted members can use /mineharbor. Arbitrary console, shell, and file operations remain blocked.",
+				Margin = new Padding(0)
+			}, 0, 5);
+
+			validationLabel = new Label
+			{
+				AutoSize = true,
+				MaximumSize = new Size(860, 0),
+				Margin = new Padding(0, 10, 0, 0),
+				Tag = "warning"
+			};
+			root.Controls.Add(validationLabel, 0, 4);
 
 			statusLabel = new Label
 			{
@@ -533,31 +582,47 @@ internal static partial class Launcher
 				Text = !string.IsNullOrEmpty(loadError)
 					? (korean ? "설정을 검증하지 못해 원본을 보존했습니다. 파일을 확인한 뒤 다시 열어 주세요." : "The settings file could not be verified and was preserved. Review it, then reopen this window.")
 					: (korean ? "연결 상태를 확인하는 중…" : "Checking connection status…"),
-				Margin = new Padding(0, 12, 0, 8)
+				Margin = new Padding(0, 4, 0, 8)
 			};
 			statusLabel.AccessibleName = statusLabel.Text;
-			root.Controls.Add(statusLabel, 0, 4);
+			root.Controls.Add(statusLabel, 0, 5);
 
 			FlowLayoutPanel buttons = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Right, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
 			guideButton = MultiServerDashboardForm.NewManagedButton(korean ? "설정 가이드" : "Setup guide", 124, "secondary");
 			Button refresh = MultiServerDashboardForm.NewManagedButton(korean ? "상태 새로고침" : "Refresh status", 136, "secondary");
-			Button save = MultiServerDashboardForm.NewManagedButton(korean ? "저장 및 연결" : "Save and connect", 136, "primary");
+			saveButton = MultiServerDashboardForm.NewManagedButton(korean ? "저장 및 연결" : "Save and connect", 136, "primary");
 			Button cancel = MultiServerDashboardForm.NewManagedButton(korean ? "취소" : "Cancel", 100, "secondary");
 			guideButton.Click += delegate { ShowRegistrationGuide(); };
 			refresh.Click += delegate { RefreshStatusAsync(); };
-			save.Click += delegate { SaveSettings(); };
+			saveButton.Click += delegate { SaveSettings(); };
 			cancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
 			refresh.Enabled = string.IsNullOrEmpty(loadError);
-			save.Enabled = string.IsNullOrEmpty(loadError);
+			saveButton.Enabled = string.IsNullOrEmpty(loadError);
 			ConfigureAccessibleField(guideButton, guideButton.Text, korean ? "Discord 앱 등록 순서를 다시 표시합니다." : "Shows the Discord app registration steps again.");
-			buttons.Controls.AddRange(new Control[] { guideButton, refresh, save, cancel });
-			root.Controls.Add(buttons, 0, 5);
+			ConfigureAccessibleField(saveButton, saveButton.Text, korean ? "입력한 설정을 검증한 뒤 백그라운드 에이전트에 연결합니다." : "Validates the configuration and connects it to the background agent.");
+			buttons.Controls.AddRange(new Control[] { guideButton, refresh, saveButton, cancel });
+			root.Controls.Add(buttons, 0, 6);
 
 			enabledBox.CheckedChanged += delegate { UpdateEnabledState(); };
 			removeTokenBox.CheckedChanged += delegate { UpdateEnabledState(); };
+			tokenBox.TextChanged += delegate { UpdateValidationState(); };
+			applicationIdBox.TextChanged += delegate { UpdateValidationState(); };
+			guildIdBox.TextChanged += delegate { UpdateValidationState(); };
+			channelIdBox.TextChanged += delegate { UpdateValidationState(); };
+			allowedUsersBox.TextChanged += delegate { UpdateValidationState(); };
+			allowedRolesBox.TextChanged += delegate { UpdateValidationState(); };
+			profilesBox.ItemCheck += delegate
+			{
+				if (!IsDisposed && IsHandleCreated)
+					BeginInvoke((MethodInvoker)delegate
+					{
+						if (!IsDisposed && !Disposing) UpdateValidationState();
+					});
+			};
 			Shown += delegate { RefreshStatusAsync(); };
 			UpdateEnabledState();
 			ApplySimpleDialogTheme(this);
+			UpdateValidationState();
 			ApplyCommonButtonToolTips(this);
 		}
 
@@ -596,6 +661,26 @@ internal static partial class Launcher
 			ConfigureAccessibleField(box, label, description);
 		}
 
+		private static TableLayoutPanel CreateDiscordAllowListColumn(string label, ModernTextBox box, string description, Padding margin)
+		{
+			TableLayoutPanel column = new TableLayoutPanel
+			{
+				Dock = DockStyle.Fill,
+				ColumnCount = 1,
+				RowCount = 2,
+				Margin = margin
+			};
+			column.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+			column.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+			column.Controls.Add(new Label { AutoSize = true, Text = label, Margin = new Padding(0, 0, 0, 4) }, 0, 0);
+			RoundedPanel surface = CreateModernTextBoxSurface(box, 9);
+			surface.Dock = DockStyle.Fill;
+			surface.Margin = Padding.Empty;
+			column.Controls.Add(surface, 0, 1);
+			ConfigureAccessibleField(box, label, description);
+			return column;
+		}
+
 		private void UpdateEnabledState()
 		{
 			bool enabled = enabledBox.Checked;
@@ -607,6 +692,132 @@ internal static partial class Launcher
 			allowedRolesBox.Enabled = enabled;
 			profilesBox.Enabled = enabled;
 			if (removeTokenBox.Checked) enabledBox.Checked = false;
+			UpdateValidationState();
+		}
+
+		private bool TryValidateInput(out string message, out Control target)
+		{
+			bool korean = IsManagedKorean();
+			message = string.Empty;
+			target = null;
+			if (!enabledBox.Checked) return true;
+
+			if (removeTokenBox.Checked || (string.IsNullOrEmpty(existingProtectedToken) && string.IsNullOrWhiteSpace(tokenBox.Text)))
+			{
+				message = korean ? "봇 토큰을 입력해 주세요." : "Enter a bot token.";
+				target = tokenBox;
+				return false;
+			}
+			if (!string.IsNullOrWhiteSpace(tokenBox.Text))
+			{
+				try { ValidateDiscordBotToken(tokenBox.Text.Trim()); }
+				catch
+				{
+					message = korean ? "봇 토큰 형식을 확인해 주세요." : "Check the bot-token format.";
+					target = tokenBox;
+					return false;
+				}
+			}
+			if (!IsDiscordSnowflake(applicationIdBox.Text.Trim()))
+			{
+				message = korean ? "애플리케이션 ID를 확인해 주세요." : "Check the application ID.";
+				target = applicationIdBox;
+				return false;
+			}
+			if (!IsDiscordSnowflake(guildIdBox.Text.Trim()))
+			{
+				message = korean ? "서버 ID를 확인해 주세요." : "Check the server ID.";
+				target = guildIdBox;
+				return false;
+			}
+			if (!IsDiscordSnowflake(channelIdBox.Text.Trim()))
+			{
+				message = korean ? "채널 ID를 확인해 주세요." : "Check the channel ID.";
+				target = channelIdBox;
+				return false;
+			}
+
+			List<string> users;
+			List<string> roles;
+			try { users = ParseDiscordIdText(allowedUsersBox.Text); }
+			catch
+			{
+				message = korean ? "허용 사용자 ID는 숫자 ID만 입력해 주세요." : "Allowed user IDs must contain numeric Discord IDs only.";
+				target = allowedUsersBox;
+				return false;
+			}
+			try { roles = ParseDiscordIdText(allowedRolesBox.Text); }
+			catch
+			{
+				message = korean ? "허용 역할 ID는 숫자 ID만 입력해 주세요." : "Allowed role IDs must contain numeric Discord IDs only.";
+				target = allowedRolesBox;
+				return false;
+			}
+			if (users.Count == 0 && roles.Count == 0)
+			{
+				message = korean
+					? "허용 사용자 또는 역할 ID를 하나 이상 입력해 주세요."
+					: "Enter at least one allowed user or role ID.";
+				target = allowedUsersBox;
+				return false;
+			}
+			if (profilesBox.CheckedItems.Count == 0)
+			{
+				message = korean ? "Discord에서 관리할 서버 프로필을 선택해 주세요." : "Select a server profile to manage from Discord.";
+				target = profilesBox;
+				return false;
+			}
+			return true;
+		}
+
+		private void SetValidationMessage(string message, string role)
+		{
+			validationLabel.Text = message ?? string.Empty;
+			validationLabel.Tag = role;
+			validationLabel.AccessibleName = validationLabel.Text;
+			ThemePalette palette = ThemePalette.Create(launcherForm != null && launcherForm.UsesDarkTheme);
+			if (string.Equals(role, "success", StringComparison.Ordinal)) validationLabel.ForeColor = palette.Success;
+			else if (string.Equals(role, "danger-text", StringComparison.Ordinal)) validationLabel.ForeColor = palette.Danger;
+			else if (string.Equals(role, "warning", StringComparison.Ordinal)) validationLabel.ForeColor = palette.Warning;
+			else validationLabel.ForeColor = palette.Muted;
+		}
+
+		private void UpdateValidationState()
+		{
+			if (validationLabel == null || saveButton == null) return;
+			bool korean = IsManagedKorean();
+			if (!string.IsNullOrEmpty(loadError))
+			{
+				SetValidationMessage(
+					korean ? "설정 파일을 먼저 확인해야 합니다." : "Review the settings file before continuing.",
+					"danger-text");
+				saveButton.Enabled = false;
+				return;
+			}
+			if (!enabledBox.Checked)
+			{
+				SetValidationMessage(
+					korean ? "원격 제어가 꺼져 있습니다. 켜면 필요한 항목을 여기서 바로 확인할 수 있습니다." : "Remote control is off. Turn it on to review the required fields here.",
+					"muted");
+				saveButton.Enabled = true;
+				return;
+			}
+
+			string message;
+			Control target;
+			if (TryValidateInput(out message, out target))
+			{
+				SetValidationMessage(
+					korean ? "연결 준비가 완료되었습니다. 저장 및 연결을 눌러 주세요." : "Ready to connect. Select Save and connect.",
+					"success");
+			}
+			else
+			{
+				SetValidationMessage(
+					(korean ? "연결 전 확인 · " : "Before connecting · ") + message,
+					"warning");
+			}
+			saveButton.Enabled = true;
 		}
 
 		private DiscordRemoteSettings BuildSettings()
@@ -637,6 +848,14 @@ internal static partial class Launcher
 			bool settingsWritten = false;
 			try
 			{
+				string validationMessage;
+				Control validationTarget;
+				if (!TryValidateInput(out validationMessage, out validationTarget))
+				{
+					SetValidationMessage(validationMessage, "danger-text");
+					if (validationTarget != null && validationTarget.CanFocus) validationTarget.Focus();
+					return;
+				}
 				previous = ReadDiscordRemoteSettings();
 				DiscordRemoteSettings settings = BuildSettings();
 				if (settings.Enabled)

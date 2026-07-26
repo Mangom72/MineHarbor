@@ -1,5 +1,17 @@
 ﻿# CODEX_HANDOFF.md
 
+## 0.0000000 Current implementation state (v1.15.3 local release verified)
+
+- Feature branch: `codex/discord-allowlist-ux-v1.15.3`
+- Version source of truth: `version.json` = 1.15.3 / build 26.2.45.82
+- The Discord settings connection table allocated its fixed credential rows first and left almost zero height for the final percentage-based allowed-user and allowed-role editors. Users could not enter the allowlist required by the save validation.
+- Credential fields remain in the left connection group. Approved profiles plus always-visible user/role editors now share the right security-boundary group, with 72px minimum editor height, an explicit one-of-two requirement, and the Discord Developer Mode path for copying a user ID.
+- Inline validation reports the exact missing or malformed value. Save focuses that field instead of first showing a generic modal for expected input errors.
+- A trailing percentage spacer absorbs extra connection height instead of stretching the channel editor. Shorter checkbox copy avoids DPI clipping.
+- The dark-theme WinForms harness confirmed visible allowlist editors, guidance, inline warning, and footer actions without accessing real Discord credentials or settings. Windows automation stopped when user input was detected.
+- The Discord regression group now covers the two-column allowlist layout, minimum height, accessibility metadata, exact missing-field target, valid-input transition, and fixed channel row plus spacer.
+- Resource preparation, the framework build, the local self-signed release candidate, and the signed Portable executable passed. Current local results are `RELEASE_ARTIFACTS_PASSED=7`, `VERSION_CONSISTENCY_OK`, 32 launcher groups, Portable version/smoke, 10 bridge protocol cases, modern-dialog scan, and security regression scan.
+
 ## 0.000000 Current implementation state (v1.15.2 released)
 
 - Release-state branch: `codex/v1.15.2-release-state` (feature: `codex/discord-guide-layout-v1.15.2`)

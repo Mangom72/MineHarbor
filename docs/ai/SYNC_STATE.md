@@ -1,5 +1,19 @@
 ﻿# AI Agent Synchronization State
 
+## Codex Discord Allowlist UX Fix - 2026-07-26
+
+- **Current Version**: 1.15.3 (build 26.2.45.82)
+- **Branch**: `codex/discord-allowlist-ux-v1.15.3`
+- **Status**: Discord 허용 사용자·역할 입력칸이 접히는 원인을 수정하고 로컬 자체서명 릴리스 검증 완료, GitHub 업로드 진행 중
+- Discord 연결 표의 고정 항목이 세로 공간을 먼저 차지해 마지막 두 백분율 행이 거의 0 높이가 되던 실제 원인을 확인했습니다.
+- 앱 연결 정보는 왼쪽, 허용 서버·사용자·역할은 오른쪽 보안 경계로 분리했습니다. 사용자·역할 입력은 최소 72px와 동일한 두 열을 사용하고 필수 조건과 사용자 ID 복사 경로를 함께 표시합니다.
+- 누락·잘못된 ID를 인라인으로 즉시 안내하며 저장을 누르면 일반 오류창보다 먼저 해당 입력으로 포커스를 이동합니다.
+- 남는 높이는 별도 여백 행이 흡수해 채널 입력이 과도하게 늘어나지 않으며 긴 체크박스 문구를 줄였습니다.
+- 실제 다크 테마 임시 WinForms 화면에서 허용 목록과 안내·버튼 노출을 확인했습니다. 사용자 입력 감지 뒤 화면 자동 조작을 중단했으며 실제 Discord 자격 증명이나 사용자 설정은 사용하지 않았습니다.
+- 허용 목록 두 열·최소 높이·접근성, 누락 포커스, 유효 입력과 마지막 고정 행을 기존 Discord 테스트 그룹에 추가했습니다.
+- `Prepare-BuildResources.ps1`, `build.ps1 -SkipDependencyDownload`, `test.ps1 -LauncherPath artifacts\MineHarbor.exe`가 통과했습니다. 현재 결과는 `VERSION_CONSISTENCY_OK`, `PASSED=32`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`입니다.
+- 자체서명 릴리스 산출물 검사는 `RELEASE_ARTIFACTS_PASSED=7`을 통과했고, 자체서명 Portable EXE로 동일한 전체 검사를 다시 통과했습니다.
+
 ## Codex Discord Guide Layout Fix - 2026-07-26
 
 - **Current Version**: 1.15.2 (build 26.2.45.81)
