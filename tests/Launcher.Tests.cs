@@ -2291,14 +2291,50 @@ internal static class LauncherTests
 			Equal(AutoScaleMode.Dpi, form.AutoScaleMode, "Discord 원격 설정 UI DPI 배율");
 			CheckBox enabled = (CheckBox)GetPrivateField(formType, form, "enabledBox");
 			TextBox token = (TextBox)GetPrivateField(formType, form, "tokenBox");
+			TextBox channel = (TextBox)GetPrivateField(formType, form, "channelIdBox");
+			TextBox allowedUsers = (TextBox)GetPrivateField(formType, form, "allowedUsersBox");
+			TextBox allowedRoles = (TextBox)GetPrivateField(formType, form, "allowedRolesBox");
 			CheckedListBox profiles = (CheckedListBox)GetPrivateField(formType, form, "profilesBox");
+			Label validation = (Label)GetPrivateField(formType, form, "validationLabel");
 			Button guideButton = (Button)GetPrivateField(formType, form, "guideButton");
+			Button saveButton = (Button)GetPrivateField(formType, form, "saveButton");
 			if (string.IsNullOrWhiteSpace(enabled.AccessibleName) || string.IsNullOrWhiteSpace(enabled.AccessibleDescription)
 				|| string.IsNullOrWhiteSpace(token.AccessibleName) || string.IsNullOrWhiteSpace(token.AccessibleDescription)
+				|| string.IsNullOrWhiteSpace(allowedUsers.AccessibleName) || string.IsNullOrWhiteSpace(allowedUsers.AccessibleDescription)
+				|| string.IsNullOrWhiteSpace(allowedRoles.AccessibleName) || string.IsNullOrWhiteSpace(allowedRoles.AccessibleDescription)
 				|| string.IsNullOrWhiteSpace(profiles.AccessibleName) || string.IsNullOrWhiteSpace(profiles.AccessibleDescription)
-				|| string.IsNullOrWhiteSpace(guideButton.AccessibleName) || string.IsNullOrWhiteSpace(guideButton.AccessibleDescription))
+				|| string.IsNullOrWhiteSpace(guideButton.AccessibleName) || string.IsNullOrWhiteSpace(guideButton.AccessibleDescription)
+				|| string.IsNullOrWhiteSpace(saveButton.AccessibleName) || string.IsNullOrWhiteSpace(saveButton.AccessibleDescription)
+				|| string.IsNullOrWhiteSpace(validation.AccessibleName))
 				throw new InvalidOperationException("Discord 원격 설정 접근성 정보가 없습니다.");
 			if (!token.UseSystemPasswordChar) throw new InvalidOperationException("Discord 봇 토큰 입력이 가려지지 않습니다.");
+			TableLayoutPanel connection = channel.Parent.Parent as TableLayoutPanel;
+			if (connection == null || connection.RowCount != 10
+				|| connection.RowStyles[8].SizeType != SizeType.Absolute
+				|| Math.Abs(connection.RowStyles[8].Height - 42F) > 0.1F
+				|| connection.RowStyles[9].SizeType != SizeType.Percent)
+				throw new InvalidOperationException("Discord 채널 입력 뒤의 남는 공간이 입력 높이를 늘립니다.");
+			Equal(true, allowedUsers.Multiline, "Discord 허용 사용자 다중 입력");
+			Equal(true, allowedRoles.Multiline, "Discord 허용 역할 다중 입력");
+			if (allowedUsers.MinimumSize.Height < 72 || allowedRoles.MinimumSize.Height < 72)
+				throw new InvalidOperationException("Discord 허용 목록 입력 높이가 보장되지 않습니다.");
+			TableLayoutPanel allowlists = allowedUsers.Parent.Parent.Parent as TableLayoutPanel;
+			if (allowlists == null || !string.Equals(allowlists.Name, "discordAllowlists", StringComparison.Ordinal)
+				|| allowlists.ColumnCount != 2 || allowlists.Controls.Count != 2)
+				throw new InvalidOperationException("Discord 허용 사용자·역할 입력이 별도 보안 영역에 표시되지 않습니다.");
+
+			allowedUsers.Clear();
+			allowedRoles.Clear();
+			if (profiles.Items.Count == 0) profiles.Items.Add(profile);
+			profiles.SetItemChecked(0, true);
+			enabled.Checked = true;
+			MethodInfo validateInput = formType.GetMethod("TryValidateInput", BindingFlags.Instance | BindingFlags.NonPublic);
+			object[] missingAllowlist = new object[] { null, null };
+			Equal(false, validateInput.Invoke(form, missingAllowlist), "Discord 허용 목록 누락 즉시 검증");
+			Equal(allowedUsers, missingAllowlist[1], "Discord 허용 목록 누락 입력 포커스 대상");
+			allowedUsers.Text = userId;
+			object[] validInput = new object[] { null, null };
+			Equal(true, validateInput.Invoke(form, validInput), "Discord 허용 사용자 입력 후 연결 준비");
 		}
 		Type guideType = launcher.GetNestedType("DiscordRemoteRegistrationGuideForm", BindingFlags.NonPublic);
 		using (Form guide = (Form)Activator.CreateInstance(guideType, true))

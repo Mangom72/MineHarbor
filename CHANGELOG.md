@@ -4,6 +4,24 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.15.3] - 2026-07-26
+
+### Korean
+
+- **Discord 허용 목록 입력 복구**: 설정 창의 고정 높이 필드가 먼저 공간을 차지해 `허용 사용자`와 `허용 역할` 입력칸이 사실상 0 높이로 접히던 문제를 수정했습니다.
+- **보안 설정 재배치**: 앱 연결 정보와 접근 허용 목록을 분리해 사용자·역할 입력칸을 항상 보이게 하고, 허용 서버 목록 옆에서 보안 경계를 한 번에 설정할 수 있게 했습니다.
+- **즉시 검증과 복구 안내**: 필수 입력 누락과 잘못된 ID를 화면 안에서 즉시 설명합니다. 저장 시 일반 오류 창을 먼저 띄우지 않고 문제가 있는 입력칸으로 포커스를 이동하며, Discord 사용자 ID 복사 경로를 함께 표시합니다.
+- **반응형 높이와 접근성**: 남는 세로 공간이 채널 입력칸을 과도하게 늘리지 않도록 별도 여백 행을 사용하고, 허용 목록 입력 최소 높이·한국어/영어 문구·키보드 포커스·스크린 리더 정보를 검증합니다.
+- **보안 기본값 유지**: Discord 사용자 또는 역할 중 하나 이상을 요구하는 기존 허용 목록 정책, DPAPI 토큰 보호, 길드·채널·프로필 제한과 임의 콘솔·셸·파일 작업 차단은 그대로 유지합니다.
+
+### English
+
+- **Discord allowlist input restored**: fixed a layout defect where fixed-height connection fields consumed the available height and collapsed the Allowed users and Allowed roles editors to almost zero height.
+- **Clear security layout**: app credentials and access allowlists are now separated. User and role editors remain visible beside the approved-server list so the complete security boundary can be configured in one view.
+- **Inline validation and recovery guidance**: missing required values and invalid IDs are explained in the form. Saving focuses the exact field instead of first showing a generic error dialog, and the UI includes the Discord path for copying a user ID.
+- **Responsive sizing and accessibility**: a dedicated spacer absorbs remaining height instead of stretching the channel editor. Tests cover allowlist minimum height, Korean/English copy, keyboard focus, and screen-reader metadata.
+- **Secure defaults preserved**: the existing requirement for at least one allowed user or role, DPAPI token protection, guild/channel/profile restrictions, and the prohibition on arbitrary console, shell, and file operations remain unchanged.
+
 ## [1.15.2] - 2026-07-26
 
 ### Korean
