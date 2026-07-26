@@ -1,14 +1,16 @@
 ﻿# CODEX_HANDOFF.md
 
-## 0.1 Current implementation state (v1.11.0 pending publication)
+## 0.1 Current implementation state (v1.11.0 released)
 
-- Feature branch: `codex/operations-foundation`
+- Release-state branch: `codex/v1.11.0-release-state` (feature: `codex/operations-foundation`)
+- Pull request [#30](https://github.com/Mangom72/MineHarbor/pull/30) is merged. PR CI `30183624045`, main CI `30183685789`, and release run `30183726971` passed.
 - Version source of truth: `version.json` = 1.11.0 / build 26.2.45.75
 - Automation schema 2 adds selected-weekday and one-time schedules, per-job missed-run policy (`run-once`, `skip`, or `notify-only`), a maximum-delay bound, one-time claim deduplication, and a pre-save preview of next run, risk, offline behavior, and five-minute conflicts.
 - Schema-1 automation files migrate only in memory until the user saves. Corrupt and future schemas remain untouched and are rejected.
 - Each server can retain up to 500 lifecycle and scheduled-job events in `.mineharbor/operations-history.json`. Entries use bounded validation, atomic replacement, a path-scoped cross-process mutex, redaction, and a SHA-256 hash chain. Read state is intentionally outside the audit hash.
 - The main Operations view supports server/severity/unread filters, selected or bulk read state, refresh, CSV export, DPI scaling, themes, and accessibility metadata.
-- Local verification passed with `VERSION_CONSISTENCY_OK`, `PASSED=28`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, and `SECURITY_REGRESSION_SCAN_OK`. This machine has only a .NET runtime, so the SDK-style `net48` path is left to PR CI.
+- Local verification passed with `VERSION_CONSISTENCY_OK`, `PASSED=28`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, and `SECURITY_REGRESSION_SCAN_OK`. PR and main CI additionally passed the .NET 10 SDK warning-as-error `net48` build.
+- The [v1.11.0 release](https://github.com/Mangom72/MineHarbor/releases/tag/v1.11.0) contains seven verified public assets. The release workflow removed its temporary self-signed certificate/PFX, and an independent download confirmed `RELEASE_ARTIFACTS_PASSED=7`, `PUBLISHED_ASSETS_MODE_OK`, and `PUBLIC_AUTO_UPDATE_OK=1.10.0->1.11.0` before rerunning the full suite against the updated executable.
 - No background agent, system tray, Windows notifications, web/Discord remote control, cloud backup, or Fabric/Forge/NeoForge bridge is claimed. Schedules still require an open MineHarbor main or multi-server management window.
 
 ## 0. Current implementation state (v1.10.0 released)
