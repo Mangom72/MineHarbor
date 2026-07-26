@@ -1111,12 +1111,15 @@ internal static class LauncherTests
 			Message deliberateFarUp = Message.Create(underlyingButton.Handle, 0x0202, IntPtr.Zero, IntPtr.Zero);
 			object[] deliberateFarUpArguments = new object[] { deliberateFarUp };
 			Equal(false, filter.Invoke(owner, deliberateFarUpArguments), "닫기 해제 처리 후 다른 위치의 의도적인 해제 허용");
-			closePoint.SetValue(owner, Control.MousePosition);
 			Application.DoEvents();
+			closePoint.SetValue(owner, Control.MousePosition);
+			FieldInfo closeHandle = formType.GetField("ownedWindowCloseHandle", BindingFlags.Instance | BindingFlags.NonPublic);
+			FieldInfo guardUntil = formType.GetField("ownedWindowClickGuardUntilTick", BindingFlags.Instance | BindingFlags.NonPublic);
+			closeHandle.SetValue(owner, underlyingButton.Handle);
+			guardUntil.SetValue(owner, unchecked(Environment.TickCount + 500));
 			Message repeatedDown = Message.Create(underlyingButton.Handle, 0x0201, IntPtr.Zero, IntPtr.Zero);
 			object[] repeatedArguments = new object[] { repeatedDown };
 			Equal(true, filter.Invoke(owner, repeatedArguments), "보조 창 종료 직후 같은 위치의 추가 클릭 차단");
-			FieldInfo guardUntil = formType.GetField("ownedWindowClickGuardUntilTick", BindingFlags.Instance | BindingFlags.NonPublic);
 			guardUntil.SetValue(owner, Environment.TickCount);
 			Message laterDown = Message.Create(underlyingButton.Handle, 0x0201, IntPtr.Zero, IntPtr.Zero);
 			object[] laterArguments = new object[] { laterDown };
@@ -2072,6 +2075,8 @@ internal static class LauncherTests
 		object defaults = Invoke("ReadDiscordRemoteSettings", new object[0]);
 		Equal(1, GetField(defaults, "SchemaVersion"), "Discord 원격 설정 기본 스키마");
 		Equal(false, GetField(defaults, "Enabled"), "Discord 원격 기본 비활성화");
+		Equal(false, Invoke("IsDiscordRemoteRegistrationConfigured", new object[] { defaults }), "Discord 미등록 상태 판정");
+		Equal(true, Invoke("ShouldShowDiscordRegistrationGuide", new object[0]), "Discord 미등록 진입 가이드 표시");
 
 		string clearToken = "test.token." + new string('x', 40);
 		string protectedToken = Convert.ToString(Invoke("ProtectDiscordBotToken", new object[] { clearToken }));
@@ -2099,6 +2104,8 @@ internal static class LauncherTests
 		object loaded = Invoke("ReadDiscordRemoteSettings", new object[0]);
 		Equal(true, GetField(loaded, "Enabled"), "Discord 원격 명시적 동의 저장");
 		Equal(profile, ((IList)GetField(loaded, "AllowedProfiles"))[0], "Discord 허용 프로필 저장");
+		Equal(true, Invoke("IsDiscordRemoteRegistrationConfigured", new object[] { loaded }), "Discord 등록 완료 상태 판정");
+		Equal(false, Invoke("ShouldShowDiscordRegistrationGuide", new object[0]), "Discord 등록 완료 후 자동 가이드 생략");
 		string storedJson = File.ReadAllText(settingsPath, Encoding.UTF8);
 		if (storedJson.Contains(clearToken)) throw new InvalidOperationException("Discord 봇 토큰이 설정 JSON에 평문으로 저장되었습니다.");
 		IList parsedIds = (IList)Invoke("ParseDiscordIdText", new object[] { userId + ", " + secondUserId + "\r\n" + userId });
@@ -2285,11 +2292,30 @@ internal static class LauncherTests
 			CheckBox enabled = (CheckBox)GetPrivateField(formType, form, "enabledBox");
 			TextBox token = (TextBox)GetPrivateField(formType, form, "tokenBox");
 			CheckedListBox profiles = (CheckedListBox)GetPrivateField(formType, form, "profilesBox");
+			Button guideButton = (Button)GetPrivateField(formType, form, "guideButton");
 			if (string.IsNullOrWhiteSpace(enabled.AccessibleName) || string.IsNullOrWhiteSpace(enabled.AccessibleDescription)
 				|| string.IsNullOrWhiteSpace(token.AccessibleName) || string.IsNullOrWhiteSpace(token.AccessibleDescription)
-				|| string.IsNullOrWhiteSpace(profiles.AccessibleName) || string.IsNullOrWhiteSpace(profiles.AccessibleDescription))
+				|| string.IsNullOrWhiteSpace(profiles.AccessibleName) || string.IsNullOrWhiteSpace(profiles.AccessibleDescription)
+				|| string.IsNullOrWhiteSpace(guideButton.AccessibleName) || string.IsNullOrWhiteSpace(guideButton.AccessibleDescription))
 				throw new InvalidOperationException("Discord 원격 설정 접근성 정보가 없습니다.");
 			if (!token.UseSystemPasswordChar) throw new InvalidOperationException("Discord 봇 토큰 입력이 가려지지 않습니다.");
+		}
+		Type guideType = launcher.GetNestedType("DiscordRemoteRegistrationGuideForm", BindingFlags.NonPublic);
+		using (Form guide = (Form)Activator.CreateInstance(guideType, true))
+		{
+			Equal(AutoScaleMode.Dpi, guide.AutoScaleMode, "Discord 등록 가이드 DPI 배율");
+			Equal(false, guide.AutoScroll, "Discord 등록 가이드 불필요한 전체 스크롤 없음");
+			TableLayoutPanel steps = (TableLayoutPanel)GetPrivateField(guideType, guide, "stepsPanel");
+			Equal(4, steps.Controls.Count, "Discord 등록 가이드 단계 수");
+			Button portal = (Button)GetPrivateField(guideType, guide, "portalButton");
+			Button start = (Button)GetPrivateField(guideType, guide, "startButton");
+			Button later = (Button)GetPrivateField(guideType, guide, "laterButton");
+			if (string.IsNullOrWhiteSpace(portal.AccessibleName) || string.IsNullOrWhiteSpace(portal.AccessibleDescription)
+				|| string.IsNullOrWhiteSpace(start.AccessibleName) || string.IsNullOrWhiteSpace(start.AccessibleDescription)
+				|| string.IsNullOrWhiteSpace(later.AccessibleName) || string.IsNullOrWhiteSpace(later.AccessibleDescription))
+				throw new InvalidOperationException("Discord 등록 가이드 접근성 정보가 없습니다.");
+			Equal(start, guide.AcceptButton, "Discord 등록 가이드 Enter 기본 동작");
+			Equal(later, guide.CancelButton, "Discord 등록 가이드 Esc 취소 동작");
 		}
 		SetStaticField("DiscordRemoteSettingsPathOverride", null);
 		SetStaticField("DiscordRemoteRunOverride", null);

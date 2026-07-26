@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Linq;
@@ -8,6 +9,233 @@ using System.Windows.Forms;
 
 internal static partial class Launcher
 {
+	private static bool IsDiscordRemoteRegistrationConfigured(DiscordRemoteSettings settings)
+	{
+		return settings != null
+			&& !string.IsNullOrWhiteSpace(settings.ProtectedBotToken)
+			&& IsDiscordSnowflake(settings.ApplicationId)
+			&& IsDiscordSnowflake(settings.GuildId)
+			&& IsDiscordSnowflake(settings.ChannelId)
+			&& ((settings.AllowedUserIds != null && settings.AllowedUserIds.Count > 0)
+				|| (settings.AllowedRoleIds != null && settings.AllowedRoleIds.Count > 0))
+			&& settings.AllowedProfiles != null
+			&& settings.AllowedProfiles.Count > 0;
+	}
+
+	private static bool ShouldShowDiscordRegistrationGuide()
+	{
+		try { return !IsDiscordRemoteRegistrationConfigured(ReadDiscordRemoteSettings()); }
+		catch { return false; }
+	}
+
+	private static void OpenDiscordRemoteSettings(IWin32Window owner, bool modal)
+	{
+		if (ShouldShowDiscordRegistrationGuide())
+		{
+			using (DiscordRemoteRegistrationGuideForm guide = new DiscordRemoteRegistrationGuideForm())
+			{
+				DialogResult result = owner == null ? guide.ShowDialog() : guide.ShowDialog(owner);
+				if (result != DialogResult.OK) return;
+			}
+		}
+		if (modal)
+		{
+			using (DiscordRemoteSettingsForm form = new DiscordRemoteSettingsForm())
+			{
+				if (owner == null) form.ShowDialog();
+				else form.ShowDialog(owner);
+			}
+			return;
+		}
+		DiscordRemoteSettingsForm settingsForm = new DiscordRemoteSettingsForm();
+		settingsForm.FormClosed += delegate { settingsForm.Dispose(); };
+		settingsForm.Show();
+	}
+
+	private sealed class DiscordRemoteRegistrationGuideForm : Form
+	{
+		private const string DiscordDeveloperPortalUrl = "https://discord.com/developers/applications";
+		private readonly TableLayoutPanel stepsPanel;
+		private readonly Button portalButton;
+		private readonly Button startButton;
+		private readonly Button laterButton;
+		private readonly List<Label> stepNumbers = new List<Label>();
+
+		public DiscordRemoteRegistrationGuideForm()
+		{
+			bool korean = IsManagedKorean();
+			Text = korean ? "Discord 원격 제어 시작 가이드" : "Discord remote-control setup guide";
+			StartPosition = FormStartPosition.CenterParent;
+			MinimumSize = new Size(680, 600);
+			Size = new Size(760, 650);
+			AutoScaleMode = AutoScaleMode.Dpi;
+			Font = new Font(ThemeFonts.Body, 10.5F);
+			MaximizeBox = false;
+			MinimizeBox = false;
+			AccessibleName = Text;
+			AccessibleDescription = korean
+				? "Discord 봇 등록에 필요한 네 단계를 설명합니다."
+				: "Explains the four steps required to register a Discord bot.";
+			ApplyLauncherWindowIcon(this);
+
+			TableLayoutPanel root = new TableLayoutPanel
+			{
+				Dock = DockStyle.Fill,
+				Padding = new Padding(28, 24, 28, 24),
+				ColumnCount = 1,
+				RowCount = 5
+			};
+			root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+			root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+			root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+			root.RowStyles.Add(new RowStyle(SizeType.Absolute, 76F));
+			root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+			Controls.Add(root);
+
+			root.Controls.Add(new Label
+			{
+				AutoSize = true,
+				Font = new Font(ThemeFonts.Display, 20F, FontStyle.Bold),
+				Text = korean ? "Discord 연결을 먼저 준비해 주세요" : "Set up your Discord connection first",
+				Margin = new Padding(0, 0, 0, 8)
+			}, 0, 0);
+			root.Controls.Add(new Label
+			{
+				AutoSize = true,
+				MaximumSize = new Size(680, 0),
+				Text = korean
+					? "아직 등록된 Discord 앱이 없습니다. 아래 순서대로 한 번만 설정하면 허용된 채널에서 서버를 안전하게 관리할 수 있습니다."
+					: "No Discord app is registered yet. Complete these steps once to manage approved servers safely from an approved channel.",
+				Tag = "muted",
+				Margin = new Padding(0, 0, 0, 14)
+			}, 0, 1);
+
+			stepsPanel = new TableLayoutPanel
+			{
+				Dock = DockStyle.Fill,
+				ColumnCount = 1,
+				RowCount = 4,
+				Margin = Padding.Empty
+			};
+			for (int index = 0; index < 4; index++) stepsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+			stepsPanel.Controls.Add(CreateDiscordGuideStep(1,
+				korean ? "Discord 앱과 봇 만들기" : "Create a Discord app and bot",
+				korean ? "Developer Portal에서 새 애플리케이션을 만들고 Bot 페이지에서 봇을 추가합니다." : "Create an application in the Developer Portal and add its bot from the Bot page."), 0, 0);
+			stepsPanel.Controls.Add(CreateDiscordGuideStep(2,
+				korean ? "내 Discord 서버에 설치하기" : "Install it to your Discord server",
+				korean ? "Guild Install에 bot과 applications.commands 범위를 선택해 관리할 서버에 설치합니다." : "Use Guild Install with the bot and applications.commands scopes for the server you manage."), 0, 1);
+			stepsPanel.Controls.Add(CreateDiscordGuideStep(3,
+				korean ? "필요한 ID 복사하기" : "Copy the required IDs",
+				korean ? "개발자 모드를 켠 뒤 애플리케이션·서버·채널과 허용할 사용자 또는 역할 ID를 복사합니다." : "Enable Developer Mode, then copy the application, guild, channel, and approved user or role IDs."), 0, 2);
+			stepsPanel.Controls.Add(CreateDiscordGuideStep(4,
+				korean ? "MineHarbor에서 연결하기" : "Connect it in MineHarbor",
+				korean ? "백그라운드 운영을 켜고 토큰·ID·허용 서버를 입력한 뒤 저장 및 연결을 누릅니다." : "Enable Background operations, enter the token, IDs, and approved servers, then choose Save and connect."), 0, 3);
+			root.Controls.Add(stepsPanel, 0, 2);
+
+			RoundedPanel security = new RoundedPanel
+			{
+				Dock = DockStyle.Fill,
+				CornerRadius = 12,
+				Tag = "input-surface",
+				Padding = new Padding(16, 10, 16, 10),
+				Margin = new Padding(0, 12, 0, 12),
+				AccessibleName = korean ? "Discord 보안 안내" : "Discord security note"
+			};
+			security.Controls.Add(new Label
+			{
+				Dock = DockStyle.Fill,
+				TextAlign = ContentAlignment.MiddleLeft,
+				Text = korean
+					? "토큰은 현재 Windows 사용자만 복호화할 수 있게 저장됩니다. 임의 콘솔·셸·파일 명령은 Discord에 노출되지 않습니다."
+					: "The token is stored so only the current Windows user can decrypt it. Discord never exposes arbitrary console, shell, or file commands.",
+				Tag = "muted"
+			});
+			root.Controls.Add(security, 0, 3);
+
+			FlowLayoutPanel buttons = new FlowLayoutPanel
+			{
+				AutoSize = true,
+				Dock = DockStyle.Right,
+				FlowDirection = FlowDirection.LeftToRight,
+				WrapContents = false,
+				Margin = Padding.Empty
+			};
+			portalButton = MultiServerDashboardForm.NewManagedButton(korean ? "Developer Portal 열기" : "Open Developer Portal", 178, "secondary");
+			startButton = MultiServerDashboardForm.NewManagedButton(korean ? "설정 시작" : "Start setup", 126, "primary");
+			laterButton = MultiServerDashboardForm.NewManagedButton(korean ? "나중에" : "Not now", 104, "secondary");
+			ConfigureAccessibleField(portalButton, portalButton.Text, korean ? "기본 브라우저에서 Discord Developer Portal을 엽니다." : "Opens the Discord Developer Portal in the default browser.");
+			ConfigureAccessibleField(startButton, startButton.Text, korean ? "가이드를 닫고 Discord 설정 입력 화면으로 이동합니다." : "Closes the guide and opens Discord settings.");
+			ConfigureAccessibleField(laterButton, laterButton.Text, korean ? "설정을 변경하지 않고 가이드를 닫습니다." : "Closes the guide without changing settings.");
+			portalButton.Click += delegate { OpenDiscordDeveloperPortal(); };
+			startButton.Click += delegate { DialogResult = DialogResult.OK; Close(); };
+			laterButton.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
+			buttons.Controls.AddRange(new Control[] { portalButton, startButton, laterButton });
+			root.Controls.Add(buttons, 0, 4);
+			AcceptButton = startButton;
+			CancelButton = laterButton;
+
+			ApplySimpleDialogTheme(this);
+			ThemePalette palette = ThemePalette.Create(launcherForm != null && launcherForm.UsesDarkTheme);
+			for (int index = 0; index < stepNumbers.Count; index++) stepNumbers[index].ForeColor = palette.Accent;
+			ApplyCommonButtonToolTips(this);
+			EnsureButtonContentFits(portalButton);
+			EnsureButtonContentFits(startButton);
+			EnsureButtonContentFits(laterButton);
+		}
+
+		private RoundedPanel CreateDiscordGuideStep(int number, string title, string description)
+		{
+			RoundedPanel card = new RoundedPanel
+			{
+				Dock = DockStyle.Fill,
+				CornerRadius = 12,
+				Tag = "surface",
+				Padding = new Padding(14, 8, 14, 8),
+				Margin = new Padding(0, 4, 0, 4),
+				AccessibleName = number.ToString() + ". " + title,
+				AccessibleDescription = description
+			};
+			TableLayoutPanel content = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty };
+			content.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 52F));
+			content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
+			Label numberLabel = new Label
+			{
+				Dock = DockStyle.Fill,
+				Text = number.ToString("00"),
+				TextAlign = ContentAlignment.MiddleCenter,
+				Font = new Font(ThemeFonts.Display, 13F, FontStyle.Bold),
+				AccessibleName = number.ToString()
+			};
+			stepNumbers.Add(numberLabel);
+			TableLayoutPanel copy = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = Padding.Empty };
+			copy.RowStyles.Add(new RowStyle(SizeType.AutoSize));
+			copy.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+			copy.Controls.Add(new Label { AutoSize = true, Text = title, Font = new Font(ThemeFonts.Body, 10.5F, FontStyle.Bold), Margin = new Padding(0, 1, 0, 2) }, 0, 0);
+			copy.Controls.Add(new Label { Dock = DockStyle.Fill, Text = description, Tag = "muted", AutoEllipsis = true }, 0, 1);
+			content.Controls.Add(numberLabel, 0, 0);
+			content.Controls.Add(copy, 1, 0);
+			card.Controls.Add(content);
+			return card;
+		}
+
+		private void OpenDiscordDeveloperPortal()
+		{
+			bool korean = IsManagedKorean();
+			try
+			{
+				Process.Start(new ProcessStartInfo { FileName = DiscordDeveloperPortalUrl, UseShellExecute = true });
+			}
+			catch
+			{
+				ShowMineHarborDialog(this,
+					korean ? "브라우저에서 Discord Developer Portal을 열지 못했습니다." : "Could not open the Discord Developer Portal in your browser.",
+					Text,
+					MessageBoxButtons.OK,
+					MessageBoxIcon.Error);
+			}
+		}
+	}
+
 	private sealed class DiscordRemoteSettingsForm : Form
 	{
 		private readonly ModernCheckBox enabledBox;
@@ -20,6 +248,7 @@ internal static partial class Launcher
 		private readonly ModernTextBox allowedRolesBox;
 		private readonly CheckedListBox profilesBox;
 		private readonly Label statusLabel;
+		private readonly Button guideButton;
 		private readonly string loadError;
 		private readonly string existingProtectedToken;
 		private bool refreshing;
@@ -220,15 +449,18 @@ internal static partial class Launcher
 			root.Controls.Add(statusLabel, 0, 4);
 
 			FlowLayoutPanel buttons = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Right, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
+			guideButton = MultiServerDashboardForm.NewManagedButton(korean ? "설정 가이드" : "Setup guide", 124, "secondary");
 			Button refresh = MultiServerDashboardForm.NewManagedButton(korean ? "상태 새로고침" : "Refresh status", 136, "secondary");
 			Button save = MultiServerDashboardForm.NewManagedButton(korean ? "저장 및 연결" : "Save and connect", 136, "primary");
 			Button cancel = MultiServerDashboardForm.NewManagedButton(korean ? "취소" : "Cancel", 100, "secondary");
+			guideButton.Click += delegate { ShowRegistrationGuide(); };
 			refresh.Click += delegate { RefreshStatusAsync(); };
 			save.Click += delegate { SaveSettings(); };
 			cancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
 			refresh.Enabled = string.IsNullOrEmpty(loadError);
 			save.Enabled = string.IsNullOrEmpty(loadError);
-			buttons.Controls.AddRange(new Control[] { refresh, save, cancel });
+			ConfigureAccessibleField(guideButton, guideButton.Text, korean ? "Discord 앱 등록 순서를 다시 표시합니다." : "Shows the Discord app registration steps again.");
+			buttons.Controls.AddRange(new Control[] { guideButton, refresh, save, cancel });
 			root.Controls.Add(buttons, 0, 5);
 
 			enabledBox.CheckedChanged += delegate { UpdateEnabledState(); };
@@ -237,6 +469,18 @@ internal static partial class Launcher
 			UpdateEnabledState();
 			ApplySimpleDialogTheme(this);
 			ApplyCommonButtonToolTips(this);
+		}
+
+		private void ShowRegistrationGuide()
+		{
+			using (DiscordRemoteRegistrationGuideForm guide = new DiscordRemoteRegistrationGuideForm())
+			{
+				if (guide.ShowDialog(this) != DialogResult.OK) return;
+			}
+			enabledBox.Checked = true;
+			if (string.IsNullOrEmpty(existingProtectedToken) && string.IsNullOrWhiteSpace(tokenBox.Text)) tokenBox.Focus();
+			else if (string.IsNullOrWhiteSpace(applicationIdBox.Text)) applicationIdBox.Focus();
+			else guildIdBox.Focus();
 		}
 
 		private static ModernTextBox NewDiscordTextBox(string cueText, bool multiline)

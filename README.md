@@ -26,9 +26,9 @@
 | **Windows 설치 프로그램** | 시작 메뉴, 선택적 바탕화면 바로가기, 제거 기능 사용 | **[최신 Release 열기](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 | **Portable ZIP** | README와 라이선스를 포함한 묶음 보관 | **[최신 Release 열기](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 
-현재 소스 버전은 `v1.15.0`, 내부 빌드는 `26.2.45.79`입니다. MineHarbor 이름으로 배포된 Portable EXE는 같은 링크에서 계속 최신 파일을 받을 수 있습니다. 기존 설치의 `%LOCALAPPDATA%\MinecraftServerLauncher` 데이터는 자동으로 찾아 그대로 사용하며, 새 사용자 데이터 경로는 `%LOCALAPPDATA%\MineHarbor`입니다.
+현재 소스 버전은 `v1.15.1`, 내부 빌드는 `26.2.45.80`입니다. MineHarbor 이름으로 배포된 Portable EXE는 같은 링크에서 계속 최신 파일을 받을 수 있습니다. 기존 설치의 `%LOCALAPPDATA%\MinecraftServerLauncher` 데이터는 자동으로 찾아 그대로 사용하며, 새 사용자 데이터 경로는 `%LOCALAPPDATA%\MineHarbor`입니다.
 
-이 README는 로드맵이 아니라 현재 `v1.15.0` 소스와 자동 테스트, 공개 Release 자산에서 확인한 기능만 설명합니다. 서버 종류나 브리지 연결처럼 조건에 따라 달라지는 기능과 지원되지 않는 상태는 아래에 따로 표시합니다.
+이 README는 로드맵이 아니라 현재 `v1.15.1` 소스와 자동 테스트, 공개 Release 자산에서 확인한 기능만 설명합니다. 서버 종류나 브리지 연결처럼 조건에 따라 달라지는 기능과 지원되지 않는 상태는 아래에 따로 표시합니다.
 
 > [!WARNING]
 > 현재 릴리스 실행 파일은 요청된 자체서명 인증서로 무결성을 표시하지만 공개 인증 기관이 신뢰한 배포자 서명은 아닙니다. 따라서 Windows SmartScreen 경고가 나타날 수 있습니다. Release의 `SHA256SUMS.txt`와 GitHub 출처를 함께 확인해 주세요.
@@ -136,7 +136,7 @@ Paper/Purpur의 복사 옵션은 서버가 공식적으로 지원하지 않는 �
 - 런처 업데이트 전에는 에이전트 서버를 먼저 안전 종료합니다. 제한 시간 안에 종료되지 않으면 서버 보호를 위해 업데이트와 에이전트 종료를 취소합니다.
 - Windows 알림은 별도 동의 후에만 표시되며 정보·경고·오류, 종류와 조용한 시간을 설정할 수 있습니다. 오래된 기록은 다시 알리지 않고 짧은 시간에 발생한 여러 사건은 하나로 요약합니다.
 - Discord 원격 제어(베타)는 별도로 동의하고 사용자가 만든 봇을 연결한 경우에만 에이전트에서 실행됩니다. 공개 수신 포트를 열지 않는 Gateway 연결을 사용하며 `상태`, `플레이어`, `최근 오류`, `시작`, 확인형 `안전 종료`·`재시작`, `백업`만 제공합니다. 임의 콘솔·셸·파일 실행과 외부 소유 서버 제어는 차단합니다.
-- Discord 설정은 `서버 관리 → 백그라운드 → Discord 원격` 또는 에이전트 트레이에서 열 수 있습니다. 백그라운드 운영을 먼저 켠 뒤 사용자가 만든 봇의 토큰, 애플리케이션·서버·채널 ID, 허용 사용자 또는 역할과 허용 서버를 입력합니다. 자세한 설치·권한 경계는 [Discord 원격 제어 구조](docs/architecture/DISCORD_REMOTE_MANAGEMENT.md)를 참고하세요.
+- Discord 설정은 `서버 관리 → 백그라운드 → Discord 원격` 또는 에이전트 트레이에서 열 수 있습니다. 등록 정보가 없으면 앱·봇 생성, 길드 설치, ID 복사와 MineHarbor 연결을 설명하는 현대형 4단계 가이드가 먼저 열리며, `설정 시작`을 선택한 경우에만 입력 화면으로 이동합니다. 설정 화면의 `설정 가이드`로 다시 볼 수도 있습니다. 백그라운드 운영을 먼저 켠 뒤 사용자가 만든 봇의 토큰, 애플리케이션·서버·채널 ID, 허용 사용자 또는 역할과 허용 서버를 입력합니다. 자세한 설치·권한 경계는 [Discord 원격 제어 구조](docs/architecture/DISCORD_REMOTE_MANAGEMENT.md)를 참고하세요.
 - 관리자 권한 Windows 서비스는 설치하지 않으며, 로그온 전 실행과 웹 원격 관리는 아직 지원하지 않습니다.
 
 > [!WARNING]
@@ -312,9 +312,9 @@ PR과 `main` 푸시의 일반 CI는 버전·문서 일치, SDK 스타일 `net48`
 | **Windows installer** | Start Menu, optional desktop shortcut, and uninstall support | **[Open the latest release](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 | **Portable ZIP** | Keep the launcher, README, and license together | **[Open the latest release](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 
-Current source version: `v1.15.0` · internal build: `26.2.45.79`. MineHarbor releases keep the same permanent Portable URL. Existing data under `%LOCALAPPDATA%\MinecraftServerLauncher` is detected and preserved; new user-data installations use `%LOCALAPPDATA%\MineHarbor`.
+Current source version: `v1.15.1` · internal build: `26.2.45.80`. MineHarbor releases keep the same permanent Portable URL. Existing data under `%LOCALAPPDATA%\MinecraftServerLauncher` is detected and preserved; new user-data installations use `%LOCALAPPDATA%\MineHarbor`.
 
-This README documents shipped behavior verified against the current `v1.15.0` source, automated tests, and public release assets—not roadmap items. Conditional and unsupported behavior is called out explicitly below.
+This README documents shipped behavior verified against the current `v1.15.1` source, automated tests, and public release assets—not roadmap items. Conditional and unsupported behavior is called out explicitly below.
 
 > [!WARNING]
 > Release executables carry the requested self-signed integrity signature, not a publisher identity trusted by a public certificate authority. Windows SmartScreen can therefore still warn. Verify the GitHub source and the release `SHA256SUMS.txt`.
@@ -375,7 +375,7 @@ Windows taskbar notifications are separately opt-in and require the agent to be 
 
 Discord remote control is another separate opt-in and requires a bot created and installed by the user. It uses an outbound Discord Gateway connection rather than a public inbound listener. The guild-only `/mineharbor` command exposes status, players when the bridge is connected, recent errors, start, backup, and 60-second-confirmed safe stop/restart for allowlisted profiles only. The token is current-user DPAPI protected; guild, channel, user or role, and profile checks plus rate limiting apply to every request. Arbitrary console, shell, and file execution remain unavailable.
 
-Open Discord setup from `Server management → Background → Discord remote` or from the agent tray. After enabling background operations, enter the user-created bot token, application/guild/channel IDs, allowed users or roles, and approved server profiles. See the [Discord remote-control architecture](docs/architecture/DISCORD_REMOTE_MANAGEMENT.md) for installation and trust boundaries.
+Open Discord setup from `Server management → Background → Discord remote` or from the agent tray. If no registration exists, a modern four-step guide first explains app/bot creation, guild installation, ID collection, and MineHarbor connection; the settings form opens only after `Start setup`, and its `Setup guide` button can reopen the guide later. After enabling background operations, enter the user-created bot token, application/guild/channel IDs, allowed users or roles, and approved server profiles. See the [Discord remote-control architecture](docs/architecture/DISCORD_REMOTE_MANAGEMENT.md) for installation and trust boundaries.
 
 This beta does not install an elevated Windows service and does not run before sign-in. Web remote management remains unsupported.
 

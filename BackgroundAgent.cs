@@ -1084,9 +1084,7 @@ internal static partial class Launcher
 			});
 			menu.Items.Add(ManagedText("Discord 원격 제어", "Discord remote control"), null, delegate
 			{
-				DiscordRemoteSettingsForm form = new DiscordRemoteSettingsForm();
-				form.FormClosed += delegate { form.Dispose(); };
-				form.Show();
+				OpenDiscordRemoteSettings(null, false);
 			});
 			menu.Items.Add(new ToolStripSeparator());
 			List<ManagedProfileRecord> profiles;
@@ -1272,7 +1270,7 @@ internal static partial class Launcher
 			};
 			discord.Click += delegate
 			{
-				using (DiscordRemoteSettingsForm form = new DiscordRemoteSettingsForm()) form.ShowDialog(this);
+				OpenDiscordRemoteSettings(this, true);
 			};
 			save.Click += delegate { SaveSettings(); };
 			cancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };

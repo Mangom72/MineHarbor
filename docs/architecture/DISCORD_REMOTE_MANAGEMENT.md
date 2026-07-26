@@ -2,9 +2,9 @@
 
 ## 한국어
 
-MineHarbor v1.15.0의 Discord 원격 제어는 사용자 계정용 백그라운드 에이전트에 붙는 별도 동의 베타 기능입니다. 사용자가 직접 Discord 애플리케이션과 봇을 만들고 `bot` 및 `applications.commands` 범위로 한 Discord 서버에 설치한 뒤 애플리케이션·서버·채널 ID, 허용 사용자 또는 역할, 허용 MineHarbor 서버를 설정해야 시작됩니다. 관리자 권한 서비스나 공개 수신 포트는 만들지 않습니다.
+MineHarbor v1.15.1의 Discord 원격 제어는 사용자 계정용 백그라운드 에이전트에 붙는 별도 동의 베타 기능입니다. 사용자가 직접 Discord 애플리케이션과 봇을 만들고 `bot` 및 `applications.commands` 범위로 한 Discord 서버에 설치한 뒤 애플리케이션·서버·채널 ID, 허용 사용자 또는 역할, 허용 MineHarbor 서버를 설정해야 시작됩니다. 관리자 권한 서비스나 공개 수신 포트는 만들지 않습니다.
 
-설정은 `서버 관리 → 백그라운드 → Discord 원격` 또는 에이전트 트레이의 `Discord 원격 제어`에서 엽니다. 먼저 백그라운드 운영을 켜고 [Discord Developer Portal](https://discord.com/developers/applications)에서 만든 봇의 토큰과 ID를 입력해야 합니다. 토큰 입력란을 비워 저장하면 기존 암호문을 유지하며, `저장된 봇 토큰 제거`를 선택한 경우에만 삭제합니다.
+설정은 `서버 관리 → 백그라운드 → Discord 원격` 또는 에이전트 트레이의 `Discord 원격 제어`에서 엽니다. 보호된 토큰, 유효한 애플리케이션·서버·채널 ID, 허용 사용자 또는 역할과 허용 서버가 모두 없으면 4단계 등록 가이드를 먼저 표시합니다. `설정 시작`만 실제 설정 화면으로 이동하며 `나중에`와 `Esc`는 아무 값도 바꾸지 않습니다. 설정 화면의 `설정 가이드`에서 언제든 다시 열 수 있습니다. 먼저 백그라운드 운영을 켜고 [Discord Developer Portal](https://discord.com/developers/applications)에서 만든 봇의 토큰과 ID를 입력해야 합니다. Portal 버튼은 이 고정된 공식 HTTPS 주소만 엽니다. 토큰 입력란을 비워 저장하면 기존 암호문을 유지하며, `저장된 봇 토큰 제거`를 선택한 경우에만 삭제합니다.
 
 ### 연결과 명령 등록
 
@@ -42,15 +42,15 @@ Gateway는 Hello의 heartbeat 간격, ACK 누락, sequence, Ready의 session ID�
 
 ### 검증 범위
 
-자동 검사는 실제 봇 토큰이나 Discord 서버를 사용하지 않습니다. 임시 설정에서 기본 비활성화, DPAPI 평문 비저장·복호화, ID와 프로필 검증, 손상·미래 스키마 보존, 사용자·역할·길드·채널 권한, 서버 자동완성, 확인 소유권·만료·재사용, 사용자별 속도 제한, 임의 명령 차단, 응답 길이와 설정 UI 접근성을 검사합니다. 실제 Discord API 연결은 사용자가 만든 테스트 길드와 봇에서 설치 권한·방화벽·프록시 정책을 포함해 별도로 확인해야 합니다.
+자동 검사는 실제 봇 토큰이나 Discord 서버를 사용하지 않습니다. 임시 설정에서 기본 비활성화, DPAPI 평문 비저장·복호화, ID와 프로필 검증, 손상·미래 스키마 보존, 사용자·역할·길드·채널 권한, 서버 자동완성, 확인 소유권·만료·재사용, 사용자별 속도 제한, 임의 명령 차단, 응답 길이, 미등록/등록 가이드 분기와 설정·가이드 UI 접근성을 검사합니다. 실제 Discord API 연결은 사용자가 만든 테스트 길드와 봇에서 설치 권한·방화벽·프록시 정책을 포함해 별도로 확인해야 합니다.
 
 현재 구현은 Discord 이벤트 알림 전송, Discord에서의 임의 콘솔, 웹 원격 관리, 여러 길드·채널 동시 연결과 Discord 계정 자체 관리를 제공하지 않습니다.
 
 ## English
 
-MineHarbor v1.15.0 Discord remote control is a separately opted-in beta attached to the per-user background agent. The user must create a Discord application/bot, install it to one guild with the `bot` and `applications.commands` scopes, and configure the application, guild, channel, allowed users or roles, and allowed MineHarbor profiles. No elevated service or public inbound listener is created.
+MineHarbor v1.15.1 Discord remote control is a separately opted-in beta attached to the per-user background agent. The user must create a Discord application/bot, install it to one guild with the `bot` and `applications.commands` scopes, and configure the application, guild, channel, allowed users or roles, and allowed MineHarbor profiles. No elevated service or public inbound listener is created.
 
-Open the settings from `Server management → Background → Discord remote` or `Discord remote control` in the agent tray. Enable background operations first, then enter the bot token and IDs created in the [Discord Developer Portal](https://discord.com/developers/applications). Leaving the token box blank preserves the existing ciphertext; only the explicit remove-token option deletes it.
+Open the settings from `Server management → Background → Discord remote` or `Discord remote control` in the agent tray. When the protected token, valid application/guild/channel IDs, allowed user or role, and approved profile have not all been registered, a four-step guide appears first. Only `Start setup` advances to settings; `Not now` and `Esc` change nothing. `Setup guide` in the settings footer reopens it later. Enable background operations first, then enter the bot token and IDs created in the [Discord Developer Portal](https://discord.com/developers/applications). The portal button opens only that fixed official HTTPS URL. Leaving the token box blank preserves the existing ciphertext; only the explicit remove-token option deletes it.
 
 The agent upserts one guild-scoped `/mineharbor` command through Discord API v10 and maintains an outbound `wss` Gateway connection. Interactions arrive through the Gateway and are answered through HTTPS callbacks/webhooks. Heartbeat ACKs, sequence numbers, Ready session/resume data, reconnect, invalid sessions, bounded payloads, exponential reconnect, the three-second initial interaction deadline, and HTTP `Retry-After` are handled. Interactions are not tied to a Gateway Intent, so MineHarbor identifies with intents 0 and requests no Message Content, Guild Members, or Presence privileged intent.
 
@@ -62,6 +62,6 @@ The supported actions are `help`, `status`, `players`, `errors`, `start`, `stop`
 
 Mutations reuse only the existing background agent's verified start, safe-stop, restart, and backup paths. A running server that the agent does not own remains untouchable even if its port is listening. No arbitrary console, PowerShell/CMD/executable launch, file upload, or file execution API is exposed. Mutating results are recorded with the `discord` source and only the last four user-ID digits. Integration failure is isolated from the server process, scheduler, local IPC, and Windows notifications.
 
-Automated tests use no real bot token or Discord server. They cover DPAPI storage, validation and corrupt/future preservation, guild/channel/user/role/profile authorization, autocomplete, confirmation ownership/expiry/replay, throttling, arbitrary-command rejection, response bounds, and UI accessibility. A user-owned test guild remains necessary for an end-to-end Discord installation, firewall, and proxy check.
+Automated tests use no real bot token or Discord server. They cover DPAPI storage, validation and corrupt/future preservation, guild/channel/user/role/profile authorization, autocomplete, confirmation ownership/expiry/replay, throttling, arbitrary-command rejection, response bounds, registered/unregistered onboarding routing, and settings/guide UI accessibility. A user-owned test guild remains necessary for an end-to-end Discord installation, firewall, and proxy check.
 
 Outbound Discord notifications, arbitrary remote console, web remote management, multi-guild/channel operation, and Discord-account management are not currently implemented.
