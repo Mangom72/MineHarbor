@@ -1,8 +1,9 @@
 ﻿# CODEX_HANDOFF.md
 
-## 0.000 Current implementation state (v1.14.0 pre-release)
+## 0.000 Current implementation state (v1.14.0 released)
 
-- Feature branch: `codex/server-handoff-v1.14.0`
+- Release-state branch: `codex/v1.14.0-release-state` (feature: `codex/server-handoff-v1.14.0`)
+- Pull request [#36](https://github.com/Mangom72/MineHarbor/pull/36) is merged. PR CI `30189035839`, main CI `30189074256`, and release run `30189118176` passed.
 - Version source of truth: `version.json` = 1.14.0 / build 26.2.45.78
 - Multi-server management children started by this version can transfer to the explicitly enabled per-user background agent without stopping. The close flow distinguishes live transfer, safe stop-all, and cancel.
 - Every child uses a fresh current-user-SID-only pipe and 256-bit token. The registered profile, exact child identity, previous owner, and new owner are checked by PID and process-start time before an atomic ownership change.
@@ -11,7 +12,7 @@
 - `Prepare-BuildResources.ps1`, `build.ps1 -SkipDependencyDownload`, and `test.ps1 -LauncherPath artifacts\MineHarbor.exe` pass with `VERSION_CONSISTENCY_OK`, 31 launcher groups, Portable version/smoke, 10 bridge protocol cases, modern-dialog scan, and security regression scan. Tests do not start Minecraft.
 - `Publish-LocalRelease.ps1 -NoPublish` passed ephemeral RSA-3072/SHA-256 self-signing and `RELEASE_ARTIFACTS_PASSED=7`, removed the certificate/PFX, and the full suite passed again against the signed Portable EXE.
 - Live handoff is intentionally limited to managed children started by this version's multi-server dashboard. The Java server hosted directly by the main launcher, manually started servers, and other programs' servers remain unsupported for lossless transfer.
-- PR, main CI, tag release, public assets, and the v1.13.0-to-v1.14.0 public updater path still need publication verification.
+- The [v1.14.0 release](https://github.com/Mangom72/MineHarbor/releases/tag/v1.14.0) contains seven verified public assets. The release workflow removed its temporary self-signed certificate/PFX, and an independent download confirmed `RELEASE_ARTIFACTS_PASSED=7`, `PUBLISHED_ASSETS_MODE_OK`, and `PUBLIC_AUTO_UPDATE_OK=1.13.0->1.14.0` before rerunning all 31 launcher groups and 10 bridge cases against the updated public executable.
 
 ## 0.00 Current implementation state (v1.13.0 released)
 
