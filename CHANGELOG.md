@@ -4,6 +4,26 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.13.0] - 2026-07-26
+
+### Korean
+
+- **선택형 Windows 알림**: 기본 비활성화 상태에서 사용자가 `운영 기록`, `백그라운드` 또는 트레이의 알림 설정을 켠 경우에만 백그라운드 에이전트가 새 운영 기록을 Windows 작업 표시줄 알림으로 표시합니다.
+- **중요도·종류·조용한 시간**: 정보·경고·오류 최소 중요도와 서버, 예약, 백업, 콘텐츠, 네트워크, 업데이트·보안 종류를 선택하고 자정을 지나는 조용한 시간도 설정할 수 있습니다.
+- **알림 폭주 방지**: 에이전트 시작 전의 오래된 기록은 다시 알리지 않고, 새 이벤트를 최대 50개로 제한해 8초 안에 여러 건이 발생하면 가장 중요한 최신 사건과 추가 개수를 하나로 요약합니다.
+- **개인정보와 실패 격리**: 알림은 운영 기록에서 이미 가린 서버 절대 경로, IPv4 주소, 토큰·비밀번호·웹훅 값을 다시 정리하며 명령 원문을 표시하지 않습니다. 알림 설정이나 기록 읽기 실패가 서버·예약 작업을 중단시키지 않습니다.
+- **현대형 설정 UX**: 한국어·영어, 다크·라이트 테마, DPI, 키보드와 스크린 리더 정보가 적용된 설정 화면에서 `저장 후 테스트`를 사용할 수 있습니다. 설정은 `windows-notifications.json`에 크기·스키마 검증과 프로세스 간 잠금을 적용해 원자적으로 저장합니다.
+- **회귀 검증**: 기본 비활성화, 설정 왕복, 손상·미래 스키마 보존, 자정 경계 조용한 시간, 중요도·종류 필터, 이전 기록 재생 방지, 알림 요약·가림과 IPC 테스트 알림을 포함해 런처 테스트를 30개 그룹으로 확장했습니다.
+
+### English
+
+- **Opt-in Windows notifications**: notifications remain disabled by default. Only after the user enables them from Operations, Background, or the tray does the background agent show new operation events as Windows taskbar notifications.
+- **Severity, category, and quiet hours**: choose an Info, Warning, or Error threshold; select server, schedule, backup, content, network, or update/security categories; and configure quiet hours that may cross midnight.
+- **Notification flood control**: history that predates agent startup is not replayed. Up to 50 new events are bounded, and events arriving within eight seconds are collapsed into the most important recent event plus an additional-count summary.
+- **Privacy and failure isolation**: notifications re-sanitize the absolute server paths, IPv4 addresses, token/password/webhook-like values already redacted from operations history and never display raw commands. Notification-setting or history-read failures cannot stop servers or schedules.
+- **Modern settings UX**: a Korean/English, dark/light, DPI-aware, keyboard- and screen-reader-labelled form includes Save and test. `windows-notifications.json` uses bounded schema validation, a cross-process lock, and atomic replacement.
+- **Regression coverage**: the 30 launcher groups now cover default-off settings, round trips, corrupt/future preservation, midnight-spanning quiet hours, severity/category filters, old-history suppression, collapse/redaction, and the IPC test-notification path.
+
 ## [1.12.0] - 2026-07-26
 
 ### Korean

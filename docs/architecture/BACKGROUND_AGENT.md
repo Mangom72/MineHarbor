@@ -29,7 +29,9 @@ GUI와 트레이 에이전트는 로컬 이름 있는 파이프를 사용합니�
 
 런처 업데이트는 에이전트에 안전 종료를 요청하고 종료를 확인한 뒤에만 실행 파일 교체를 시작합니다. 서버가 제한 시간 안에 종료되지 않으면 강제 종료하지 않고 업데이트를 중단합니다. 업데이트된 GUI가 다시 시작되면 활성화된 에이전트에 재연결합니다.
 
-현재 베타는 사용자 로그인 이전 실행, 관리자 권한 서비스, Windows 알림 센터, 웹/Discord 원격 관리, 실행 중 GUI 서버의 무손실 소유권 이전을 제공하지 않습니다. GUI가 직접 시작한 서버는 기존처럼 GUI 종료 확인 후 안전 종료됩니다.
+v1.13.0부터 사용자가 별도로 동의하면 에이전트의 기존 트레이 아이콘으로 새 운영 기록의 Windows 작업 표시줄 알림을 표시합니다. 알림은 중요도·종류·조용한 시간을 적용하고, 오래된 기록을 재생하지 않으며 짧은 시간의 여러 사건을 하나로 요약합니다. 자세한 경계는 [Windows 알림 구조](WINDOWS_NOTIFICATIONS.md)를 따릅니다.
+
+현재 베타는 사용자 로그인 이전 실행, 관리자 권한 서비스, 영구 Windows 알림 센터 저장소, 웹/Discord 원격 관리, 실행 중 GUI 서버의 무손실 소유권 이전을 제공하지 않습니다. GUI가 직접 시작한 서버는 기존처럼 GUI 종료 확인 후 안전 종료됩니다.
 
 ## English
 
@@ -41,4 +43,6 @@ GUI/agent IPC uses a local named pipe derived from the current Windows SID, with
 
 Per-server automation schema 2 remains the source of truth. A path-derived Windows mutex serializes cross-process file access, while PID/start-time leases prevent duplicate claims. Resume events re-evaluate the existing bounded `run-once`, `skip`, or `notify-only` missed-run policy. Live backups use `save-off`, `save-all flush`, backup, and `save-on` only for agent-owned servers.
 
-Launcher updates request safe agent shutdown and begin executable replacement only after the agent exits; a timeout aborts the update instead of forcing a server exit. The beta does not provide pre-sign-in execution, an elevated service, Windows notifications, web/Discord remote control, or lossless transfer of a GUI-owned running server. GUI-owned servers keep the existing safe-close behavior.
+Starting with v1.13.0, separately opted-in Windows taskbar notifications reuse the agent's tray icon for new operations. Severity/category filters, quiet hours, old-history suppression, and burst summaries follow the [Windows notification architecture](WINDOWS_NOTIFICATIONS.md).
+
+Launcher updates request safe agent shutdown and begin executable replacement only after the agent exits; a timeout aborts the update instead of forcing a server exit. The beta does not provide pre-sign-in execution, an elevated service, a durable Windows notification-center store, web/Discord remote control, or lossless transfer of a GUI-owned running server. GUI-owned servers keep the existing safe-close behavior.

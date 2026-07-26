@@ -55,6 +55,7 @@ internal static class LauncherTests
 			TestContentManagement(temporary);
 			TestServerAutomationAndDashboard(temporary);
 			TestBackgroundAgentSettings(temporary);
+			TestWindowsNotifications(temporary);
 			TestOperationsHistory(temporary);
 			TestDiagnosticRedaction(temporary);
 			TestQuickCommandsAndBridge(temporary);
@@ -89,6 +90,8 @@ internal static class LauncherTests
 			SetStaticField("BackgroundAgentPipeNameOverride", null);
 			SetStaticField("BackgroundAgentStartupRegistrationOverride", null);
 			SetStaticField("BackgroundAgentDisableTrayForTests", false);
+			SetStaticField("WindowsNotificationSettingsPathOverride", null);
+			SetStaticField("WindowsNotificationDisplayOverride", null);
 			if (Directory.Exists(temporary)) Directory.Delete(temporary, true);
 		}
 	}
@@ -1682,6 +1685,11 @@ internal static class LauncherTests
 			Equal(true, GetField(Invoke("ReadBackgroundAgentSettings", new object[0]), "Paused"), "IPC 일시 중지 상태 저장");
 			object resume = Invoke("SendBackgroundAgentRequest", new object[] { "resume", null, null, 1000 });
 			Equal(true, GetField(resume, "Success"), "백그라운드 예약 재개 IPC");
+			int testNotifications = 0;
+			SetStaticField("WindowsNotificationDisplayOverride", new Action<string, string, ToolTipIcon>(delegate { testNotifications++; }));
+			object notification = Invoke("SendBackgroundAgentRequest", new object[] { "test-notification", null, null, 1000 });
+			Equal(true, GetField(notification, "Success"), "Windows 테스트 알림 IPC");
+			Equal(1, testNotifications, "Windows 테스트 알림 전달");
 		}
 		finally
 		{
@@ -1717,6 +1725,110 @@ internal static class LauncherTests
 		SetStaticField("BackgroundAgentPipeNameOverride", null);
 		SetStaticField("BackgroundAgentStartupRegistrationOverride", null);
 		SetStaticField("BackgroundAgentDisableTrayForTests", false);
+		SetStaticField("WindowsNotificationDisplayOverride", null);
+		SetStaticField("StorageSettingsPathOverride", Path.Combine(root, "storage.properties"));
+		SetStaticField("LauncherUserDataDirectoryOverride", Path.Combine(root, "isolated-user-data"));
+		Pass();
+	}
+
+	private static void TestWindowsNotifications(string root)
+	{
+		string settingsPath = Path.Combine(root, "windows-notifications", "settings.json");
+		SetStaticField("WindowsNotificationSettingsPathOverride", settingsPath);
+		Type settingsType = launcher.GetNestedType("WindowsNotificationSettings", BindingFlags.NonPublic);
+		object defaults = Invoke("ReadWindowsNotificationSettings", new object[0]);
+		Equal(1, GetField(defaults, "SchemaVersion"), "Windows 알림 설정 기본 스키마");
+		Equal(false, GetField(defaults, "Enabled"), "Windows 알림 기본 비활성화");
+		Equal("warning", GetField(defaults, "MinimumSeverity"), "Windows 알림 기본 최소 중요도");
+
+		object settings = Activator.CreateInstance(settingsType, true);
+		SetPublic(settings, "Enabled", true);
+		SetPublic(settings, "MinimumSeverity", "warning");
+		SetPublic(settings, "QuietHoursEnabled", true);
+		SetPublic(settings, "QuietStartMinutes", 22 * 60);
+		SetPublic(settings, "QuietEndMinutes", 7 * 60);
+		Invoke("WriteWindowsNotificationSettings", new object[] { settings });
+		object loaded = Invoke("ReadWindowsNotificationSettings", new object[0]);
+		Equal(true, GetField(loaded, "Enabled"), "Windows 알림 동의 저장");
+		Equal("warning", GetField(loaded, "MinimumSeverity"), "Windows 알림 중요도 저장");
+		Equal(true, Invoke("IsWithinWindowsNotificationQuietHours", new object[] { loaded, new DateTime(2026, 7, 26, 23, 30, 0) }), "자정 경계 조용한 시간");
+		Equal(true, Invoke("IsWithinWindowsNotificationQuietHours", new object[] { loaded, new DateTime(2026, 7, 26, 6, 30, 0) }), "새벽 조용한 시간");
+		Equal(false, Invoke("IsWithinWindowsNotificationQuietHours", new object[] { loaded, new DateTime(2026, 7, 26, 12, 0, 0) }), "주간 알림 허용");
+		Equal(false, Invoke("ShouldDeliverWindowsNotification", new object[] { loaded, "server", "info", new DateTime(2026, 7, 26, 12, 0, 0) }), "최소 중요도 미만 차단");
+		Equal(true, Invoke("ShouldDeliverWindowsNotification", new object[] { loaded, "server", "error", new DateTime(2026, 7, 26, 12, 0, 0) }), "서버 오류 알림 허용");
+		SetPublic(loaded, "ServerEvents", false);
+		Equal(false, Invoke("ShouldDeliverWindowsNotification", new object[] { loaded, "server", "error", new DateTime(2026, 7, 26, 12, 0, 0) }), "비활성 종류 알림 차단");
+		SetPublic(loaded, "ServerEvents", true);
+		SetPublic(loaded, "QuietHoursEnabled", false);
+		SetPublic(loaded, "MinimumSeverity", "info");
+		Invoke("WriteWindowsNotificationSettings", new object[] { loaded });
+
+		string notificationData = Path.Combine(root, "windows-notification-data");
+		string storagePath = Path.Combine(root, "windows-notification-storage.properties");
+		SetStaticField("StorageSettingsPathOverride", storagePath);
+		SetStaticField("LauncherUserDataDirectoryOverride", Path.Combine(root, "windows-notification-user"));
+		Invoke("SaveDataStorageSettings", new object[] { "custom", notificationData });
+		string server = Path.Combine(notificationData, "servers", "알림 테스트 서버");
+		Directory.CreateDirectory(server);
+		File.WriteAllText(Path.Combine(server, ".launcher-properties-configured"), "launcher-settings-version=7\r\nprofile-name=알림 테스트 서버\r\nserver-type=paper\r\nminecraft-version=1.21.11\r\nmemory-gb=2\r\n", Encoding.UTF8);
+		File.WriteAllText(Path.Combine(server, "server.properties"), "server-port=25565\r\n", Encoding.UTF8);
+		Invoke("RecordOperationEvent", new object[] { server, "server", "warning", "기존 알림", "Existing notification", "launcher", false });
+
+		int displayed = 0;
+		string displayedTitle = null;
+		string displayedMessage = null;
+		SetStaticField("WindowsNotificationDisplayOverride", new Action<string, string, ToolTipIcon>(delegate(string title, string message, ToolTipIcon icon)
+		{
+			displayed++;
+			displayedTitle = title;
+			displayedMessage = message;
+		}));
+		Type monitorType = launcher.GetNestedType("WindowsNotificationMonitor", BindingFlags.NonPublic);
+		object monitor = Activator.CreateInstance(monitorType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { null }, null);
+		DateTime initialUtc = new DateTime(2026, 7, 26, 3, 0, 0, DateTimeKind.Utc);
+		DateTime daytime = new DateTime(2026, 7, 26, 12, 0, 0, DateTimeKind.Local);
+		InvokeInstance(monitor, "PollAt", new object[] { initialUtc, daytime });
+		Equal(0, displayed, "에이전트 시작 전 알림 재생 방지");
+		Invoke("RecordOperationEvent", new object[] { server, "server", "error", "경로 " + server + " IP=192.168.0.10 token=secret", "Path " + server + " IP=192.168.0.10 token=secret", "recovery", false });
+		InvokeInstance(monitor, "PollAt", new object[] { initialUtc.AddSeconds(1), daytime });
+		Equal(1, displayed, "새 운영 오류 Windows 알림 전달");
+		if (displayedTitle == null || displayedTitle.IndexOf("알림 테스트 서버", StringComparison.Ordinal) < 0)
+			throw new InvalidOperationException("Windows 알림에 서버 식별 정보가 없습니다.");
+		if (displayedMessage == null || displayedMessage.Contains(server) || displayedMessage.Contains("192.168.0.10") || displayedMessage.Contains("secret"))
+			throw new InvalidOperationException("Windows 알림 민감 정보 가림이 적용되지 않았습니다.");
+		Invoke("RecordOperationEvent", new object[] { server, "backup", "warning", "백업 경고", "Backup warning", "background-agent", false });
+		Invoke("RecordOperationEvent", new object[] { server, "automation", "error", "예약 실패", "Scheduled job failed", "automation", false });
+		InvokeInstance(monitor, "PollAt", new object[] { initialUtc.AddSeconds(10), daytime });
+		Equal(2, displayed, "동시 알림 요약 전달");
+		if (displayedMessage.IndexOf("1", StringComparison.Ordinal) < 0)
+			throw new InvalidOperationException("동시 Windows 알림 요약 개수가 없습니다.");
+
+		File.WriteAllText(settingsPath, "{\"SchemaVersion\":999}", Encoding.UTF8);
+		ExpectFailure(delegate { Invoke("ReadWindowsNotificationSettings", new object[0]); }, "미래 Windows 알림 설정 스키마 거부");
+		Equal("{\"SchemaVersion\":999}", File.ReadAllText(settingsPath, Encoding.UTF8), "미래 Windows 알림 설정 원본 보존");
+		File.WriteAllText(settingsPath, "{ broken", Encoding.UTF8);
+		ExpectFailure(delegate { Invoke("ReadWindowsNotificationSettings", new object[0]); }, "손상된 Windows 알림 설정 차단");
+		Equal("{ broken", File.ReadAllText(settingsPath, Encoding.UTF8), "손상된 Windows 알림 설정 원본 보존");
+		Type formType = launcher.GetNestedType("WindowsNotificationSettingsForm", BindingFlags.NonPublic);
+		using (Form blockedForm = (Form)Activator.CreateInstance(formType, true))
+		{
+			Equal(false, InvokeInstance(blockedForm, "SaveSettings", new object[] { false }), "손상된 Windows 알림 설정 UI 덮어쓰기 차단");
+			Equal("{ broken", File.ReadAllText(settingsPath, Encoding.UTF8), "Windows 알림 설정 UI 원본 보존");
+		}
+		File.Delete(settingsPath);
+
+		using (Form form = (Form)Activator.CreateInstance(formType, true))
+		{
+			Equal(AutoScaleMode.Dpi, form.AutoScaleMode, "Windows 알림 설정 UI DPI 배율");
+			CheckBox enabledBox = (CheckBox)GetPrivateField(formType, form, "enabledBox");
+			ComboBox severityBox = (ComboBox)GetPrivateField(formType, form, "severityBox");
+			if (string.IsNullOrWhiteSpace(enabledBox.AccessibleName) || string.IsNullOrWhiteSpace(enabledBox.AccessibleDescription)
+				|| string.IsNullOrWhiteSpace(severityBox.AccessibleName) || string.IsNullOrWhiteSpace(severityBox.AccessibleDescription))
+				throw new InvalidOperationException("Windows 알림 설정 접근성 정보가 없습니다.");
+		}
+
+		SetStaticField("WindowsNotificationSettingsPathOverride", null);
+		SetStaticField("WindowsNotificationDisplayOverride", null);
 		SetStaticField("StorageSettingsPathOverride", Path.Combine(root, "storage.properties"));
 		SetStaticField("LauncherUserDataDirectoryOverride", Path.Combine(root, "isolated-user-data"));
 		Pass();

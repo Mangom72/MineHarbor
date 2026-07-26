@@ -14,6 +14,8 @@
 
 백그라운드 에이전트 IPC는 현재 Windows 사용자 SID에서 파생한 로컬 이름 있는 파이프와 해당 SID 전용 ACL을 사용합니다. JSON 한 줄 요청은 크기와 수신 시간을 제한하며 임의 셸·실행 파일 호출을 제공하지 않습니다. 에이전트는 자신이 시작한 관리 서버만 명령·종료·실행 중 백업하고, 같은 포트를 사용하는 외부 소유 프로세스에는 접근하지 않습니다. 자동 시작은 현재 사용자 범위이며 명시적으로 동의한 경우에만 등록됩니다. 에이전트 종료나 런처 업데이트는 소유 서버가 제한 시간 안에 안전 종료되지 않으면 강제 종료 대신 취소됩니다.
 
+Windows 알림은 같은 에이전트의 기존 트레이 아이콘만 사용하며 별도 네트워크 리스너나 외부 알림 공급자를 만들지 않습니다. 설정은 기본 비활성화, 크기·스키마 검증, 프로세스 간 잠금과 원자적 교체를 사용합니다. 알림 문구는 운영 기록의 가림 결과를 다시 정리하고 명령 원문을 표시하지 않으며, 손상되거나 미래 스키마인 설정은 원본을 덮어쓰지 않습니다. 알림 표시 실패는 서버 제어와 예약 실행에서 격리됩니다.
+
 플러그인과 모드는 서버에서 코드를 실행할 수 있으므로 신뢰하는 프로젝트만 설치해야 합니다. MineHarbor는 Modrinth CDN·크기·SHA-512/SHA-1, Minecraft 버전·로더와 필수 의존성을 확인하지만 제3자 콘텐츠 자체의 안전성을 보증하지 않습니다. 데이터팩 ZIP은 루트 `pack.mcmeta`, 경로 이탈, 중복 항목, 항목 수와 해제 크기를 검사합니다. 관리 콘텐츠 제거는 서버 내부 휴지통으로 이동하며 수동 파일은 manifest에서 명확히 구분합니다.
 
 `.mineharbor/content-manifest.json`과 `.mineharbor/automation.json`은 크기·스키마·경로·중복을 검증하고 원자적으로 교체합니다. 손상된 설정은 자동으로 덮어쓰지 않습니다. 예약 명령은 줄바꿈과 제어 문자를 거부하고, 예약 작업은 프로세스 ID·시작 시각 임대로 중복 실행을 막습니다. 놓친 작업의 기본값은 한 번만 실행이며 무제한 따라잡기 실행을 하지 않습니다. 자동화 파일을 편집할 수 있는 사용자는 서버 콘솔 명령을 예약할 수 있으므로 서버 폴더의 Windows 권한을 신뢰할 수 있는 계정으로 제한해 주세요.
@@ -33,6 +35,8 @@ Report sensitive vulnerabilities through a [private GitHub Security Advisory](ht
 The command bridge uses a loopback-only launcher listener, a fresh 256-bit token per run, profile and protocol validation, and bounded JSON Lines messages and suggestions. It never executes server commands or opens an external network port. Do not include bridge session files or tokens in reports.
 
 Background-agent IPC uses a local named pipe derived from the current Windows SID, with an ACL granting that SID only. Single-line JSON requests have size and receive-time limits, and the API exposes no arbitrary shell or executable launch. The agent commands, stops, or live-backs up only managed servers that it started; a process using the same port under external ownership is not touched. Sign-in startup is current-user scoped and opt-in. Agent shutdown and launcher update abort rather than force an unsafe exit when an owned server does not stop within the timeout.
+
+Windows notifications reuse that agent's existing tray icon and add no network listener or external notification provider. Settings are disabled by default and use size/schema validation, a cross-process lock, and atomic replacement. Display text is re-sanitized from the operations-history summary, never includes raw commands, and corrupt or future-schema settings are preserved rather than overwritten. Notification failures are isolated from server control and schedule execution.
 
 Plugins and mods can execute code in the server process, so install only trusted projects. MineHarbor validates the Modrinth CDN, declared size, SHA-512/SHA-1, game version, loader, and required dependencies, but cannot guarantee third-party content safety. Data-pack ZIPs are checked for a root `pack.mcmeta`, path traversal, duplicate entries, entry count, and expanded size. Managed removals move files into server-local trash, and manually installed files remain clearly distinguished.
 

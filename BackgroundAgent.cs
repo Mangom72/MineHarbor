@@ -333,6 +333,7 @@ internal static partial class Launcher
 		private readonly Dictionary<string, SemaphoreSlim> executionLocks = new Dictionary<string, SemaphoreSlim>(StringComparer.OrdinalIgnoreCase);
 		private readonly CancellationTokenSource cancellation = new CancellationTokenSource();
 		private readonly NotifyIcon trayIcon;
+		private readonly WindowsNotificationMonitor notificationMonitor;
 		private readonly System.Windows.Forms.Timer pollTimer;
 		private readonly Control dispatcher;
 		private BackgroundAgentSettings settings;
@@ -354,10 +355,16 @@ internal static partial class Launcher
 			};
 			try { trayIcon.Icon = Icon.ExtractAssociatedIcon(AssemblyLocation()); } catch { }
 			trayIcon.DoubleClick += delegate { OpenMainWindow(); };
+			notificationMonitor = new WindowsNotificationMonitor(trayIcon);
 			pollTimer = new System.Windows.Forms.Timer { Interval = 5000 };
-			pollTimer.Tick += delegate { PollSchedulesAsync(); };
+			pollTimer.Tick += delegate
+			{
+				PollSchedulesAsync();
+				notificationMonitor.Poll();
+			};
 			pollTimer.Start();
 			SystemEvents.PowerModeChanged += HandlePowerModeChanged;
+			notificationMonitor.Poll();
 			StartPipeServer();
 			PollSchedulesAsync();
 		}
@@ -366,6 +373,7 @@ internal static partial class Launcher
 		{
 			if (eventArgs.Mode != PowerModes.Resume) return;
 			PollSchedulesAsync();
+			notificationMonitor.Poll();
 			RecordForAllProfiles("background-agent", "info", "절전 모드 복귀 후 놓친 예약 작업을 확인했습니다.", "Checked missed schedules after resume.");
 		}
 
@@ -476,6 +484,15 @@ internal static partial class Launcher
 			{
 				ObserveImmediateBackupAsync(request.Profile);
 				return Success("백업을 시작했습니다.", "Backup started.");
+			}
+			if (command == "test-notification")
+			{
+				DisplayWindowsNotification(
+					trayIcon,
+					"MineHarbor",
+					ManagedText("Windows 알림이 정상적으로 연결되었습니다.", "Windows notifications are connected."),
+					ToolTipIcon.Info);
+				return Success("테스트 알림을 표시했습니다.", "Test notification displayed.");
 			}
 			return Failure("지원하지 않는 백그라운드 명령입니다.", "Unsupported background command.");
 		}
@@ -888,6 +905,12 @@ internal static partial class Launcher
 		{
 			menu.Items.Clear();
 			menu.Items.Add(ManagedText("MineHarbor 열기", "Open MineHarbor"), null, delegate { OpenMainWindow(); });
+			menu.Items.Add(ManagedText("Windows 알림 설정", "Windows notification settings"), null, delegate
+			{
+				WindowsNotificationSettingsForm form = new WindowsNotificationSettingsForm();
+				form.FormClosed += delegate { form.Dispose(); };
+				form.Show();
+			});
 			menu.Items.Add(new ToolStripSeparator());
 			List<ManagedProfileRecord> profiles;
 			try { profiles = ReadManagedProfiles(GetServersRootDirectory(AppDomain.CurrentDomain.BaseDirectory)); }
@@ -1061,10 +1084,16 @@ internal static partial class Launcher
 			statusLabel = new Label { AutoSize = true, Text = IsBackgroundAgentRunning() ? (korean ? "현재 상태: 실행 중" : "Current status: Running") : (korean ? "현재 상태: 중지됨" : "Current status: Stopped"), Margin = new Padding(0, 12, 0, 8) };
 			root.Controls.Add(statusLabel, 0, 5);
 			FlowLayoutPanel buttons = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Right, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
+			Button notifications = MultiServerDashboardForm.NewManagedButton(korean ? "알림 설정" : "Notifications", 118, "secondary");
 			Button save = MultiServerDashboardForm.NewManagedButton(korean ? "저장" : "Save", 100, "primary");
 			Button cancel = MultiServerDashboardForm.NewManagedButton(korean ? "취소" : "Cancel", 100, "secondary");
+			notifications.Click += delegate
+			{
+				using (WindowsNotificationSettingsForm form = new WindowsNotificationSettingsForm()) form.ShowDialog(this);
+			};
 			save.Click += delegate { SaveSettings(); };
 			cancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
+			buttons.Controls.Add(notifications);
 			buttons.Controls.Add(save);
 			buttons.Controls.Add(cancel);
 			root.Controls.Add(buttons, 0, 6);

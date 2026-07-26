@@ -45,6 +45,7 @@ $sources = @(
 	'BackgroundAgent.cs',
 	'ServerManagementFeatures.cs',
 	'OperationsHistory.cs',
+    'WindowsNotifications.cs',
     'ManagedServerDashboard.cs',
 	'ServerTrash.cs',
     'NetworkAndPlayerTools.cs',

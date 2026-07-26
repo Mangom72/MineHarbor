@@ -283,6 +283,7 @@ internal static partial class Launcher
 			case "automation":
 			case "launcher":
 			case "recovery":
+			case "background-agent":
 				return normalized;
 			default:
 				return "system";
@@ -451,13 +452,18 @@ internal static partial class Launcher
 			FlowLayoutPanel actions = new FlowLayoutPanel { Dock = DockStyle.Fill, AutoSize = true, WrapContents = true, Margin = new Padding(0, 6, 0, 0) };
 			Button markRead = MultiServerDashboardForm.NewManagedButton(korean ? "선택 읽음" : "Mark read", 112, "secondary");
 			Button markAll = MultiServerDashboardForm.NewManagedButton(korean ? "모두 읽음" : "Mark all read", 126, "secondary");
+			Button notificationSettings = MultiServerDashboardForm.NewManagedButton(korean ? "알림 설정" : "Notifications", 118, "secondary");
 			Button export = MultiServerDashboardForm.NewManagedButton(korean ? "내보내기" : "Export", 108, "secondary");
 			Button refresh = MultiServerDashboardForm.NewManagedButton(korean ? "새로고침" : "Refresh", 108, "primary");
 			markRead.Click += delegate { MarkSelectedRead(); };
 			markAll.Click += delegate { MarkAllRead(); };
+			notificationSettings.Click += delegate
+			{
+				using (WindowsNotificationSettingsForm form = new WindowsNotificationSettingsForm()) form.ShowDialog(this);
+			};
 			export.Click += delegate { ExportVisibleHistory(); };
 			refresh.Click += delegate { ReloadHistory(); };
-			actions.Controls.AddRange(new Control[] { markRead, markAll, export, refresh });
+			actions.Controls.AddRange(new Control[] { markRead, markAll, notificationSettings, export, refresh });
 			root.Controls.Add(actions, 0, 4);
 
 			serverBox.SelectedIndexChanged += delegate { ReloadHistory(); };

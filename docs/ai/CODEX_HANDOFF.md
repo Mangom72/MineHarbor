@@ -1,5 +1,17 @@
 ﻿# CODEX_HANDOFF.md
 
+## 0.00 Current implementation state (v1.13.0 in progress)
+
+- Feature branch: `codex/windows-notifications-v1.13.0`
+- Version source of truth: `version.json` = 1.13.0 / build 26.2.45.77
+- Windows taskbar notifications are opt-in and require the per-user background agent. Operations, Background settings, and the tray expose the themed notification settings form.
+- `windows-notifications.json` is bounded to 64 KiB and uses exact schema validation, a path-derived cross-process mutex, and atomic replacement. Corrupt and future schemas remain untouched.
+- Severity thresholds, six category groups, and local quiet hours that cross midnight are supported. Equal start/end represents a full quiet day.
+- Each agent lifetime establishes a latest-entry baseline per server, so existing history is not replayed. Up to 50 pending events are bounded and an eight-second burst collapses to the most important recent event plus a remaining count.
+- Notification text reuses and re-sanitizes operation summaries, never includes raw commands, and strips server paths, IPv4 addresses, and token/password/webhook-like values. Failures remain isolated from server control and automation.
+- Local verification currently passes 30 launcher groups, 10 bridge protocol cases, Portable version/smoke, modern-dialog, and security scans. PR/main CI, self-signed release, public-asset download, and v1.12.0→v1.13.0 update verification remain to be completed.
+- Durable Windows notification-center storage/actions, dedicated player join/leave notifications, web/Discord remote control, and lossless transfer of a GUI-owned running server are not claimed.
+
 ## 0.0 Current implementation state (v1.12.0 released)
 
 - Release-state branch: `codex/v1.12.0-release-state` (feature: `codex/background-agent-v1.12.0`)
@@ -13,7 +25,7 @@
 - Launcher update and agent exit request safe stops and abort rather than force exiting when an owned server misses the timeout.
 - Local verification passes 29 launcher test groups, 10 bridge protocol cases, Portable version/smoke, modern-dialog, and security scans. PR and main CI also passed the .NET 10 SDK warning-as-error `net48` build.
 - The [v1.12.0 release](https://github.com/Mangom72/MineHarbor/releases/tag/v1.12.0) contains seven verified public assets. The release workflow removed its temporary self-signed certificate/PFX, and an independent download confirmed `RELEASE_ARTIFACTS_PASSED=7`, `PUBLISHED_ASSETS_MODE_OK`, and `PUBLIC_AUTO_UPDATE_OK=1.11.0->1.12.0` before rerunning the full suite against the updated executable.
-- Windows notifications, web/Discord remote control, elevated/pre-sign-in service operation, cloud backup, Fabric/Forge/NeoForge bridges, and lossless transfer of a GUI-owned running server are not claimed.
+- v1.12.0 did not include Windows notifications. They are introduced separately in v1.13.0. Web/Discord remote control, elevated/pre-sign-in service operation, cloud backup, Fabric/Forge/NeoForge bridges, and lossless transfer of a GUI-owned running server remain unclaimed.
 
 ## 0.1 Current implementation state (v1.11.0 released)
 
