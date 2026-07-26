@@ -4,6 +4,26 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.14.0] - 2026-07-26
+
+### Korean
+
+- **실행 중 서버 무중단 인계**: 백그라운드 운영을 켠 상태에서 멀티 서버 관리 창을 닫으면 해당 창이 시작한 실행 중 서버를 중단하지 않고 사용자 계정용 에이전트에 넘길 수 있습니다. `중단 없이 인계`, `모두 안전 종료`, `취소`를 명확히 구분합니다.
+- **검증된 소유권 전환**: 관리 자식마다 현재 Windows SID 전용 제어 파이프와 새 256비트 토큰을 만들고, 자식·기존 소유자·새 소유자의 PID와 프로세스 시작 시각이 모두 일치할 때만 소유권을 원자적으로 바꿉니다. 포트 상태나 프로세스 이름만으로 인계하지 않습니다.
+- **인계 후 콘솔과 운영 유지**: 명령과 최근 로그를 관리 자식이 직접 보유하므로 GUI의 표준 입출력 파이프가 닫혀도 서버가 계속 실행됩니다. 에이전트 콘솔, 안전 종료·재시작, 실행 중 백업과 예약 명령은 같은 자식 제어 채널을 사용합니다.
+- **실패와 경합 처리**: 응답 유실은 멱등 재시도하고, 자식이 다른 살아 있는 소유자를 실제로 확인한 경우에만 복구 성공으로 처리합니다. 인계 도중 종료 사건과 추가 창 닫기는 결과가 정해질 때까지 보류해 조기 종료와 GUI·에이전트의 중복 재시작을 막습니다.
+- **부분 실패 UX**: 여러 서버 중 일부 인계가 실패하면 관리 창을 닫지 않고 실패한 서버를 계속 보유합니다. 이미 인계된 서버는 에이전트가 계속 관리하며 사용자에게 실패 프로필을 표시합니다.
+- **회귀 검증**: 실제 Minecraft 서버를 실행하지 않고 현재 사용자 제어 파이프, 잘못된 토큰, PID 재사용 방지, 원자적 소유자 전환, 부모 출력 파이프 종료 후 로그 보존, 에이전트 인계·중복 요청·명령·로그 경로를 검사해 런처 테스트를 31개 그룹으로 확장했습니다.
+
+### English
+
+- **Live server transfer without restart**: when Background operations is enabled, closing multi-server management can hand its running managed children to the per-user agent without stopping them. The dialog clearly separates transfer, safe stop, and cancel.
+- **Verified ownership transition**: every managed child gets a current-Windows-SID-only control pipe and fresh 256-bit token. Ownership changes atomically only after the child, previous owner, and new owner PID plus process-start times all match. A port or process name is never treated as proof.
+- **Console and operations continuity**: the managed child retains commands and recent logs, so closing the GUI's standard streams does not stop the server. Agent console, safe stop, restart, live backup, and scheduled commands use the same child control channel.
+- **Failure and race handling**: lost replies use idempotent retries and count as recovered only when the child confirms a different live owner. Process exits and repeated window-close requests are deferred while transfer is unresolved, preventing premature closure and duplicate GUI/agent restart handling.
+- **Partial-failure UX**: if only some servers transfer, the management window stays open and continues owning failures while successfully transferred servers continue under the agent. Failed profile names are shown to the user.
+- **Regression coverage**: without starting a Minecraft server, the 31 launcher groups now cover the real current-user pipe, bad tokens, PID-reuse rejection, atomic ownership changes, retained logs after a broken parent output stream, agent adoption, duplicate requests, commands, and logs.
+
 ## [1.13.0] - 2026-07-26
 
 ### Korean

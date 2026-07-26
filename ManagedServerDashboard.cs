@@ -6,7 +6,8 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using System.Text.RegularExpressions;
-using System.Threading;
+using System.Threading;
+using System.Web.Script.Serialization;
 using System.Windows.Forms;
 
 internal static partial class Launcher
@@ -37,6 +38,11 @@ internal static partial class Launcher
 		public bool ScheduledRestartRequested;
 		public int ChildPid = -1;
 		public long ChildStartTime = -1;
+		public string ControlPipeName;
+		public string ControlToken;
+		public bool HandoffPending;
+		public bool HandoffExitDeferred;
+		public bool HandedOff;
 		public bool MetricsAvailable;
 		public double Tps1;
 		public double Tps5;
@@ -99,7 +105,8 @@ internal static partial class Launcher
 		private readonly System.Windows.Forms.Timer refreshTimer;
 		private BackgroundAgentResponse backgroundAgentSnapshot;
 		private DateTime nextBackgroundAgentRefreshUtc = DateTime.MinValue;
-		private bool closingAfterStop;
+		private bool closingAfterStop;
+		private bool handoffInProgress;
 
 		public MultiServerDashboardForm(string rootDirectory)
 			: this(rootDirectory, false)
@@ -260,7 +267,7 @@ internal static partial class Launcher
 
 			refreshTimer = new System.Windows.Forms.Timer();
 			refreshTimer.Interval = 1000;
-			refreshTimer.Tick += delegate { RenderProfiles(); ProcessAutomationTimerTick(); };
+			refreshTimer.Tick += delegate { RefreshBackgroundAgentSnapshot(false); RenderProfiles(); ProcessAutomationTimerTick(); };
 			refreshTimer.Start();
 			Shown += delegate { RefreshBackgroundAgentSnapshot(true); ReloadProfiles(); };
 			FormClosing += OnDashboardClosing;
@@ -707,7 +714,12 @@ internal static partial class Launcher
 			session.Address = GetLocalConnectionAddress(profile.Port);
 			session.StartedUtc = DateTime.UtcNow;
 			session.StopRequested = false;
-			session.RestartEnabled = restartBox.Checked;
+			session.RestartEnabled = restartBox.Checked;
+			session.HandedOff = false;
+			session.HandoffPending = false;
+			session.HandoffExitDeferred = false;
+			session.ControlPipeName = CreateManagedChildControlPipeName();
+			session.ControlToken = CreateManagedChildControlToken();
 			session.Players.Clear();
 			session.AddLine("[Launcher] " + session.Status + ": " + profile.Name);
 			sessions[profile.Name] = session;
@@ -717,7 +729,11 @@ internal static partial class Launcher
 				startInfo.FileName = AssemblyLocation();
 				using (Process currentProcess = Process.GetCurrentProcess())
 				{
-					startInfo.Arguments = "--managed-profile " + QuoteCommandLineArgument(profile.Name) + " --parent-pid " + currentProcess.Id + " --parent-start " + currentProcess.StartTime.Ticks;
+					startInfo.Arguments = "--managed-profile " + QuoteCommandLineArgument(profile.Name)
+						+ " --parent-pid " + currentProcess.Id
+						+ " --parent-start " + currentProcess.StartTime.Ticks
+						+ " --control-pipe " + QuoteCommandLineArgument(session.ControlPipeName)
+						+ " --control-token " + QuoteCommandLineArgument(session.ControlToken);
 				}
 				startInfo.WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory;
 				startInfo.UseShellExecute = false;
@@ -777,9 +793,18 @@ internal static partial class Launcher
 			RenderProfiles();
 		}
 
-		private void OnManagedSessionExited(ManagedServerSession session)
+		private void OnManagedSessionExited(ManagedServerSession session)
 		{
-			int exitCode = -1;
+			lock (session.SyncRoot)
+			{
+				if (session.HandedOff) return;
+				if (session.HandoffPending)
+				{
+					session.HandoffExitDeferred = true;
+					return;
+				}
+			}
+			int exitCode = -1;
 			try
 			{
 				exitCode = session.Process.ExitCode;
@@ -940,18 +965,38 @@ internal static partial class Launcher
 			ShowManagedMessage("기본 프로필을 '" + profile.Name + "'(으)로 바꿨습니다.", "Active profile changed to '" + profile.Name + "'.", false);
 		}
 
-		private void OnDashboardClosing(object sender, FormClosingEventArgs eventArgs)
-		{
-			if (closingAfterStop || !HasRunningManagedSessions())
-			{
-				return;
+		private void OnDashboardClosing(object sender, FormClosingEventArgs eventArgs)
+		{
+			if (handoffInProgress)
+			{
+				eventArgs.Cancel = true;
+				return;
+			}
+			if (closingAfterStop || !HasRunningManagedSessions())
+			{
+				return;
 			}
-			DialogResult result = ShowMineHarborDialog(this,
-				ManagedText("실행 중인 서버를 모두 안전하게 종료한 뒤 창을 닫을까요?", "Stop all running servers safely before closing?"),
-				ManagedText("멀티 서버 종료", "Close multi-server dashboard"),
-				MessageBoxButtons.YesNo,
-				MessageBoxIcon.Question);
-			if (result != DialogResult.Yes)
+			RefreshBackgroundAgentSnapshot(true);
+			bool canHandOff = HasConnectedBackgroundAgent();
+			DialogResult result = ShowMineHarborDialog(
+				this,
+				canHandOff
+					? ManagedText(
+						"실행 중인 서버를 백그라운드 에이전트에 넘기고 창을 닫을까요?\r\n\r\n예: 서버를 중단하지 않고 인계\r\n아니요: 모든 서버를 안전 종료한 뒤 닫기",
+						"Hand running servers to the background agent before closing?\r\n\r\nYes: transfer without stopping\r\nNo: stop every server safely before closing")
+					: ManagedText(
+						"실행 중인 서버를 모두 안전하게 종료한 뒤 창을 닫을까요?",
+						"Stop all running servers safely before closing?"),
+				ManagedText("멀티 서버 종료", "Close multi-server dashboard"),
+				canHandOff ? MessageBoxButtons.YesNoCancel : MessageBoxButtons.YesNo,
+				MessageBoxIcon.Question);
+			if (canHandOff && result == DialogResult.Yes)
+			{
+				eventArgs.Cancel = true;
+				BeginBackgroundHandoffAndClose();
+				return;
+			}
+			if (canHandOff ? result != DialogResult.No : result != DialogResult.Yes)
 			{
 				eventArgs.Cancel = true;
 				return;
@@ -1007,7 +1052,94 @@ internal static partial class Launcher
 			waiter.Start();
 		}
 
-		private bool HasRunningManagedSessions()
+		private void BeginBackgroundHandoffAndClose()
+		{
+			if (closingAfterStop || handoffInProgress) return;
+			handoffInProgress = true;
+			List<ManagedServerSession> running = new List<ManagedServerSession>();
+			foreach (ManagedServerSession session in sessions.Values)
+				if (IsManagedSessionRunning(session)) running.Add(session);
+			ThreadPool.QueueUserWorkItem(delegate
+			{
+				List<ManagedServerSession> transferred = new List<ManagedServerSession>();
+				List<string> failedProfiles = new List<string>();
+				for (int index = 0; index < running.Count; index++)
+				{
+					ManagedServerSession session = running[index];
+					bool replayDeferredExit = false;
+					try
+					{
+						lock (session.SyncRoot)
+						{
+							session.HandoffPending = true;
+							session.HandoffExitDeferred = false;
+						}
+						ManagedChildHandoffDescriptor descriptor = CreateManagedChildHandoffDescriptor(session);
+						string serialized = new JavaScriptSerializer().Serialize(descriptor);
+						BackgroundAgentResponse response = null;
+						for (int attempt = 0; attempt < 2 && response == null; attempt++)
+							response = SendBackgroundAgentRequest("adopt", session.Profile.Name, serialized, 5000);
+						if ((response == null && !IsManagedChildHandoffComplete(descriptor))
+							|| (response != null && !response.Success))
+							throw new IOException(response == null ? "백그라운드 에이전트에 연결할 수 없습니다." : response.Message);
+						lock (session.SyncRoot)
+						{
+							session.HandedOff = true;
+							session.HandoffPending = false;
+							session.HandoffExitDeferred = false;
+						}
+						transferred.Add(session);
+					}
+					catch
+					{
+						lock (session.SyncRoot)
+						{
+							session.HandoffPending = false;
+							replayDeferredExit = session.HandoffExitDeferred;
+							session.HandoffExitDeferred = false;
+						}
+						failedProfiles.Add(session.Profile.Name);
+						if (replayDeferredExit) OnManagedSessionExited(session);
+					}
+				}
+				if (IsDisposed) return;
+				TryPostToUi(this, (MethodInvoker)delegate
+				{
+					for (int index = 0; index < transferred.Count; index++)
+					{
+						ManagedServerSession session = transferred[index];
+						sessions.Remove(session.Profile.Name);
+						try { session.Process.CancelOutputRead(); } catch { }
+						try { session.Process.CancelErrorRead(); } catch { }
+						try { session.Process.Dispose(); } catch { }
+						TryRecordOperationEvent(
+							session.Profile.Directory,
+							"server",
+							"info",
+							"실행 중인 서버를 백그라운드 에이전트에 중단 없이 인계했습니다.",
+							"The running server was transferred to the background agent without stopping.",
+							"user",
+							false);
+					}
+					RefreshBackgroundAgentSnapshot(true);
+					RenderProfiles();
+					if (failedProfiles.Count > 0)
+					{
+						handoffInProgress = false;
+						ShowManagedMessage(
+							"일부 서버를 인계하지 못해 창을 유지합니다. 인계된 서버는 백그라운드에서 계속 실행됩니다.\r\n\r\n실패: " + string.Join(", ", failedProfiles.ToArray()),
+							"Some servers could not be transferred, so this window will stay open. Transferred servers continue in the background.\r\n\r\nFailed: " + string.Join(", ", failedProfiles.ToArray()),
+							true);
+						return;
+					}
+					handoffInProgress = false;
+					FormClosing -= OnDashboardClosing;
+					Close();
+				});
+			});
+		}
+
+		private bool HasRunningManagedSessions()
 		{
 			foreach (ManagedServerSession session in sessions.Values)
 			{
@@ -1415,57 +1547,54 @@ internal static partial class Launcher
 			return true;
 		}
 		
-		int parentPid = -1;
-		long parentStart = -1;
-		for (int i = 2; i < args.Length - 1; i++)
-		{
-			if (args[i] == "--parent-pid") int.TryParse(args[i + 1], out parentPid);
-			if (args[i] == "--parent-start") long.TryParse(args[i + 1], out parentStart);
-		}
+		int parentPid = -1;
+		long parentStart = -1;
+		string controlPipeName = null;
+		string controlToken = null;
+		for (int i = 2; i < args.Length - 1; i++)
+		{
+			if (args[i] == "--parent-pid") int.TryParse(args[i + 1], out parentPid);
+			if (args[i] == "--parent-start") long.TryParse(args[i + 1], out parentStart);
+			if (args[i] == "--control-pipe") controlPipeName = args[i + 1];
+			if (args[i] == "--control-token") controlToken = args[i + 1];
+		}
 
-		if (parentPid != -1 && parentStart != -1)
-		{
-			try
-			{
-				Process parentProcess = Process.GetProcessById(parentPid);
-				try 
-				{
-					if (parentProcess.StartTime.Ticks != parentStart)
-					{
-						Console.WriteLine("[오류] 부모 프로세스의 시작 시간이 일치하지 않습니다. PID 재사용으로 의심되어 강제 종료합니다.");
-						exitCode = 3;
-						return true;
-					}
-				}
-				catch (Exception ex)
-				{
-					Console.WriteLine("[경고] 부모 프로세스의 시작 시간을 확인할 수 없습니다 (접근 권한 등). 부모 프로세스 PID 검사만 진행합니다: " + ex.Message);
-				}
-				
-				Thread monitorThread = new Thread((ThreadStart)delegate
+		ManagedChildControlServer controlServer = null;
+		if (parentPid != -1 && parentStart != -1)
+		{
+			try
+			{
+				ConfigureManagedChildOwner(parentPid, parentStart);
+				if (!string.IsNullOrWhiteSpace(controlPipeName) || !string.IsNullOrWhiteSpace(controlToken))
 				{
-					try
-					{
-						parentProcess.WaitForExit();
-						StopManagedChildAfterParentExit();
-					}
-					catch { StopManagedChildAfterParentExit(); }
-				});
-				monitorThread.IsBackground = true;
-				monitorThread.Start();
-			}
-			catch
-			{
-				Console.WriteLine("[오류] 부모 프로세스를 식별할 수 없습니다. 강제 종료합니다.");
-				exitCode = 3;
-				return true;
-			}
-		}
+					ValidateManagedChildControlValues(controlPipeName, controlToken);
+					controlServer = new ManagedChildControlServer(profile, controlPipeName, controlToken);
+				}
+			}
+			catch (Exception exception)
+			{
+				Console.WriteLine("[오류] 부모 프로세스 또는 제어 채널을 확인할 수 없습니다: " + exception.Message);
+				exitCode = 3;
+				return true;
+			}
+		}
 
-		ManagedChildMode = true;
-		ManagedProfileOverride = profile;
-		StartManagedChildInputRelay();
-		exitCode = Run();
+		ManagedChildMode = true;
+		ManagedProfileOverride = profile;
+		Console.SetOut(new ManagedChildSafeTeeWriter(Console.Out));
+		Console.SetError(new ManagedChildSafeTeeWriter(Console.Error));
+		if (controlServer != null) controlServer.Start();
+		if (parentPid != -1 && parentStart != -1) StartManagedChildOwnerMonitor();
+		StartManagedChildInputRelay();
+		try
+		{
+			exitCode = Run();
+		}
+		finally
+		{
+			ManagedChildMode = false;
+			if (controlServer != null) controlServer.Dispose();
+		}
 		return true;
 	}
 
@@ -1652,7 +1781,7 @@ internal static partial class Launcher
 
 	private static bool IsManagedSessionRunning(ManagedServerSession session)
 	{
-		if (session == null || session.Process == null)
+		if (session == null || session.Process == null || session.HandedOff)
 		{
 			return false;
 		}

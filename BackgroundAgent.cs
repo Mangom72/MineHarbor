@@ -71,6 +71,9 @@ internal static partial class Launcher
 		public bool ScheduledRestart;
 		public DateTime StartedUtc;
 		public string Status;
+		public string ControlPipeName;
+		public string ControlToken;
+		public bool Adopted;
 		public readonly List<string> Lines = new List<string>();
 		public readonly Queue<DateTime> CrashTimes = new Queue<DateTime>();
 
@@ -476,6 +479,7 @@ internal static partial class Launcher
 				});
 				return Success("백그라운드 에이전트를 종료합니다.", "The background agent is shutting down.");
 			}
+			if (command == "adopt") return AdoptProfile(request.Profile, request.Value);
 			if (command == "start") return StartProfile(request.Profile, false);
 			if (command == "stop") return StopProfile(request.Profile, false);
 			if (command == "restart") return StopProfile(request.Profile, true);
@@ -667,6 +671,134 @@ internal static partial class Launcher
 			});
 		}
 
+		private BackgroundAgentResponse AdoptProfile(string profileName, string serializedDescriptor)
+		{
+			ManagedProfileRecord profile = FindProfile(profileName);
+			if (profile == null) return Failure("서버 프로필을 찾지 못했습니다.", "Server profile not found.");
+			ManagedChildHandoffDescriptor descriptor;
+			try { descriptor = ParseManagedChildHandoffDescriptor(serializedDescriptor, profile.Name); }
+			catch (Exception exception) { return new BackgroundAgentResponse { Success = false, Message = exception.Message }; }
+
+			BackgroundAgentSession existing = GetRunningSession(profile.Name);
+			if (existing != null)
+			{
+				try
+				{
+					if (existing.Process != null
+						&& existing.Process.Id == descriptor.ChildProcessId
+						&& existing.Process.StartTime.Ticks == descriptor.ChildProcessStartTicks
+						&& string.Equals(existing.ControlPipeName, descriptor.PipeName, StringComparison.Ordinal)
+						&& ManagedChildTokensEqual(existing.ControlToken, descriptor.Token))
+						return Success("이미 백그라운드 에이전트가 관리하고 있습니다.", "Already managed by the background agent.");
+				}
+				catch { }
+				return Failure("같은 프로필의 다른 서버를 이미 관리하고 있습니다.", "Another server for this profile is already managed.");
+			}
+			if (!IsExactProcessIdentityAlive(descriptor.ChildProcessId, descriptor.ChildProcessStartTicks))
+				return Failure("인계할 관리 서버 프로세스를 확인하지 못했습니다.", "Could not verify the managed server process to transfer.");
+
+			ManagedChildControlRequest statusRequest = NewManagedChildControlRequest(descriptor.Token, "status", null);
+			ManagedChildControlResponse childStatus = SendManagedChildControlRequest(descriptor.PipeName, statusRequest, 2000);
+			if (childStatus == null || !childStatus.Success
+				|| !string.Equals(childStatus.Profile, profile.Name, StringComparison.OrdinalIgnoreCase)
+				|| childStatus.ChildProcessId != descriptor.ChildProcessId
+				|| childStatus.ChildProcessStartTicks != descriptor.ChildProcessStartTicks
+				|| childStatus.OwnerProcessId != descriptor.OwnerProcessId
+				|| childStatus.OwnerProcessStartTicks != descriptor.OwnerProcessStartTicks)
+				return Failure("관리 서버 제어 채널의 소유권 검증에 실패했습니다.", "Managed server control-channel ownership validation failed.");
+
+			Process process = null;
+			try
+			{
+				process = Process.GetProcessById(descriptor.ChildProcessId);
+				if (process.StartTime.Ticks != descriptor.ChildProcessStartTicks)
+					throw new InvalidOperationException("관리 서버 프로세스 시작 시간이 바뀌었습니다.");
+				int agentProcessId;
+				long agentProcessStartTicks;
+				using (Process current = Process.GetCurrentProcess())
+				{
+					agentProcessId = current.Id;
+					agentProcessStartTicks = current.StartTime.Ticks;
+				}
+				BackgroundAgentSession session = new BackgroundAgentSession
+				{
+					Profile = profile,
+					Process = process,
+					StartedUtc = process.StartTime.ToUniversalTime(),
+					Status = ManagedText("인계 중", "Transferring"),
+					ControlPipeName = descriptor.PipeName,
+					ControlToken = descriptor.Token,
+					Adopted = true
+				};
+				process.EnableRaisingEvents = true;
+				process.Exited += delegate { HandleSessionExit(session); };
+				ManagedChildControlRequest transferRequest = NewManagedChildControlRequest(descriptor.Token, "transfer-owner", null);
+				transferRequest.ExpectedOwnerProcessId = descriptor.OwnerProcessId;
+				transferRequest.ExpectedOwnerProcessStartTicks = descriptor.OwnerProcessStartTicks;
+				transferRequest.NewOwnerProcessId = agentProcessId;
+				transferRequest.NewOwnerProcessStartTicks = agentProcessStartTicks;
+				ManagedChildControlResponse transferResponse;
+				lock (sessionsLock)
+				{
+					BackgroundAgentSession concurrent;
+					if (sessions.TryGetValue(profile.Name, out concurrent) && IsSessionRunning(concurrent))
+						throw new InvalidOperationException("같은 프로필의 서버가 동시에 등록되었습니다.");
+					transferResponse = SendManagedChildControlRequest(descriptor.PipeName, transferRequest, 3000);
+					bool transferred = IsManagedChildOwnedBy(
+						transferResponse,
+						descriptor,
+						agentProcessId,
+						agentProcessStartTicks);
+					if (!transferred && transferResponse == null)
+					{
+						ManagedChildControlResponse recoveredStatus = SendManagedChildControlRequest(
+							descriptor.PipeName,
+							NewManagedChildControlRequest(descriptor.Token, "status", null),
+							2000);
+						transferred = IsManagedChildOwnedBy(
+							recoveredStatus,
+							descriptor,
+							agentProcessId,
+							agentProcessStartTicks);
+					}
+					if (!transferred)
+						throw new InvalidOperationException(transferResponse == null ? "관리 서버 소유권 이전 응답이 없습니다." : transferResponse.Message);
+					session.Status = ManagedText("백그라운드 실행 중", "Running in background");
+					sessions[profile.Name] = session;
+				}
+				TryRecordOperationEvent(
+					profile.Directory,
+					"server",
+					"info",
+					"멀티 서버 관리에서 실행 중인 서버를 백그라운드 에이전트가 인계했습니다.",
+					"The background agent adopted a running server from multi-server management.",
+					"background-agent",
+					false);
+				return Success("서버를 중단하지 않고 백그라운드로 인계했습니다.", "Server transferred to the background without stopping.");
+			}
+			catch (Exception exception)
+			{
+				if (process != null) process.Dispose();
+				return new BackgroundAgentResponse { Success = false, Message = exception.Message };
+			}
+		}
+
+		private static bool IsManagedChildOwnedBy(
+			ManagedChildControlResponse response,
+			ManagedChildHandoffDescriptor descriptor,
+			int ownerProcessId,
+			long ownerProcessStartTicks)
+		{
+			return response != null
+				&& response.Success
+				&& string.Equals(response.Profile, descriptor.Profile, StringComparison.OrdinalIgnoreCase)
+				&& response.ChildProcessId == descriptor.ChildProcessId
+				&& response.ChildProcessStartTicks == descriptor.ChildProcessStartTicks
+				&& response.OwnerProcessId == ownerProcessId
+				&& response.OwnerProcessStartTicks == ownerProcessStartTicks
+				&& IsExactProcessIdentityAlive(ownerProcessId, ownerProcessStartTicks);
+		}
+
 		private BackgroundAgentResponse StartProfile(string profileName, bool automaticRestart)
 		{
 			ManagedProfileRecord profile = FindProfile(profileName);
@@ -696,6 +828,9 @@ internal static partial class Launcher
 				session.StartedUtc = DateTime.UtcNow;
 				session.StopRequested = false;
 				session.ScheduledRestart = false;
+				session.ControlPipeName = CreateManagedChildControlPipeName();
+				session.ControlToken = CreateManagedChildControlToken();
+				session.Adopted = false;
 				sessions[profile.Name] = session;
 			}
 			try
@@ -712,7 +847,11 @@ internal static partial class Launcher
 				};
 				using (Process current = Process.GetCurrentProcess())
 				{
-					startInfo.Arguments = "--managed-profile " + QuoteCommandLineArgument(profile.Name) + " --parent-pid " + current.Id + " --parent-start " + current.StartTime.Ticks;
+					startInfo.Arguments = "--managed-profile " + QuoteCommandLineArgument(profile.Name)
+						+ " --parent-pid " + current.Id
+						+ " --parent-start " + current.StartTime.Ticks
+						+ " --control-pipe " + QuoteCommandLineArgument(session.ControlPipeName)
+						+ " --control-token " + QuoteCommandLineArgument(session.ControlToken);
 				}
 				Process process = new Process { StartInfo = startInfo, EnableRaisingEvents = true };
 				process.OutputDataReceived += delegate(object sender, DataReceivedEventArgs eventArgs) { if (eventArgs.Data != null) session.AddLine(eventArgs.Data); };
@@ -768,6 +907,14 @@ internal static partial class Launcher
 		private static void SendSessionCommand(BackgroundAgentSession session, string command)
 		{
 			if (!IsSessionRunning(session)) throw new InvalidOperationException("서버가 실행 중이 아닙니다.");
+			if (!string.IsNullOrWhiteSpace(session.ControlPipeName) && !string.IsNullOrWhiteSpace(session.ControlToken))
+			{
+				ManagedChildControlRequest request = NewManagedChildControlRequest(session.ControlToken, "command", command);
+				ManagedChildControlResponse response = SendManagedChildControlRequest(session.ControlPipeName, request, 2000);
+				if (response != null && response.Success) return;
+				if (session.Adopted)
+					throw new IOException(response == null ? "인계된 서버의 제어 채널에 연결하지 못했습니다." : response.Message);
+			}
 			lock (session.SyncRoot)
 			{
 				session.Process.StandardInput.WriteLine(command);
@@ -885,6 +1032,21 @@ internal static partial class Launcher
 			BackgroundAgentSession session = GetRunningSession(profileName);
 			if (session == null) return Failure("에이전트가 관리하는 실행 중 서버가 아닙니다.", "The server is not running under the agent.");
 			BackgroundAgentResponse response = Success("콘솔 로그를 불러왔습니다.", "Console logs loaded.");
+			if (!string.IsNullOrWhiteSpace(session.ControlPipeName) && !string.IsNullOrWhiteSpace(session.ControlToken))
+			{
+				ManagedChildControlResponse childResponse = SendManagedChildControlRequest(
+					session.ControlPipeName,
+					NewManagedChildControlRequest(session.ControlToken, "logs", null),
+					1500);
+				if (childResponse != null && childResponse.Success && childResponse.Lines != null)
+				{
+					int childStart = Math.Max(0, childResponse.Lines.Count - 1500);
+					for (int index = childStart; index < childResponse.Lines.Count; index++) response.Lines.Add(childResponse.Lines[index]);
+					return response;
+				}
+				if (session.Adopted)
+					return Failure("인계된 서버의 로그 채널에 연결하지 못했습니다.", "Could not connect to the transferred server log channel.");
+			}
 			string[] lines = session.SnapshotLines();
 			int start = Math.Max(0, lines.Length - 1500);
 			for (int i = start; i < lines.Length; i++) response.Lines.Add(lines[i]);
@@ -1069,8 +1231,8 @@ internal static partial class Launcher
 				AutoSize = true,
 				MaximumSize = new Size(620, 0),
 				Text = korean
-					? "사용자 계정용 트레이 에이전트가 예약 백업·시작·종료·재시작·명령을 처리합니다. 에이전트가 시작한 서버만 창을 닫은 뒤에도 계속 실행됩니다."
-					: "A per-user tray agent handles scheduled backups, starts, stops, restarts, and commands. Only servers started by the agent keep running after the window closes.",
+					? "사용자 계정용 트레이 에이전트가 예약 백업·시작·종료·재시작·명령을 처리합니다. 에이전트가 시작했거나 멀티 서버 관리에서 안전하게 인계한 서버는 창을 닫은 뒤에도 계속 실행됩니다."
+					: "A per-user tray agent handles scheduled backups, starts, stops, restarts, and commands. Servers started by the agent or safely transferred from multi-server management keep running after the window closes.",
 				Margin = new Padding(0, 0, 0, 16)
 			}, 0, 1);
 			BackgroundAgentSettings settings;

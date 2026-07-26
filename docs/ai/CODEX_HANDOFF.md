@@ -1,5 +1,18 @@
 ﻿# CODEX_HANDOFF.md
 
+## 0.000 Current implementation state (v1.14.0 pre-release)
+
+- Feature branch: `codex/server-handoff-v1.14.0`
+- Version source of truth: `version.json` = 1.14.0 / build 26.2.45.78
+- Multi-server management children started by this version can transfer to the explicitly enabled per-user background agent without stopping. The close flow distinguishes live transfer, safe stop-all, and cancel.
+- Every child uses a fresh current-user-SID-only pipe and 256-bit token. The registered profile, exact child identity, previous owner, and new owner are checked by PID and process-start time before an atomic ownership change.
+- The child retains a bounded recent-log buffer and server-console endpoint. A safe output wrapper isolates the old parent's closed redirected stream, preserving agent console, safe stop/restart, live backup, schedules, and crash monitoring.
+- Agent-side ownership-transfer reply loss is reconciled by rereading and validating the child's exact new owner before session registration. GUI requests are idempotent; partial failure keeps the window and failed ownership while successful transfers stay with the agent.
+- `Prepare-BuildResources.ps1`, `build.ps1 -SkipDependencyDownload`, and `test.ps1 -LauncherPath artifacts\MineHarbor.exe` pass with `VERSION_CONSISTENCY_OK`, 31 launcher groups, Portable version/smoke, 10 bridge protocol cases, modern-dialog scan, and security regression scan. Tests do not start Minecraft.
+- `Publish-LocalRelease.ps1 -NoPublish` passed ephemeral RSA-3072/SHA-256 self-signing and `RELEASE_ARTIFACTS_PASSED=7`, removed the certificate/PFX, and the full suite passed again against the signed Portable EXE.
+- Live handoff is intentionally limited to managed children started by this version's multi-server dashboard. The Java server hosted directly by the main launcher, manually started servers, and other programs' servers remain unsupported for lossless transfer.
+- PR, main CI, tag release, public assets, and the v1.13.0-to-v1.14.0 public updater path still need publication verification.
+
 ## 0.00 Current implementation state (v1.13.0 released)
 
 - Release-state branch: `codex/v1.13.0-release-state` (feature: `codex/windows-notifications-v1.13.0`)

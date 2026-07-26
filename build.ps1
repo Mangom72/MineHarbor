@@ -43,6 +43,7 @@ $sources = @(
 	'ContentManagementUi.cs',
 	'ServerAutomation.cs',
 	'BackgroundAgent.cs',
+	'ManagedServerHandoff.cs',
 	'ServerManagementFeatures.cs',
 	'OperationsHistory.cs',
     'WindowsNotifications.cs',

@@ -21,6 +21,8 @@ Paper/Purpur 실시간 명령 브리지는 인터넷이나 LAN에 연결하지 �
 
 백그라운드 운영(베타)은 사용자가 명시적으로 켠 경우에만 현재 Windows 사용자 계정에서 실행됩니다. GUI와 에이전트의 통신은 현재 사용자 SID에만 권한을 부여한 로컬 이름 있는 파이프를 사용하며 인터넷이나 LAN 포트를 열지 않습니다. 활성화·Windows 로그인 자동 시작·충돌 재시작·일시 중지 설정은 사용자 데이터 폴더의 `background-agent.json`에 저장됩니다. 자동 시작을 별도로 선택하면 실행 파일 경로와 `--background-agent` 인수만 현재 사용자 Windows `Run` 항목에 기록되며 토큰이나 서버 명령은 기록하지 않습니다.
 
+멀티 서버 관리가 시작한 각 관리 자식은 실행 중 서버를 에이전트에 안전하게 인계하기 위해 현재 사용자 SID 전용 로컬 이름 있는 파이프와 실행마다 새 256비트 토큰을 사용합니다. 이 채널은 인터넷이나 LAN 포트를 열지 않으며 콘솔 명령과 제한된 최근 로그만 전달합니다. 토큰은 자식 프로세스 인수와 실행 중 메모리에만 존재하고 설정 파일·운영 기록·로그·진단 묶음에 저장되지 않습니다.
+
 Windows 작업 표시줄 알림은 기본적으로 꺼져 있으며 사용자가 별도로 켠 경우에만 백그라운드 에이전트가 표시합니다. 중요도·종류·조용한 시간 설정은 사용자 데이터 폴더의 `windows-notifications.json`에 로컬로 저장됩니다. 알림은 새 운영 기록의 한국어 또는 영어 요약만 사용하며 명령 원문을 표시하지 않습니다. 서버 절대 경로, IPv4 주소와 토큰·비밀번호·웹훅처럼 보이는 값은 표시 전에 다시 가리고, MineHarbor 서버로 전송하지 않습니다.
 
 설치 콘텐츠 기록은 각 서버의 `.mineharbor/content-manifest.json`, 백업·재시작·명령 일정과 최근 실행 결과는 `.mineharbor/automation.json`에 로컬로 저장됩니다. 서버 시작·종료·충돌·자동 재시작과 예약 결과는 서버별 `.mineharbor/operations-history.json`에 최대 500개까지 저장됩니다. 운영 기록은 절대 서버 경로, IPv4 주소와 토큰·비밀번호·웹훅처럼 보이는 값을 가리고 SHA-256 연속 해시로 변경 여부를 검사하지만, 사용자가 CSV 내보내기를 선택하면 표시 중인 서버 이름과 운영 문구가 선택한 파일에 포함됩니다. Paper/Purpur 복사 호환성 설정을 변경하면 기존 YAML은 서버의 `.mineharbor/configuration-backups`에 최대 5개까지 로컬 보관됩니다. 이 파일과 대시보드의 CPU·메모리·플레이어·용량·오류·TPS/MSPT 값은 원격 분석 서버로 전송되지 않습니다. TPS/MSPT는 연결된 Paper/Purpur 브리지가 공개 서버 API에서 얻을 수 있을 때만 로컬 루프백으로 전달합니다.
@@ -44,6 +46,8 @@ Launcher updates are downloaded only from the canonical or legacy-alias paths of
 The optional Paper/Purpur command bridge never connects to the internet or LAN. It connects only to the launcher's temporary `127.0.0.1` listener and validates a fresh random session token, profile, and protocol version. The session file is deleted when the server stops, the token is not logged, and the session file is excluded from diagnostic bundles. The bridge JAR is downloaded from the GitHub Release only after user consent and is verified by size and SHA-256.
 
 Background operations (Beta) runs in the current Windows user account only after explicit opt-in. GUI/agent communication uses a local named pipe whose ACL grants only the current user SID and opens no LAN or internet port. Enablement, optional Windows sign-in startup, crash restart, and pause state are stored in `background-agent.json` under user data. If sign-in startup is separately selected, only the executable path and `--background-agent` argument are stored in the current-user Windows `Run` entry; no token or server command is stored there.
+
+Each managed child started by multi-server management uses a current-user-SID-only local named pipe and a fresh 256-bit token when transferring a running server safely to the agent. This channel opens no LAN or internet port and carries only console commands and a bounded recent-log buffer. The token exists only in the child process arguments and live process memory; it is not stored in settings, operations history, logs, or diagnostic bundles.
 
 Windows taskbar notifications are disabled by default and appear only after separate opt-in while the background agent is running. Severity, category, and quiet-hour preferences are stored locally in `windows-notifications.json` under user data. Notifications contain only the Korean or English summary of a new operation and never include a raw command. Absolute server paths, IPv4 addresses, and token/password/webhook-like values are sanitized again before display and are not sent to a MineHarbor server.
 

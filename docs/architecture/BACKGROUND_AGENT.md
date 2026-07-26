@@ -7,8 +7,9 @@ MineHarbor v1.12.0의 백그라운드 운영은 관리자 권한 Windows 서비�
 ### 프로세스와 소유권
 
 - GUI와 에이전트는 서로 다른 단일 인스턴스 뮤텍스를 사용하므로 함께 실행할 수 있습니다.
-- 에이전트는 자신이 시작한 `--managed-profile` 자식만 표준 입력·출력으로 제어합니다.
-- 자식은 에이전트 PID와 프로세스 시작 시각을 확인해 PID 재사용을 차단합니다.
+- 에이전트는 자신이 시작했거나 멀티 서버 관리에서 검증된 절차로 인계받은 `--managed-profile` 자식만 제어합니다.
+- 관리 자식은 현재 사용자 SID 전용 제어 파이프, 실행별 256비트 토큰과 자식·현재 소유자·새 소유자의 PID 및 프로세스 시작 시각을 확인해 PID 재사용과 추측 인계를 차단합니다.
+- 멀티 서버 관리 창을 닫을 때 실행 중 서버를 중단 없이 인계하거나 모두 안전 종료하거나 취소할 수 있습니다. 부분 실패 시 창은 실패 서버를 계속 보유하고 성공한 서버만 에이전트가 관리합니다.
 - 에이전트가 정상 종료될 때는 모든 소유 서버에 `stop`을 보내고 제한 시간 안에 종료됐을 때만 에이전트를 끝냅니다.
 - 부모 프로세스가 예상치 않게 사라진 관리 자식도 Java 프로세스에 먼저 `stop`을 보내고 종료를 기다립니다.
 - 다른 MineHarbor 창이나 사용자가 직접 실행해 같은 포트를 사용하는 서버는 외부 소유로 표시하며, 명령·종료·실행 중 백업을 수행하지 않습니다.
@@ -31,13 +32,13 @@ GUI와 트레이 에이전트는 로컬 이름 있는 파이프를 사용합니�
 
 v1.13.0부터 사용자가 별도로 동의하면 에이전트의 기존 트레이 아이콘으로 새 운영 기록의 Windows 작업 표시줄 알림을 표시합니다. 알림은 중요도·종류·조용한 시간을 적용하고, 오래된 기록을 재생하지 않으며 짧은 시간의 여러 사건을 하나로 요약합니다. 자세한 경계는 [Windows 알림 구조](WINDOWS_NOTIFICATIONS.md)를 따릅니다.
 
-현재 베타는 사용자 로그인 이전 실행, 관리자 권한 서비스, 영구 Windows 알림 센터 저장소, 웹/Discord 원격 관리, 실행 중 GUI 서버의 무손실 소유권 이전을 제공하지 않습니다. GUI가 직접 시작한 서버는 기존처럼 GUI 종료 확인 후 안전 종료됩니다.
+현재 베타는 사용자 로그인 이전 실행, 관리자 권한 서비스, 영구 Windows 알림 센터 저장소와 웹/Discord 원격 관리를 제공하지 않습니다. 무중단 인계는 멀티 서버 관리가 이 버전의 제어 채널을 포함해 시작한 자식에 한정됩니다. 메인 런처 내부의 Java 서버와 외부 소유 서버는 인계하지 않으며 기존 안전 종료 또는 외부 소유 상태를 유지합니다. 자세한 신뢰 경계와 실패 처리는 [관리 서버 인계 구조](MANAGED_SERVER_HANDOFF.md)를 따릅니다.
 
 ## English
 
 MineHarbor v1.12.0 Background operations is an opt-in beta that runs in the current user account, not an elevated Windows service. `MineHarbor.exe --background-agent` starts only after explicit consent in `Server management → Background`; Windows sign-in registration is a separate opt-in.
 
-The GUI and agent have separate single-instance mutexes. The agent controls only `--managed-profile` children that it started and validates the parent PID plus start time. Normal agent shutdown sends `stop` to every owned server and exits only after they stop within the timeout. A managed child whose parent disappears also attempts a safe console stop before exiting. Servers using the configured port but not owned by the agent are reported as external ownership and are never commanded, stopped, or live-backed up.
+The GUI and agent have separate single-instance mutexes. The agent controls only `--managed-profile` children it started or received through the verified multi-server handoff. Each child uses a current-SID-only control pipe, fresh 256-bit token, and exact child/current-owner/new-owner PID plus process-start-time validation. Closing multi-server management offers live transfer, safe stop, or cancel; partial failure keeps the window and failed ownership while successful transfers remain with the agent. Normal agent shutdown sends `stop` to every owned server and exits only after they stop within the timeout. A managed child whose current owner disappears also attempts a safe console stop before exiting. Servers using the configured port but not owned by the agent are reported as external ownership and are never commanded, stopped, or live-backed up.
 
 GUI/agent IPC uses a local named pipe derived from the current Windows SID, with a pipe ACL that grants only that SID. JSON Lines requests, responses, and receive time are bounded. No LAN or internet listener is opened, and no arbitrary shell or executable command is supported.
 
@@ -45,4 +46,4 @@ Per-server automation schema 2 remains the source of truth. A path-derived Windo
 
 Starting with v1.13.0, separately opted-in Windows taskbar notifications reuse the agent's tray icon for new operations. Severity/category filters, quiet hours, old-history suppression, and burst summaries follow the [Windows notification architecture](WINDOWS_NOTIFICATIONS.md).
 
-Launcher updates request safe agent shutdown and begin executable replacement only after the agent exits; a timeout aborts the update instead of forcing a server exit. The beta does not provide pre-sign-in execution, an elevated service, a durable Windows notification-center store, web/Discord remote control, or lossless transfer of a GUI-owned running server. GUI-owned servers keep the existing safe-close behavior.
+Launcher updates request safe agent shutdown and begin executable replacement only after the agent exits; a timeout aborts the update instead of forcing a server exit. The beta does not provide pre-sign-in execution, an elevated service, a durable Windows notification-center store, or web/Discord remote control. Live transfer is limited to managed children started by this version's multi-server management; Java hosted directly inside the main launcher and externally owned servers retain their existing safe-close or external-ownership behavior. See [managed server handoff](MANAGED_SERVER_HANDOFF.md) for the trust and failure boundaries.
