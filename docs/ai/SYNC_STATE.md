@@ -1,5 +1,18 @@
 ﻿# AI Agent Synchronization State
 
+## Codex Discord Guide Layout Fix - 2026-07-26
+
+- **Current Version**: 1.15.2 (build 26.2.45.81)
+- **Branch**: `codex/discord-guide-layout-v1.15.2`
+- **Status**: Discord 등록 가이드 문구 잘림 수정 및 로컬 릴리스 후보 검증 완료
+- 실제 다크 테마 화면에서 단계 설명과 보안 안내의 두 번째 줄이 고정 높이 경계에 가려지는 원인을 확인했습니다.
+- 고정 25% 단계 행, 고정 보안 행과 말줄임을 제거하고 카드·레이블의 실제 줄바꿈 높이를 사용합니다.
+- 창 높이는 내용과 현재 모니터 작업 영역에 맞추며, 화면이 부족한 경우에만 단계 영역 내부에 세로 스크롤을 표시합니다. 가로 스크롤은 만들지 않고 헤더·보안 안내·설정 버튼은 유지합니다.
+- 사용자 제보와 같은 다크 테마의 실제 WinForms 렌더링에서 전체 한글 문구, 카드 간격, 빈 공간과 버튼 위계를 확인했습니다.
+- 기존 32개 런처 그룹에 단계 행 자동 크기, 설명·보안 안내 자동 줄바꿈, 말줄임 금지와 단계 전용 스크롤 검사를 추가했습니다. 실제 Discord 자격 증명이나 사용자 설정은 사용하지 않습니다.
+- `Prepare-BuildResources.ps1`, 프레임워크 빌드와 일반 Portable 전체 검사가 통과했습니다. 현재 결과는 `VERSION_CONSISTENCY_OK`, `PASSED=32`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`입니다.
+- 자체서명 `Publish-LocalRelease.ps1 -NoPublish`도 `RELEASE_ARTIFACTS_PASSED=7`을 통과하고 임시 인증서/PFX를 정리했습니다. 자체서명 Portable EXE로 동일한 전체 검사를 다시 통과했습니다.
+
 ## Codex Discord Registration Onboarding - 2026-07-26
 
 - **Current Version**: 1.15.1 (build 26.2.45.80)

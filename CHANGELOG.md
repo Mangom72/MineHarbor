@@ -4,6 +4,24 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.15.2] - 2026-07-26
+
+### Korean
+
+- **Discord 가이드 문구 잘림 수정**: 좁은 창과 DPI 배율에서 4개 단계 설명 및 하단 보안 안내의 두 번째 줄이 카드 경계에 가려지던 문제를 수정했습니다.
+- **내용 기반 카드 높이**: 고정 25% 행 높이와 말줄임 표시를 제거하고, 한국어·영어 문구가 실제로 차지하는 줄 수에 맞춰 각 카드와 보안 안내의 높이를 계산합니다.
+- **작은 화면 대응**: 가이드 창은 내용과 작업 영역에 맞춰 높이를 자동 조정합니다. 화면이 부족한 경우에만 단계 목록 내부에 세로 스크롤을 표시하며 헤더, 보안 안내와 설정 버튼은 계속 보입니다. 가로 스크롤은 만들지 않습니다.
+- **다크 테마 시각 검증**: 사용자 제보와 같은 다크 테마의 실제 WinForms 렌더링에서 모든 문구, 카드 간격과 버튼 위계를 확인했습니다.
+- **회귀 검증**: 단계 행의 자동 크기, 설명·보안 문구의 자동 줄바꿈, 말줄임 금지와 내부 스크롤 범위를 기존 32개 런처 테스트 그룹에 추가했습니다.
+
+### English
+
+- **Discord guide clipping fixed**: the second lines of the four step descriptions and footer security note no longer get clipped by their cards in narrow windows or at scaled DPI.
+- **Content-driven card heights**: fixed 25-percent rows and ellipsis behavior were removed. Every step card and the security note now measure the actual Korean or English wrapped text.
+- **Small-screen behavior**: the guide fits its height to the content and current working area. Only the step list becomes vertically scrollable when space is insufficient, keeping the heading, security note, and setup actions visible without a horizontal scrollbar.
+- **Dark-theme visual verification**: the real WinForms dark-theme rendering was checked against the reported layout for complete copy, balanced card spacing, and clear action hierarchy.
+- **Regression coverage**: the existing 32 launcher groups now assert auto-sized step rows, wrapped step/security labels, no ellipsis, and the scoped internal scroll container.
+
 ## [1.15.1] - 2026-07-26
 
 ### Korean
