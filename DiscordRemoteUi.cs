@@ -344,6 +344,7 @@ internal static partial class Launcher
 		private readonly string loadError;
 		private readonly string existingProtectedToken;
 		private bool refreshing;
+		private bool syncingToggles;
 
 		public DiscordRemoteSettingsForm()
 		{
@@ -603,8 +604,28 @@ internal static partial class Launcher
 			buttons.Controls.AddRange(new Control[] { guideButton, refresh, saveButton, cancel });
 			root.Controls.Add(buttons, 0, 6);
 
-			enabledBox.CheckedChanged += delegate { UpdateEnabledState(); };
-			removeTokenBox.CheckedChanged += delegate { UpdateEnabledState(); };
+			// 두 항목은 동시에 켤 수 없으므로 사용자가 마지막에 누른 쪽을 남기고 반대쪽을 끕니다.
+			// 예전처럼 방금 켠 항목이 말없이 되돌아가지 않도록 합니다.
+			enabledBox.CheckedChanged += delegate
+			{
+				if (!syncingToggles && enabledBox.Checked && removeTokenBox.Checked)
+				{
+					syncingToggles = true;
+					try { removeTokenBox.Checked = false; }
+					finally { syncingToggles = false; }
+				}
+				UpdateEnabledState();
+			};
+			removeTokenBox.CheckedChanged += delegate
+			{
+				if (!syncingToggles && removeTokenBox.Checked && enabledBox.Checked)
+				{
+					syncingToggles = true;
+					try { enabledBox.Checked = false; }
+					finally { syncingToggles = false; }
+				}
+				UpdateEnabledState();
+			};
 			tokenBox.TextChanged += delegate { UpdateValidationState(); };
 			applicationIdBox.TextChanged += delegate { UpdateValidationState(); };
 			guildIdBox.TextChanged += delegate { UpdateValidationState(); };
@@ -624,6 +645,13 @@ internal static partial class Launcher
 			ApplySimpleDialogTheme(this);
 			UpdateValidationState();
 			ApplyCommonButtonToolTips(this);
+		}
+
+		protected override void OnFormClosed(FormClosedEventArgs eventArgs)
+		{
+			// 저장이 끝나거나 취소한 뒤 평문 봇 토큰이 입력 컨트롤에 남지 않도록 지웁니다.
+			if (tokenBox != null && !tokenBox.IsDisposed) tokenBox.Clear();
+			base.OnFormClosed(eventArgs);
 		}
 
 		private void ShowRegistrationGuide()
@@ -691,7 +719,6 @@ internal static partial class Launcher
 			allowedUsersBox.Enabled = enabled;
 			allowedRolesBox.Enabled = enabled;
 			profilesBox.Enabled = enabled;
-			if (removeTokenBox.Checked) enabledBox.Checked = false;
 			UpdateValidationState();
 		}
 
@@ -792,6 +819,16 @@ internal static partial class Launcher
 					korean ? "설정 파일을 먼저 확인해야 합니다." : "Review the settings file before continuing.",
 					"danger-text");
 				saveButton.Enabled = false;
+				return;
+			}
+			if (removeTokenBox.Checked)
+			{
+				SetValidationMessage(
+					korean
+						? "저장하면 암호화된 토큰을 지우고 원격 제어를 끕니다. 다시 사용하려면 새 봇 토큰을 입력해 주세요."
+						: "Saving deletes the encrypted token and turns remote control off. Enter a new bot token to use it again.",
+					"warning");
+				saveButton.Enabled = true;
 				return;
 			}
 			if (!enabledBox.Checked)

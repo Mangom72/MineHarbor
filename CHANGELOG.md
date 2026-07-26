@@ -4,6 +4,26 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.15.4] - 2026-07-26
+
+### Korean
+
+- **IPv6 접속 주소 가림**: 운영 기록·Windows 알림·Discord `/mineharbor errors` 응답에서 IPv4만 `[IP]`로 가리고 IPv6로 접속한 플레이어 주소는 그대로 노출되던 문제를 수정했습니다. 로그 시각(`12:34:56`)이나 `Class::method` 같은 표기는 지우지 않습니다.
+- **전체 상태 조회 정리**: 서버를 지정하지 않은 `/mineharbor status`가 응답 길이 상한에 걸려 뒤쪽 서버를 조용히 잘라내던 문제를 수정했습니다. 한 응답에서 다루는 서버 수를 제한하고 생략된 개수와 개별 조회 방법을 한국어·영어로 안내하며, 프로필마다 반복되던 조회 부하도 함께 줄입니다.
+- **Discord 설정 체크박스 복구**: `저장된 토큰 제거`가 켜져 있을 때 `Discord 원격 제어 사용`이 아무 설명 없이 다시 꺼지던 문제를 수정했습니다. 이제 마지막에 선택한 항목이 유지되고 반대쪽이 자동으로 해제되며, 토큰을 지우면 원격 제어도 함께 꺼진다는 사실을 화면에서 먼저 알려 줍니다.
+- **입력 예시 문구 정렬**: 여러 줄 입력의 예시 문구가 상자 한가운데 떠 있어 실제 입력 시작 위치와 어긋나던 문제를 수정했습니다. 여러 줄 입력은 첫 줄에, 한 줄 입력은 세로 가운데에 맞춥니다.
+- **평문 봇 토큰 정리**: Discord 설정 창을 닫을 때 입력 컨트롤에 남아 있던 평문 봇 토큰을 지웁니다. 저장된 토큰은 이전과 같이 현재 Windows 사용자 범위 DPAPI로만 보관합니다.
+- **설치 파일 체크섬 오류 처리**: Forge·NeoForge Installer의 `.sha256` 응답이 비어 있거나 형식이 다를 때 인덱스 예외로 중단되지 않고 검증 실패로 처리합니다. 체크섬 형식 검사도 함께 강화했습니다.
+
+### English
+
+- **IPv6 client addresses redacted**: operations history, Windows notifications, and Discord `/mineharbor errors` replies previously redacted only IPv4 addresses, leaking the addresses of players connecting over IPv6. Log timestamps (`12:34:56`) and tokens such as `Class::method` are left intact.
+- **All-server status cleanup**: `/mineharbor status` without a server no longer silently drops trailing servers when the reply hits the length limit. The number of servers per reply is bounded, the omitted count and per-server lookup are explained in Korean and English, and the repeated per-profile lookup cost is reduced.
+- **Discord settings checkbox fixed**: turning on `Enable Discord remote control` while `Remove saved token` was checked silently reverted with no explanation. The most recent choice now wins, the opposite option clears itself, and the form states up front that removing the token also turns remote control off.
+- **Placeholder alignment**: placeholder text in multi-line editors floated in the vertical middle of the box, away from where typing actually starts. Multi-line editors now align the placeholder to the first line while single-line editors keep vertical centering.
+- **Plaintext bot token cleared**: closing the Discord settings window clears the plaintext bot token left in the input control. The stored token continues to be protected with current-user Windows DPAPI only.
+- **Installer checksum error handling**: an empty or unexpected `.sha256` response for the Forge or NeoForge installer is now reported as a checksum verification failure instead of throwing an index exception, and the checksum format check was tightened.
+
 ## [1.15.3] - 2026-07-26
 
 ### Korean

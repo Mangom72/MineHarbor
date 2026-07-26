@@ -395,7 +395,9 @@ internal static partial class Launcher
 			Label cueLabel = new Label
 			{
 				Dock = DockStyle.Fill,
-				TextAlign = ContentAlignment.MiddleLeft,
+				// 여러 줄 입력에서는 첫 줄 커서 위치에 맞춰 위쪽에 붙입니다. 가운데 정렬하면
+				// 입력 예시가 상자 한가운데 떠서 실제 입력 시작 위치와 어긋납니다.
+				TextAlign = textBox.Multiline ? ContentAlignment.TopLeft : ContentAlignment.MiddleLeft,
 				AutoEllipsis = true,
 				BackColor = Color.Transparent,
 				ForeColor = Color.FromArgb(128, 136, 146),

@@ -2242,6 +2242,45 @@ internal static class LauncherTests
 		Equal(true, GetField(autocomplete, "IsAutocomplete"), "Discord 서버 자동완성 응답");
 		Equal(1, ((IList)GetField(autocomplete, "Choices")).Count, "허용된 Discord 서버만 자동완성");
 
+		// 서버 지정 없는 전체 상태 조회는 프로필마다 조회를 한 번씩 하므로 개수를 제한하고,
+		// 응답 길이 상한에 걸려 남은 서버가 조용히 사라지지 않도록 생략 수를 알려야 합니다.
+		object manyProfileSettings = Activator.CreateInstance(settingsType, true);
+		SetPublic(manyProfileSettings, "Enabled", true);
+		SetPublic(manyProfileSettings, "ProtectedBotToken", protectedToken);
+		SetPublic(manyProfileSettings, "ApplicationId", applicationId);
+		SetPublic(manyProfileSettings, "GuildId", guildId);
+		SetPublic(manyProfileSettings, "ChannelId", channelId);
+		SetPublic(manyProfileSettings, "AllowedUserIds", new List<string> { userId });
+		SetPublic(manyProfileSettings, "AllowedRoleIds", new List<string>());
+		List<string> bulkProfiles = new List<string>();
+		for (int index = 0; index < 20; index++) bulkProfiles.Add("대량 서버 " + index.ToString("00"));
+		SetPublic(manyProfileSettings, "AllowedProfiles", bulkProfiles);
+		int bulkStatusCalls = 0;
+		SetStaticField("DiscordRemoteActionOverride", new Func<string, string, string, bool, string>(
+			delegate(string command, string selectedProfile, string actor, bool korean)
+			{
+				bulkStatusCalls++;
+				return "`" + selectedProfile + "` · OK";
+			}));
+		object bulkProcessor = Activator.CreateInstance(
+			processorType,
+			BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+			null,
+			new object[] { manyProfileSettings, null },
+			null);
+		object bulkStatus = InvokeInstance(bulkProcessor, "Process", new object[]
+		{
+			NewDiscordInteraction("73000000000000000", 2, guildId, channelId, userId, null, "status", null, null, "ko"),
+			now
+		});
+		Equal(15, bulkStatusCalls, "Discord 전체 상태 조회 서버 수 제한");
+		string bulkContent = Convert.ToString(GetField(bulkStatus, "Content"));
+		if (bulkContent.Length > 1800)
+			throw new InvalidOperationException("Discord 전체 상태 응답 길이 상한이 적용되지 않았습니다.");
+		if (bulkContent.IndexOf("그 외 5개 서버는 생략", StringComparison.Ordinal) < 0)
+			throw new InvalidOperationException("Discord 전체 상태에서 생략된 서버 수가 안내되지 않았습니다.");
+		SetStaticField("DiscordRemoteActionOverride", actionOverride);
+
 		object limitedProcessor = Activator.CreateInstance(
 			processorType,
 			BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
@@ -2335,6 +2374,33 @@ internal static class LauncherTests
 			allowedUsers.Text = userId;
 			object[] validInput = new object[] { null, null };
 			Equal(true, validateInput.Invoke(form, validInput), "Discord 허용 사용자 입력 후 연결 준비");
+
+			// 여러 줄 입력의 예시 문구는 첫 줄 커서 위치에 맞춰야 하고, 한 줄 입력은 세로 가운데를 유지합니다.
+			Equal(ContentAlignment.TopLeft, FindCueLabel(allowedUsers).TextAlign, "Discord 허용 사용자 예시 문구 첫 줄 정렬");
+			Equal(ContentAlignment.TopLeft, FindCueLabel(allowedRoles).TextAlign, "Discord 허용 역할 예시 문구 첫 줄 정렬");
+			Equal(ContentAlignment.MiddleLeft, FindCueLabel(channel).TextAlign, "Discord 채널 ID 예시 문구 세로 가운데 정렬");
+
+			// 사용 설정과 토큰 제거는 함께 켤 수 없지만, 방금 누른 쪽이 말없이 되돌아가서는 안 됩니다.
+			CheckBox removeToken = (CheckBox)GetPrivateField(formType, form, "removeTokenBox");
+			Equal(true, removeToken.Enabled, "저장된 토큰이 있으면 제거 선택 가능");
+			enabled.Checked = false;
+			removeToken.Checked = true;
+			enabled.Checked = true;
+			Equal(false, removeToken.Checked, "Discord 사용 설정을 켜면 토큰 제거 자동 해제");
+			Equal(true, enabled.Checked, "Discord 사용 설정이 조용히 되돌아가지 않음");
+			removeToken.Checked = true;
+			Equal(false, enabled.Checked, "Discord 토큰 제거를 켜면 원격 제어 해제");
+			string removeTokenNotice = Convert.ToString(validation.Text);
+			if (removeTokenNotice.IndexOf("토큰", StringComparison.Ordinal) < 0
+				&& removeTokenNotice.IndexOf("token", StringComparison.OrdinalIgnoreCase) < 0)
+				throw new InvalidOperationException("Discord 토큰 제거 결과 안내가 표시되지 않았습니다.");
+			removeToken.Checked = false;
+
+			// 창을 닫으면 평문 봇 토큰이 입력 컨트롤에 남지 않아야 합니다.
+			token.Text = "test.token." + new string('y', 40);
+			formType.GetMethod("OnFormClosed", BindingFlags.Instance | BindingFlags.NonPublic)
+				.Invoke(form, new object[] { new FormClosedEventArgs(CloseReason.UserClosing) });
+			Equal(0, token.TextLength, "Discord 창을 닫으면 평문 봇 토큰 제거");
 		}
 		Type guideType = launcher.GetNestedType("DiscordRemoteRegistrationGuideForm", BindingFlags.NonPublic);
 		using (Form guide = (Form)Activator.CreateInstance(guideType, true))
@@ -2375,6 +2441,17 @@ internal static class LauncherTests
 		SetStaticField("DiscordRemoteRunOverride", null);
 		SetStaticField("DiscordRemoteActionOverride", null);
 		Pass();
+	}
+
+	private static Label FindCueLabel(TextBox textBox)
+	{
+		if (textBox == null || textBox.Parent == null) throw new InvalidOperationException("입력 예시 문구를 담을 표면이 없습니다.");
+		foreach (Control child in textBox.Parent.Controls)
+		{
+			Label label = child as Label;
+			if (label != null) return label;
+		}
+		throw new InvalidOperationException("입력 예시 문구 레이블을 찾지 못했습니다.");
 	}
 
 	private static Dictionary<string, object> NewDiscordInteraction(
@@ -2453,6 +2530,19 @@ internal static class LauncherTests
 		Equal(true, Invoke("MarkOperationEventRead", new object[] { server, GetField(first, "Id"), true }), "운영 기록 읽음 처리");
 		document = Invoke("ReadOperationsHistory", new object[] { server });
 		Equal(true, GetField(((IList)GetField(document, "Entries"))[0], "IsRead"), "운영 기록 읽음 상태 저장");
+
+		// IPv6로 접속한 플레이어 주소도 가리되, 같은 줄의 로그 시각은 남겨야 합니다.
+		const string ipv6Line = "[12:34:56] Steve[/[2001:db8:85a3::8a2e:370:7334]:52341] lost connection";
+		Invoke("RecordOperationEvent", new object[] { server, "server", "warning", ipv6Line, ipv6Line, "launcher", false });
+		document = Invoke("ReadOperationsHistory", new object[] { server });
+		entries = (IList)GetField(document, "Entries");
+		string ipv6Sanitized = Convert.ToString(GetField(entries[entries.Count - 1], "MessageEn"));
+		if (ipv6Sanitized.IndexOf("2001:db8", StringComparison.OrdinalIgnoreCase) >= 0)
+			throw new InvalidOperationException("운영 기록 IPv6 주소 가림이 적용되지 않았습니다.");
+		if (ipv6Sanitized.IndexOf("[IP]", StringComparison.Ordinal) < 0)
+			throw new InvalidOperationException("운영 기록 IPv6 주소가 [IP]로 대체되지 않았습니다.");
+		if (ipv6Sanitized.IndexOf("12:34:56", StringComparison.Ordinal) < 0)
+			throw new InvalidOperationException("운영 기록 로그 시각이 IPv6 가림에 함께 지워졌습니다.");
 
 		string historyPath = Convert.ToString(Invoke("GetOperationsHistoryPath", new object[] { server }));
 		string validJson = File.ReadAllText(historyPath, Encoding.UTF8);
