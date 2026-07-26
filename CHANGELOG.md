@@ -4,6 +4,26 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.12.0] - 2026-07-26
+
+### Korean
+
+- **사용자 계정용 백그라운드 에이전트(베타)**: `서버 관리 → 백그라운드`에서 명시적으로 동의하면 `MineHarbor.exe --background-agent`가 시스템 트레이에 상주해 창을 닫은 뒤에도 서버별 예약 백업·시작·종료·재시작·명령을 평가합니다. Windows 로그인 자동 시작과 충돌 재시작은 각각 선택 사항이며 관리자 권한 서비스는 설치하지 않습니다.
+- **트레이 서버 운영**: 에이전트가 시작한 서버는 GUI 종료 후에도 유지됩니다. 트레이에서 서버별 시작·안전 종료·재시작·즉시 백업·콘솔, 전체 안전 종료, 예약 일시 중지와 완전 종료를 제공하고, 에이전트 콘솔은 자동완성과 실제 위험 명령 재확인을 사용합니다.
+- **안전한 소유권과 IPC**: GUI/에이전트 통신은 현재 Windows 사용자 SID 전용 ACL을 가진 로컬 이름 있는 파이프와 제한된 JSON 요청을 사용합니다. 에이전트는 자신이 시작한 서버만 제어하며 같은 포트를 사용하는 다른 프로세스에는 명령·종료·실행 중 백업을 시도하지 않습니다.
+- **예약 중복 및 절전 복구**: 자동화 파일 접근을 서버 경로별 프로세스 간 뮤텍스로 직렬화하고 기존 PID·시작 시각 임대와 결합했습니다. 절전 복귀 시 놓친 작업 정책을 다시 평가하되 GUI와 에이전트가 같은 작업을 중복 청구하지 않습니다.
+- **안전 종료와 업데이트**: 관리 자식의 부모가 사라져도 Java 서버에 먼저 `stop`을 보내며, 에이전트 종료와 런처 업데이트는 소유 서버가 제한 시간 안에 안전 종료된 경우에만 계속합니다. 종료되지 않으면 강제 종료 대신 작업을 취소합니다.
+- **설정·문서·회귀 검증**: `background-agent.json`은 원자적 저장, 크기·스키마 검증, 손상/미래 스키마 보존을 사용합니다. 한국어·영어 README, 개인정보·보안·기여·구조 문서를 동기화하고 전체 런처 테스트를 29개 그룹으로 확장했습니다.
+
+### English
+
+- **Per-user background agent (Beta)**: after explicit opt-in under `Server management → Background`, `MineHarbor.exe --background-agent` stays in the tray and evaluates scheduled backup, start, stop, restart, and command jobs after the GUI closes. Windows sign-in startup and crash restart are independent options; no elevated service is installed.
+- **Tray server operations**: servers started by the agent survive GUI exit. The tray provides per-server start, safe stop, restart, immediate backup, and console access, plus stop-all, schedule pause, and complete exit. The agent console includes completion and confirmation of the exact risky command.
+- **Safe ownership and IPC**: GUI/agent communication uses a local named pipe whose ACL grants only the current Windows SID, with bounded JSON requests. The agent controls only servers that it started and refuses to command, stop, or live-back-up another process using the configured port.
+- **Schedule deduplication and resume recovery**: per-server path-derived Windows mutexes serialize automation-file access and complement existing PID/start-time leases. Resume re-evaluates bounded missed-run policies without duplicate GUI/agent claims.
+- **Safe shutdown and update**: managed children first send `stop` when their parent disappears. Agent shutdown and launcher update proceed only after owned servers stop within the timeout; otherwise the operation aborts instead of forcing an unsafe exit.
+- **Settings, documentation, and regression coverage**: `background-agent.json` uses bounded, schema-validated atomic storage and preserves corrupt or future-schema files. Korean/English README, privacy, security, contribution, and architecture documents are synchronized, and the launcher suite now contains 29 test groups.
+
 ## [1.11.0] - 2026-07-26
 
 ### Korean

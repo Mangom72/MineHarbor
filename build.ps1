@@ -42,6 +42,7 @@ $sources = @(
     'ContentManagementServices.cs',
 	'ContentManagementUi.cs',
 	'ServerAutomation.cs',
+	'BackgroundAgent.cs',
 	'ServerManagementFeatures.cs',
 	'OperationsHistory.cs',
     'ManagedServerDashboard.cs',

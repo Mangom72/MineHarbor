@@ -54,6 +54,7 @@ internal static class LauncherTests
 			TestModrinthHash(temporary);
 			TestContentManagement(temporary);
 			TestServerAutomationAndDashboard(temporary);
+			TestBackgroundAgentSettings(temporary);
 			TestOperationsHistory(temporary);
 			TestDiagnosticRedaction(temporary);
 			TestQuickCommandsAndBridge(temporary);
@@ -84,6 +85,10 @@ internal static class LauncherTests
 			SetStaticField("LauncherUpdatePreferencesPathOverride", null);
 			SetStaticField("BridgeArtifactOverridePath", null);
 			SetStaticField("BridgeInstallFailureAfterBackup", false);
+			SetStaticField("BackgroundAgentSettingsPathOverride", null);
+			SetStaticField("BackgroundAgentPipeNameOverride", null);
+			SetStaticField("BackgroundAgentStartupRegistrationOverride", null);
+			SetStaticField("BackgroundAgentDisableTrayForTests", false);
 			if (Directory.Exists(temporary)) Directory.Delete(temporary, true);
 		}
 	}
@@ -1613,6 +1618,107 @@ internal static class LauncherTests
 			CancellationTokenSource closedCancellation = (CancellationTokenSource)GetPrivateField(dashboardFormType, dashboard, "cancellation");
 			Equal(true, closedCancellation.IsCancellationRequested, "UI 종료 후 비동기 콜백 취소");
 		}
+		Pass();
+	}
+
+	private static void TestBackgroundAgentSettings(string root)
+	{
+		string path = Path.Combine(root, "background-agent", "settings.json");
+		SetStaticField("BackgroundAgentSettingsPathOverride", path);
+		SetStaticField("BackgroundAgentPipeNameOverride", "MineHarbor.Tests." + Guid.NewGuid().ToString("N"));
+		Type settingsType = launcher.GetNestedType("BackgroundAgentSettings", BindingFlags.NonPublic);
+		object defaults = Invoke("ReadBackgroundAgentSettings", new object[0]);
+		Equal(1, GetField(defaults, "SchemaVersion"), "백그라운드 설정 기본 스키마");
+		Equal(false, GetField(defaults, "Enabled"), "백그라운드 운영 기본 비활성화");
+		Equal(false, Invoke("IsBackgroundAgentRunning", new object[0]), "없는 에이전트 연결 상태");
+
+		object settings = Activator.CreateInstance(settingsType, true);
+		SetPublic(settings, "Enabled", true);
+		SetPublic(settings, "StartWithWindows", true);
+		SetPublic(settings, "RestartAfterCrash", true);
+		SetPublic(settings, "Paused", true);
+		Invoke("WriteBackgroundAgentSettings", new object[] { settings });
+		object loaded = Invoke("ReadBackgroundAgentSettings", new object[0]);
+		Equal(true, GetField(loaded, "Enabled"), "백그라운드 운영 동의 저장");
+		Equal(true, GetField(loaded, "StartWithWindows"), "Windows 자동 시작 저장");
+		Equal(true, GetField(loaded, "RestartAfterCrash"), "충돌 자동 재시작 저장");
+		Equal(true, GetField(loaded, "Paused"), "백그라운드 운영 일시 중지 저장");
+
+		bool startupEnabled = false;
+		string startupPath = null;
+		Action<bool, string> registration = delegate(bool enabled, string executable)
+		{
+			startupEnabled = enabled;
+			startupPath = executable;
+		};
+		SetStaticField("BackgroundAgentStartupRegistrationOverride", registration);
+		Invoke("SetBackgroundAgentStartupRegistration", new object[] { true, @"C:\MineHarbor\MineHarbor.exe" });
+		Equal(true, startupEnabled, "자동 시작 등록 동의 전달");
+		Equal(@"C:\MineHarbor\MineHarbor.exe", startupPath, "자동 시작 실행 파일 전달");
+
+		string agentData = Path.Combine(root, "background-agent-data");
+		Directory.CreateDirectory(agentData);
+		string storagePath = Path.Combine(root, "background-agent-storage.properties");
+		SetStaticField("StorageSettingsPathOverride", storagePath);
+		SetStaticField("LauncherUserDataDirectoryOverride", Path.Combine(root, "background-agent-user"));
+		Invoke("SaveDataStorageSettings", new object[] { "custom", agentData });
+		SetPublic(settings, "Paused", false);
+		Invoke("WriteBackgroundAgentSettings", new object[] { settings });
+		SetStaticField("BackgroundAgentDisableTrayForTests", true);
+		Type contextType = launcher.GetNestedType("BackgroundAgentContext", BindingFlags.NonPublic);
+		object context = Activator.CreateInstance(contextType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { settings }, null);
+		try
+		{
+			object response = null;
+			for (int attempt = 0; attempt < 20 && response == null; attempt++)
+			{
+				Thread.Sleep(50);
+				response = Invoke("SendBackgroundAgentRequest", new object[] { "ping", null, null, 500 });
+			}
+			if (response == null) throw new InvalidOperationException("테스트 백그라운드 에이전트 IPC에 연결하지 못했습니다.");
+			Equal(true, GetField(response, "Success"), "현재 사용자 로컬 IPC 상태 요청");
+			object pause = Invoke("SendBackgroundAgentRequest", new object[] { "pause", null, null, 1000 });
+			Equal(true, GetField(pause, "Success"), "백그라운드 예약 일시 중지 IPC");
+			Equal(true, GetField(Invoke("ReadBackgroundAgentSettings", new object[0]), "Paused"), "IPC 일시 중지 상태 저장");
+			object resume = Invoke("SendBackgroundAgentRequest", new object[] { "resume", null, null, 1000 });
+			Equal(true, GetField(resume, "Success"), "백그라운드 예약 재개 IPC");
+		}
+		finally
+		{
+			((IDisposable)context).Dispose();
+			SetStaticField("BackgroundAgentDisableTrayForTests", false);
+		}
+
+		File.WriteAllText(path, "{\"SchemaVersion\":999}", Encoding.UTF8);
+		ExpectFailure(delegate { Invoke("ReadBackgroundAgentSettings", new object[0]); }, "미래 백그라운드 설정 스키마 거부");
+		Equal("{\"SchemaVersion\":999}", File.ReadAllText(path, Encoding.UTF8), "미래 백그라운드 설정 원본 보존");
+		File.WriteAllText(path, "{ broken", Encoding.UTF8);
+		ExpectFailure(delegate { Invoke("ReadBackgroundAgentSettings", new object[0]); }, "손상된 백그라운드 설정 차단");
+		Equal("{ broken", File.ReadAllText(path, Encoding.UTF8), "손상된 백그라운드 설정 원본 보존");
+		File.Delete(path);
+
+		Type settingsFormType = launcher.GetNestedType("BackgroundAgentSettingsForm", BindingFlags.NonPublic);
+		using (Form form = (Form)Activator.CreateInstance(settingsFormType, true))
+		{
+			Equal(AutoScaleMode.Dpi, form.AutoScaleMode, "백그라운드 설정 UI DPI 배율");
+			CheckBox enabledBox = (CheckBox)GetPrivateField(settingsFormType, form, "enabledBox");
+			if (string.IsNullOrWhiteSpace(enabledBox.AccessibleName) || string.IsNullOrWhiteSpace(enabledBox.AccessibleDescription))
+				throw new InvalidOperationException("백그라운드 설정 접근성 정보가 없습니다.");
+		}
+		Type consoleFormType = launcher.GetNestedType("BackgroundAgentConsoleForm", BindingFlags.NonPublic);
+		using (Form console = (Form)Activator.CreateInstance(consoleFormType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { "테스트 서버" }, null))
+		{
+			Equal(AutoScaleMode.Dpi, console.AutoScaleMode, "백그라운드 콘솔 DPI 배율");
+			TextBox commandBox = (TextBox)GetPrivateField(consoleFormType, console, "commandBox");
+			if (string.IsNullOrWhiteSpace(commandBox.AccessibleName) || GetPrivateField(consoleFormType, console, "commandSuggestions") == null)
+				throw new InvalidOperationException("백그라운드 콘솔 자동완성 또는 접근성 정보가 없습니다.");
+		}
+		SetStaticField("BackgroundAgentSettingsPathOverride", null);
+		SetStaticField("BackgroundAgentPipeNameOverride", null);
+		SetStaticField("BackgroundAgentStartupRegistrationOverride", null);
+		SetStaticField("BackgroundAgentDisableTrayForTests", false);
+		SetStaticField("StorageSettingsPathOverride", Path.Combine(root, "storage.properties"));
+		SetStaticField("LauncherUserDataDirectoryOverride", Path.Combine(root, "isolated-user-data"));
 		Pass();
 	}
 

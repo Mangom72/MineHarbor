@@ -34,6 +34,7 @@ internal static partial class Launcher
 		private Button backupManagerButton;
 		private Button automationManagerButton;
 		private Button statusDashboardButton;
+		private Button backgroundAgentButton;
 		private CancellationTokenSource managementCancellation = new CancellationTokenSource();
 		private DateTime nextAutomationPollUtc = DateTime.MinValue;
 		private bool automationPollRunning;
@@ -46,18 +47,29 @@ internal static partial class Launcher
 			backupManagerButton = NewManagedButton(korean ? "백업" : "Backups", 90, "secondary");
 			automationManagerButton = NewManagedButton(korean ? "일정" : "Schedules", 94, "secondary");
 			statusDashboardButton = NewManagedButton(korean ? "대시보드" : "Dashboard", 106, "secondary");
+			backgroundAgentButton = NewManagedButton(korean ? "백그라운드" : "Background", 118, "secondary");
 			contentManagerButton.Click += delegate { OpenSelectedContentManager(); };
 			backupManagerButton.Click += delegate { OpenSelectedBackupManager(); };
 			automationManagerButton.Click += delegate { OpenSelectedAutomationManager(); };
 			statusDashboardButton.Click += delegate { OpenSelectedStatusDashboard(); };
+			backgroundAgentButton.Click += delegate { OpenBackgroundAgentSettings(); };
 			actions.Controls.Add(contentManagerButton);
 			actions.Controls.Add(backupManagerButton);
 			actions.Controls.Add(automationManagerButton);
 			actions.Controls.Add(statusDashboardButton);
+			actions.Controls.Add(backgroundAgentButton);
 			EnsureButtonContentFits(contentManagerButton);
 			EnsureButtonContentFits(backupManagerButton);
 			EnsureButtonContentFits(automationManagerButton);
 			EnsureButtonContentFits(statusDashboardButton);
+			EnsureButtonContentFits(backgroundAgentButton);
+		}
+
+		private void OpenBackgroundAgentSettings()
+		{
+			using (BackgroundAgentSettingsForm form = new BackgroundAgentSettingsForm()) form.ShowDialog(this);
+			RefreshBackgroundAgentSnapshot(true);
+			RenderProfiles();
 		}
 
 		private void DisposeManagementFeatures()
@@ -182,6 +194,8 @@ internal static partial class Launcher
 
 		private void ProcessAutomationTimerTick()
 		{
+			RefreshBackgroundAgentSnapshot(false);
+			if (HasConnectedBackgroundAgent()) return;
 			if (automationPollRunning || managementCancellation == null || managementCancellation.IsCancellationRequested || DateTime.UtcNow < nextAutomationPollUtc) return;
 			nextAutomationPollUtc = DateTime.UtcNow.AddSeconds(5);
 			ObserveAutomationPollAsync();
@@ -374,6 +388,7 @@ internal static partial class Launcher
 		private async void PollMainAutomationAsync()
 		{
 			if (mainAutomationPolling || mainAutomationCancellation == null || mainAutomationCancellation.IsCancellationRequested) return;
+			if (IsBackgroundAgentRunning() && !serverRunning && !workflowRunning) return;
 			mainAutomationPolling = true;
 			try
 			{

@@ -319,11 +319,16 @@ internal static partial class Launcher
 			if (IsSafeLauncherUpdateDirectory(args[1])) PendingLauncherUpdateDirectory = Path.GetFullPath(args[1]);
 		}
 		int managedExitCode;
-		if (TryRunManagedProfileMode(args, out managedExitCode))
-		{
-			return managedExitCode;
-		}
-		bool createdNew;
+		if (TryRunManagedProfileMode(args, out managedExitCode))
+		{
+			return managedExitCode;
+		}
+		int backgroundAgentExitCode;
+		if (TryRunBackgroundAgentMode(args, out backgroundAgentExitCode))
+		{
+			return backgroundAgentExitCode;
+		}
+		bool createdNew;
 		using (Mutex mutex = new Mutex(true, string.IsNullOrEmpty(LauncherMutexNameOverride) ? MutexName : LauncherMutexNameOverride, out createdNew))
 		{
 			if (!createdNew)
@@ -408,10 +413,11 @@ internal static partial class Launcher
 			processStartInfo.Arguments = "--apply-launcher-update " + QuoteCommandLineArgument(location) + " " + QuoteCommandLineArgument(latestLauncherReleaseAsset.Sha256) + " " + QuoteCommandLineArgument(text2) + " " + Process.GetCurrentProcess().Id;
 			processStartInfo.WorkingDirectory = AppDomain.CurrentDomain.BaseDirectory;
 			bool requiresElevation = RequiresLauncherUpdateElevation(location);
-			processStartInfo.UseShellExecute = requiresElevation;
-			if (requiresElevation) processStartInfo.Verb = "runas";
-			processStartInfo.CreateNoWindow = false;
-			Process.Start(processStartInfo);
+			processStartInfo.UseShellExecute = requiresElevation;
+			if (requiresElevation) processStartInfo.Verb = "runas";
+			processStartInfo.CreateNoWindow = false;
+			StopBackgroundAgentForLauncherUpdate();
+			Process.Start(processStartInfo);
 			return true;
 		}
 		catch

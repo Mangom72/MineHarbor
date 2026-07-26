@@ -19,13 +19,15 @@ MineHarbor — Minecraft Server Launcher는 자동 사용 통계나 분석 정�
 
 Paper/Purpur 실시간 명령 브리지는 인터넷이나 LAN에 연결하지 않습니다. 런처가 실행마다 만든 임시 포트의 `127.0.0.1` 리스너에만 연결하며, 무작위 세션 토큰·프로필 이름·프로토콜 버전을 확인합니다. 세션 파일과 토큰은 서버가 종료되면 삭제되고 진단 묶음에 포함되지 않으며 로그에도 기록하지 않습니다. 브리지 JAR 설치·업데이트를 사용자가 선택한 경우에만 GitHub Release에서 자산을 내려받아 크기와 SHA-256을 검증합니다.
 
+백그라운드 운영(베타)은 사용자가 명시적으로 켠 경우에만 현재 Windows 사용자 계정에서 실행됩니다. GUI와 에이전트의 통신은 현재 사용자 SID에만 권한을 부여한 로컬 이름 있는 파이프를 사용하며 인터넷이나 LAN 포트를 열지 않습니다. 활성화·Windows 로그인 자동 시작·충돌 재시작·일시 중지 설정은 사용자 데이터 폴더의 `background-agent.json`에 저장됩니다. 자동 시작을 별도로 선택하면 실행 파일 경로와 `--background-agent` 인수만 현재 사용자 Windows `Run` 항목에 기록되며 토큰이나 서버 명령은 기록하지 않습니다.
+
 설치 콘텐츠 기록은 각 서버의 `.mineharbor/content-manifest.json`, 백업·재시작·명령 일정과 최근 실행 결과는 `.mineharbor/automation.json`에 로컬로 저장됩니다. 서버 시작·종료·충돌·자동 재시작과 예약 결과는 서버별 `.mineharbor/operations-history.json`에 최대 500개까지 저장됩니다. 운영 기록은 절대 서버 경로, IPv4 주소와 토큰·비밀번호·웹훅처럼 보이는 값을 가리고 SHA-256 연속 해시로 변경 여부를 검사하지만, 사용자가 CSV 내보내기를 선택하면 표시 중인 서버 이름과 운영 문구가 선택한 파일에 포함됩니다. Paper/Purpur 복사 호환성 설정을 변경하면 기존 YAML은 서버의 `.mineharbor/configuration-backups`에 최대 5개까지 로컬 보관됩니다. 이 파일과 대시보드의 CPU·메모리·플레이어·용량·오류·TPS/MSPT 값은 원격 분석 서버로 전송되지 않습니다. TPS/MSPT는 연결된 Paper/Purpur 브리지가 공개 서버 API에서 얻을 수 있을 때만 로컬 루프백으로 전달합니다.
 
 공인 IP와 서버 포트는 외부 TCP 응답을 확인하기 위해 portchecker.io에 요청될 수 있습니다. 이 검사는 응답한 서비스가 현재 Minecraft 서버인지 식별하지 못하므로 MineHarbor는 결과를 별도 미확인 상태로 표시합니다. 런처는 공유기 관리 비밀번호를 읽거나 전송하지 않습니다.
 
 진단 묶음에는 운영체제 버전, 런처 제품 버전과 빌드 번호, CPU 논리 코어 수, 총 메모리, 서버 종류·Minecraft 버전·설정 파일, 최근 서버 로그와 최대 3개의 충돌 보고서가 포함될 수 있습니다. 사용자 프로필 경로, 서버 절대 경로, IPv4 주소, 서버 소유자 이름, RCON 비밀번호, 서버 IP와 일부 민감 설정은 제거하거나 대체합니다. 파일 크기가 지나치게 크거나 재분석 지점인 파일은 포함하지 않습니다.
 
-자동 업데이트는 `Mangom72/MineHarbor` GitHub Release의 정식 경로나 기존 저장소 별칭에서만 내려받고, 메타데이터의 크기와 SHA-256을 모두 확인합니다. 코드 서명은 릴리스 워크플로에 인증서가 설정된 경우에만 적용됩니다.
+자동 업데이트는 `Mangom72/MineHarbor` GitHub Release의 정식 경로나 기존 저장소 별칭에서만 내려받고, 메타데이터의 크기와 SHA-256을 모두 확인합니다. 공개 릴리스 실행 파일은 릴리스마다 생성하고 폐기하는 자체서명 인증서로 무결성을 표시하지만 공개 인증 기관의 신뢰 서명은 아닙니다.
 
 ## English
 
@@ -35,8 +37,10 @@ The launcher accesses GitHub Releases for launcher updates; PaperMC, Purpur, Moj
 
 Diagnostic bundles may include OS information, launcher product/build versions, logical processor count, total memory, server type and version, redacted settings, recent logs, and up to three crash reports. User-profile paths, absolute server paths, IPv4 addresses, owner names, RCON passwords, server IP values, and selected sensitive settings are removed or replaced. Oversized files and reparse points are excluded.
 
-Launcher updates are downloaded only from the canonical or legacy-alias paths of the `Mangom72/MineHarbor` GitHub Release and are checked against both the declared size and SHA-256. Code signing is applied only when a certificate is configured in the release workflow.
+Launcher updates are downloaded only from the canonical or legacy-alias paths of the `Mangom72/MineHarbor` GitHub Release and are checked against both the declared size and SHA-256. Public release executables carry a per-release self-signed integrity signature whose certificate is then discarded; it is not a public-CA trust signature.
 
 The optional Paper/Purpur command bridge never connects to the internet or LAN. It connects only to the launcher's temporary `127.0.0.1` listener and validates a fresh random session token, profile, and protocol version. The session file is deleted when the server stops, the token is not logged, and the session file is excluded from diagnostic bundles. The bridge JAR is downloaded from the GitHub Release only after user consent and is verified by size and SHA-256.
+
+Background operations (Beta) runs in the current Windows user account only after explicit opt-in. GUI/agent communication uses a local named pipe whose ACL grants only the current user SID and opens no LAN or internet port. Enablement, optional Windows sign-in startup, crash restart, and pause state are stored in `background-agent.json` under user data. If sign-in startup is separately selected, only the executable path and `--background-agent` argument are stored in the current-user Windows `Run` entry; no token or server command is stored there.
 
 Managed-content records are stored locally in each server's `.mineharbor/content-manifest.json`. Backup, restart, and command schedules plus their latest results are stored in `.mineharbor/automation.json`. Server starts, stops, crashes, automatic restarts, and scheduled-job results retain up to 500 local entries in each server's `.mineharbor/operations-history.json`. Operations history redacts absolute server paths, IPv4 addresses, and values that resemble tokens, passwords, or webhooks and verifies a SHA-256 hash chain; exporting CSV writes the visible server names and operation messages to the file selected by the user. When Paper/Purpur duplication compatibility settings change, up to five prior YAML copies are retained locally under the server's `.mineharbor/configuration-backups`. These files and dashboard CPU, memory, player, storage, error, TPS, and MSPT data are not sent to an analytics service. TPS/MSPT are sent only over local loopback when the connected Paper/Purpur server exposes the corresponding public APIs.
