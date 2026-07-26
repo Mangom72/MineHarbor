@@ -4,6 +4,28 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.15.0] - 2026-07-26
+
+### Korean
+
+- **Discord 원격 제어(베타)**: 사용자가 별도로 동의하고 직접 만든 봇을 연결하면 백그라운드 에이전트가 공개 수신 포트 없이 Discord Gateway에 연결하고 길드 전용 `/mineharbor` 명령을 등록합니다.
+- **제한된 운영 명령**: 허용된 서버의 상태, 브리지 연결 시 온라인 플레이어, 최근 경고·오류를 조회하고 시작·백업을 요청할 수 있습니다. 안전 종료와 재시작은 요청자에게만 유효한 60초 단일 사용 확인 버튼을 거칩니다.
+- **다중 허용 목록과 속도 제한**: 애플리케이션·길드·채널을 고정하고 Discord 사용자 또는 역할과 MineHarbor 서버 프로필을 각각 허용 목록으로 검사합니다. 사용자별 분당 요청 수를 제한하며 임의 콘솔·셸·파일 실행은 제공하지 않습니다.
+- **자격 증명 보호**: 봇 토큰은 사용자 데이터의 `discord-remote.json`에 현재 Windows 사용자 범위 DPAPI 암호문으로만 저장합니다. 설정 파일은 64KiB 상한, 스키마 검증, 프로세스 간 잠금, 원자적 교체와 손상·미래 스키마 원본 보존을 사용합니다.
+- **기존 소유권 경계 재사용**: Discord 작업은 에이전트의 검증된 시작·안전 종료·재시작·백업 경로만 호출합니다. 포트만 열린 외부 소유 서버를 종료하거나 실행 중 백업하지 않으며 원격 기능 실패가 로컬 서버 운영을 중단시키지 않습니다.
+- **Gateway 신뢰성**: Discord API v10의 3초 상호작용 응답을 지연 응답으로 먼저 승인하고, heartbeat, 재연결·세션 재개, 응답 크기 제한과 HTTP `Retry-After`를 처리합니다. 특권 Gateway Intent와 공개 HTTP 상호작용 endpoint는 사용하지 않습니다.
+- **UI·문서·회귀 검증**: 다크·라이트 테마, DPI, 키보드와 스크린 리더 정보를 갖춘 설정 화면을 백그라운드 설정과 트레이에 추가했습니다. DPAPI, 허용 목록, 역할 권한, 확인 소유권·만료·재사용, 속도 제한, 임의 명령 차단, 손상 설정 보존을 포함해 런처 테스트를 32개 그룹으로 확장했습니다.
+
+### English
+
+- **Discord remote control (Beta)**: after separate opt-in and user-created bot setup, the background agent connects through the outbound Discord Gateway and registers a guild-only `/mineharbor` command without opening a public listener.
+- **Bounded operations**: approved-server status, bridge-backed online players, and recent warnings/errors can be queried; start and backup can be requested. Safe stop and restart require a 60-second, single-use confirmation owned by the requester.
+- **Layered allowlists and throttling**: the application, guild, and channel are fixed, while Discord users or roles and MineHarbor profiles are independently allowlisted. Per-user requests are throttled, and no arbitrary console, shell, or file execution is exposed.
+- **Credential protection**: the bot token is stored only as current-user Windows DPAPI ciphertext in `discord-remote.json`. The 64 KiB settings store is schema validated, cross-process locked, atomically replaced, and preserves corrupt or future-schema originals.
+- **Existing ownership boundary reused**: Discord actions invoke only the agent's verified start, safe-stop, restart, and backup paths. A merely listening externally owned server is never stopped or live-backed up, and remote-integration failure cannot stop local server operation.
+- **Gateway reliability**: API v10 interactions are deferred within Discord's initial-response window, with heartbeat, reconnect/session resume, bounded responses, and HTTP `Retry-After` handling. No privileged Gateway Intent or public HTTP interaction endpoint is required.
+- **UI, documentation, and regression coverage**: a themed, DPI-aware, keyboard/screen-reader-labeled setup view is available from Background settings and the tray. DPAPI, allowlists, role authorization, confirmation ownership/expiry/replay, rate limiting, arbitrary-command rejection, and corrupt-settings preservation expand the launcher suite to 32 groups.
+
 ## [1.14.0] - 2026-07-26
 
 ### Korean

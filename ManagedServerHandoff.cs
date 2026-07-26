@@ -63,6 +63,8 @@ internal static partial class Launcher
 		public int OwnerProcessId;
 		public long OwnerProcessStartTicks;
 		public bool ServerRunning;
+		public bool PlayersAvailable;
+		public List<string> Players = new List<string>();
 		public List<string> Lines = new List<string>();
 	}
 
@@ -354,6 +356,8 @@ internal static partial class Launcher
 			try { running = currentServerProcess != null && !currentServerProcess.HasExited; }
 			catch { running = false; }
 		}
+		CommandBridgeSession bridge = GetActiveCommandBridge();
+		string[] players = bridge != null && bridge.Connected ? bridge.Players : new string[0];
 		return new ManagedChildControlResponse
 		{
 			Success = true,
@@ -363,7 +367,9 @@ internal static partial class Launcher
 			ChildProcessStartTicks = childProcessStartTicks,
 			OwnerProcessId = ownerProcessId,
 			OwnerProcessStartTicks = ownerProcessStartTicks,
-			ServerRunning = running
+			ServerRunning = running,
+			PlayersAvailable = bridge != null && bridge.Connected,
+			Players = new List<string>(players)
 		};
 	}
 

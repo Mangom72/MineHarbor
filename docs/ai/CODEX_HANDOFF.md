@@ -1,5 +1,20 @@
 ﻿# CODEX_HANDOFF.md
 
+## 0.0000 Current implementation state (v1.15.0 release candidate)
+
+- Feature branch: `codex/discord-remote-v1.15.0`
+- Version source of truth: `version.json` = 1.15.0 / build 26.2.45.79
+- Discord remote control is a separately opted-in beta owned by the per-user background agent. It opens no inbound listener and uses outbound Discord Gateway/REST connections only.
+- The bot token is protected with current-user Windows DPAPI. Application, guild, channel, user-or-role, profile, replay, and per-user rate checks are applied before every operation.
+- The guild-only `/mineharbor` command exposes help, status, bridge-backed players, recent warning/error summaries, start, backup, and 60-second single-use confirmed safe stop/restart. Arbitrary console, shell, file access, DMs, and control of externally owned processes are not exposed.
+- Stop/restart confirmation state is random, bound to the same actor/guild/channel/profile/action, expires after 60 seconds, and is single-use. Responses disable mentions and are length bounded.
+- The themed settings UI masks tokens, preserves an existing token when the field is blank, requires explicit removal, limits profiles, and includes Korean/English, DPI, keyboard, and screen-reader metadata.
+- Local tests cover DPAPI non-plaintext storage, corrupt/future schema preservation, direct-user and role authorization, wrong application/guild/channel/profile rejection, arbitrary command rejection, confirmation expiry/replay/wrong-user rejection, autocomplete scoping, rate limiting, response bounds, and UI accessibility. They do not use a real Discord bot or Minecraft server.
+- `Prepare-BuildResources.ps1`, the framework-compiler build, and the full test suite pass with `VERSION_CONSISTENCY_OK`, 32 launcher groups, Portable version/smoke, 10 bridge protocol cases, modern-dialog scan, and security regression scan.
+- `Publish-LocalRelease.ps1 -NoPublish` passed ephemeral RSA-3072/SHA-256 self-signing and `RELEASE_ARTIFACTS_PASSED=7`, removed the certificate/PFX, and the full suite passed again against the signed Portable EXE.
+- This machine has no .NET SDK, so the warning-as-error SDK-style `net48` build remains a PR CI requirement.
+- Release publication, independent public-asset download, and public `1.14.0 -> 1.15.0` updater verification are pending.
+
 ## 0.000 Current implementation state (v1.14.0 released)
 
 - Release-state branch: `codex/v1.14.0-release-state` (feature: `codex/server-handoff-v1.14.0`)

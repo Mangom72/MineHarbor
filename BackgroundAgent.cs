@@ -329,7 +329,7 @@ internal static partial class Launcher
 		}
 	}
 
-	private sealed class BackgroundAgentContext : ApplicationContext
+	private sealed partial class BackgroundAgentContext : ApplicationContext
 	{
 		private readonly object sessionsLock = new object();
 		private readonly Dictionary<string, BackgroundAgentSession> sessions = new Dictionary<string, BackgroundAgentSession>(StringComparer.OrdinalIgnoreCase);
@@ -337,6 +337,7 @@ internal static partial class Launcher
 		private readonly CancellationTokenSource cancellation = new CancellationTokenSource();
 		private readonly NotifyIcon trayIcon;
 		private readonly WindowsNotificationMonitor notificationMonitor;
+		private readonly DiscordRemoteController discordRemote;
 		private readonly System.Windows.Forms.Timer pollTimer;
 		private readonly Control dispatcher;
 		private BackgroundAgentSettings settings;
@@ -359,6 +360,7 @@ internal static partial class Launcher
 			try { trayIcon.Icon = Icon.ExtractAssociatedIcon(AssemblyLocation()); } catch { }
 			trayIcon.DoubleClick += delegate { OpenMainWindow(); };
 			notificationMonitor = new WindowsNotificationMonitor(trayIcon);
+			discordRemote = new DiscordRemoteController(HandleDiscordRemoteAction);
 			pollTimer = new System.Windows.Forms.Timer { Interval = 5000 };
 			pollTimer.Tick += delegate
 			{
@@ -369,6 +371,7 @@ internal static partial class Launcher
 			SystemEvents.PowerModeChanged += HandlePowerModeChanged;
 			notificationMonitor.Poll();
 			StartPipeServer();
+			discordRemote.Reload();
 			PollSchedulesAsync();
 		}
 
@@ -456,6 +459,12 @@ internal static partial class Launcher
 			string command = request.Command.Trim().ToLowerInvariant();
 			if (command == "ping" || command == "status") return CreateStatusResponse();
 			if (command == "logs") return CreateLogsResponse(request.Profile);
+			if (command == "discord-status") return discordRemote.CreateAgentResponse();
+			if (command == "reload-discord")
+			{
+				discordRemote.Reload();
+				return Success("Discord 원격 제어 설정을 다시 불러왔습니다.", "Discord remote-control settings reloaded.");
+			}
 			if (command == "pause")
 			{
 				settings.Paused = true;
@@ -1073,6 +1082,12 @@ internal static partial class Launcher
 				form.FormClosed += delegate { form.Dispose(); };
 				form.Show();
 			});
+			menu.Items.Add(ManagedText("Discord 원격 제어", "Discord remote control"), null, delegate
+			{
+				DiscordRemoteSettingsForm form = new DiscordRemoteSettingsForm();
+				form.FormClosed += delegate { form.Dispose(); };
+				form.Show();
+			});
 			menu.Items.Add(new ToolStripSeparator());
 			List<ManagedProfileRecord> profiles;
 			try { profiles = ReadManagedProfiles(GetServersRootDirectory(AppDomain.CurrentDomain.BaseDirectory)); }
@@ -1191,6 +1206,7 @@ internal static partial class Launcher
 			cancellation.Cancel();
 			pollTimer.Stop();
 			pollTimer.Dispose();
+			discordRemote.Dispose();
 			trayIcon.Visible = false;
 			if (trayIcon.ContextMenuStrip != null) trayIcon.ContextMenuStrip.Dispose();
 			trayIcon.Dispose();
@@ -1247,15 +1263,21 @@ internal static partial class Launcher
 			root.Controls.Add(statusLabel, 0, 5);
 			FlowLayoutPanel buttons = new FlowLayoutPanel { AutoSize = true, Dock = DockStyle.Right, FlowDirection = FlowDirection.LeftToRight, WrapContents = false };
 			Button notifications = MultiServerDashboardForm.NewManagedButton(korean ? "알림 설정" : "Notifications", 118, "secondary");
+			Button discord = MultiServerDashboardForm.NewManagedButton(korean ? "Discord 원격" : "Discord remote", 132, "secondary");
 			Button save = MultiServerDashboardForm.NewManagedButton(korean ? "저장" : "Save", 100, "primary");
 			Button cancel = MultiServerDashboardForm.NewManagedButton(korean ? "취소" : "Cancel", 100, "secondary");
 			notifications.Click += delegate
 			{
 				using (WindowsNotificationSettingsForm form = new WindowsNotificationSettingsForm()) form.ShowDialog(this);
 			};
+			discord.Click += delegate
+			{
+				using (DiscordRemoteSettingsForm form = new DiscordRemoteSettingsForm()) form.ShowDialog(this);
+			};
 			save.Click += delegate { SaveSettings(); };
 			cancel.Click += delegate { DialogResult = DialogResult.Cancel; Close(); };
 			buttons.Controls.Add(notifications);
+			buttons.Controls.Add(discord);
 			buttons.Controls.Add(save);
 			buttons.Controls.Add(cancel);
 			root.Controls.Add(buttons, 0, 6);

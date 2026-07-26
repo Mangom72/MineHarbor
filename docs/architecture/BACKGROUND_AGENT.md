@@ -32,7 +32,9 @@ GUI와 트레이 에이전트는 로컬 이름 있는 파이프를 사용합니�
 
 v1.13.0부터 사용자가 별도로 동의하면 에이전트의 기존 트레이 아이콘으로 새 운영 기록의 Windows 작업 표시줄 알림을 표시합니다. 알림은 중요도·종류·조용한 시간을 적용하고, 오래된 기록을 재생하지 않으며 짧은 시간의 여러 사건을 하나로 요약합니다. 자세한 경계는 [Windows 알림 구조](WINDOWS_NOTIFICATIONS.md)를 따릅니다.
 
-현재 베타는 사용자 로그인 이전 실행, 관리자 권한 서비스, 영구 Windows 알림 센터 저장소와 웹/Discord 원격 관리를 제공하지 않습니다. 무중단 인계는 멀티 서버 관리가 이 버전의 제어 채널을 포함해 시작한 자식에 한정됩니다. 메인 런처 내부의 Java 서버와 외부 소유 서버는 인계하지 않으며 기존 안전 종료 또는 외부 소유 상태를 유지합니다. 자세한 신뢰 경계와 실패 처리는 [관리 서버 인계 구조](MANAGED_SERVER_HANDOFF.md)를 따릅니다.
+v1.15.0부터 사용자가 다시 별도로 동의하고 자신의 Discord 봇과 허용 목록을 구성하면 에이전트가 길드 전용 `/mineharbor` 상태 조회와 제한된 서버 제어를 제공합니다. 공개 리스너·임의 콘솔·외부 소유 서버 제어 없이 기존 에이전트 소유권 경계를 재사용합니다. 자세한 인증·확인·개인정보 경계는 [Discord 원격 제어 구조](DISCORD_REMOTE_MANAGEMENT.md)를 따릅니다.
+
+현재 베타는 사용자 로그인 이전 실행, 관리자 권한 서비스, 영구 Windows 알림 센터 저장소와 웹 원격 관리를 제공하지 않습니다. 무중단 인계는 멀티 서버 관리가 이 버전의 제어 채널을 포함해 시작한 자식에 한정됩니다. 메인 런처 내부의 Java 서버와 외부 소유 서버는 인계하지 않으며 기존 안전 종료 또는 외부 소유 상태를 유지합니다. 자세한 신뢰 경계와 실패 처리는 [관리 서버 인계 구조](MANAGED_SERVER_HANDOFF.md)를 따릅니다.
 
 ## English
 
@@ -46,4 +48,6 @@ Per-server automation schema 2 remains the source of truth. A path-derived Windo
 
 Starting with v1.13.0, separately opted-in Windows taskbar notifications reuse the agent's tray icon for new operations. Severity/category filters, quiet hours, old-history suppression, and burst summaries follow the [Windows notification architecture](WINDOWS_NOTIFICATIONS.md).
 
-Launcher updates request safe agent shutdown and begin executable replacement only after the agent exits; a timeout aborts the update instead of forcing a server exit. The beta does not provide pre-sign-in execution, an elevated service, a durable Windows notification-center store, or web/Discord remote control. Live transfer is limited to managed children started by this version's multi-server management; Java hosted directly inside the main launcher and externally owned servers retain their existing safe-close or external-ownership behavior. See [managed server handoff](MANAGED_SERVER_HANDOFF.md) for the trust and failure boundaries.
+Starting with v1.15.0, another separate opt-in lets the agent connect a user-owned Discord bot and expose guild-only `/mineharbor` status and bounded server operations. It opens no public listener or arbitrary console and reuses the existing ownership boundary. See the [Discord remote-control architecture](DISCORD_REMOTE_MANAGEMENT.md).
+
+Launcher updates request safe agent shutdown and begin executable replacement only after the agent exits; a timeout aborts the update instead of forcing a server exit. The beta does not provide pre-sign-in execution, an elevated service, a durable Windows notification-center store, or web remote control. Live transfer is limited to managed children started by this version's multi-server management; Java hosted directly inside the main launcher and externally owned servers retain their existing safe-close or external-ownership behavior. See [managed server handoff](MANAGED_SERVER_HANDOFF.md) for the trust and failure boundaries.

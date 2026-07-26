@@ -47,6 +47,8 @@ $sources = @(
 	'ServerManagementFeatures.cs',
 	'OperationsHistory.cs',
     'WindowsNotifications.cs',
+    'DiscordRemoteManagement.cs',
+    'DiscordRemoteUi.cs',
     'ManagedServerDashboard.cs',
 	'ServerTrash.cs',
     'NetworkAndPlayerTools.cs',
@@ -65,7 +67,7 @@ $arguments = @(
     '/reference:System.dll', '/reference:System.Core.dll', '/reference:System.Drawing.dll',
     '/reference:System.Windows.Forms.dll', '/reference:System.Web.Extensions.dll',
     '/reference:System.IO.Compression.dll', '/reference:System.IO.Compression.FileSystem.dll',
-    '/reference:System.Net.Http.dll',
+    '/reference:System.Net.Http.dll', '/reference:System.Security.dll',
     "/out:$portableExe"
 ) + $sources
 if (!$SkipCompile) {
