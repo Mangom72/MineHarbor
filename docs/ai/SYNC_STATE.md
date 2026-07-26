@@ -4,7 +4,7 @@
 
 - **Current Version**: 1.15.4 (build 26.2.45.83)
 - **Branch**: `claude/remote-control-u4tvpt`
-- **Status**: 원격 제어 경로를 중심으로 UI·UX·취약점 정적 감사를 마치고 6건을 수정, 회귀 테스트 추가 완료. 이 환경에는 .NET SDK와 PowerShell이 없어 `build.ps1`·`test.ps1`은 실행하지 못했습니다.
+- **Status**: 원격 제어 경로를 중심으로 UI·UX·취약점 감사를 마치고 6건을 수정, 회귀 테스트를 추가해 v1.15.4 릴리스 진행 중
 - 로그 가림 함수가 IPv4만 `[IP]`로 바꾸고 IPv6 주소는 그대로 통과시키던 문제를 확인했습니다. `SanitizeOperationMessage`는 운영 기록·Windows 알림·Discord `/mineharbor errors` 응답이 모두 거쳐 가는 지점이라, IPv6로 접속한 플레이어 주소가 Discord 채널까지 그대로 나갈 수 있었습니다. 압축 표기(`::`)나 8개 그룹을 모두 갖춘 주소만 가리도록 해 로그 시각(`12:34:56`)과 `Class::method` 표기는 보존합니다.
 - 서버를 지정하지 않은 `/mineharbor status`가 허용 프로필 전체를 이어 붙인 뒤 1800자에서 잘려 뒤쪽 서버가 조용히 사라지고, 프로필마다 `FindProfile` → `ReadManagedProfiles` 전체 디렉터리 조회를 반복하던 문제를 확인했습니다. 한 응답에서 다루는 서버를 15개로 제한하고 생략 개수와 개별 조회 방법을 한국어·영어로 안내합니다.
 - `ProcessAllStatus`가 `DiscordRemoteActionOverride`와 `actionHandler == null`을 무시하고 처리기를 직접 호출하던 경로를 `RunAction` 공용 헬퍼로 정리했습니다. `Execute`의 동작은 그대로입니다.
@@ -14,7 +14,7 @@
 - Forge·NeoForge Installer의 `.sha256` 응답이 비어 있으면 `Split(...)[0]`에서 `IndexOutOfRangeException`으로 중단되던 문제를 검증 실패 처리로 바꾸고 `IsValidSha256` 형식 검사를 추가했습니다.
 - 회귀 테스트는 IPv6 가림과 로그 시각 보존, 전체 상태 조회 개수 제한과 생략 안내, 체크박스 상호 배타 동작과 안내 문구, 예시 문구 정렬, 창을 닫을 때의 토큰 제거를 확인합니다.
 - 실제 Discord 자격 증명, 사용자 서버 데이터, 공유기 설정과 UPnP 매핑은 사용하거나 변경하지 않았습니다.
-- **다음 담당자 확인 필요**: Windows에서 `.\scripts\Prepare-BuildResources.ps1`, `.\build.ps1`, `.\test.ps1`을 실행해 빌드와 32개 테스트 그룹 통과를 확인한 뒤 릴리스를 진행해 주세요.
+- 감사 환경에는 .NET SDK와 PowerShell이 없어 로컬 빌드를 하지 못했으므로, `build-release.yml`을 발행 없이(`publish_release: false`) 브랜치에서 실행해 검증했습니다([run #75](https://github.com/Mangom72/MineHarbor/actions/runs/30214672591)). `dotnet build -p:TreatWarningsAsErrors=true`, `build.ps1`, `test.ps1`, `Test-VersionConsistency.ps1`이 모두 통과했고 `VERSION_CONSISTENCY_OK`와 `RELEASE_ARTIFACTS_PASSED=7`을 확인했습니다.
 
 ## Codex Discord Allowlist UX Fix - 2026-07-26
 
