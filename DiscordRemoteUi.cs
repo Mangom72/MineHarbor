@@ -55,18 +55,22 @@ internal static partial class Launcher
 	private sealed class DiscordRemoteRegistrationGuideForm : Form
 	{
 		private const string DiscordDeveloperPortalUrl = "https://discord.com/developers/applications";
+		private readonly Panel stepsViewport;
 		private readonly TableLayoutPanel stepsPanel;
+		private readonly RoundedPanel securityPanel;
+		private readonly Label securityLabel;
 		private readonly Button portalButton;
 		private readonly Button startButton;
 		private readonly Button laterButton;
 		private readonly List<Label> stepNumbers = new List<Label>();
+		private readonly List<Label> stepDescriptions = new List<Label>();
 
 		public DiscordRemoteRegistrationGuideForm()
 		{
 			bool korean = IsManagedKorean();
 			Text = korean ? "Discord 원격 제어 시작 가이드" : "Discord remote-control setup guide";
 			StartPosition = FormStartPosition.CenterParent;
-			MinimumSize = new Size(680, 600);
+			MinimumSize = new Size(680, 520);
 			Size = new Size(760, 650);
 			AutoScaleMode = AutoScaleMode.Dpi;
 			Font = new Font(ThemeFonts.Body, 10.5F);
@@ -88,7 +92,7 @@ internal static partial class Launcher
 			root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			root.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
-			root.RowStyles.Add(new RowStyle(SizeType.Absolute, 76F));
+			root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			root.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			Controls.Add(root);
 
@@ -110,14 +114,23 @@ internal static partial class Launcher
 				Margin = new Padding(0, 0, 0, 14)
 			}, 0, 1);
 
-			stepsPanel = new TableLayoutPanel
+			stepsViewport = new Panel
 			{
 				Dock = DockStyle.Fill,
+				AutoScroll = true,
+				Margin = Padding.Empty,
+				AccessibleName = korean ? "Discord 등록 단계" : "Discord registration steps"
+			};
+			stepsPanel = new TableLayoutPanel
+			{
+				AutoSize = true,
+				AutoSizeMode = AutoSizeMode.GrowAndShrink,
+				Dock = DockStyle.Top,
 				ColumnCount = 1,
 				RowCount = 4,
 				Margin = Padding.Empty
 			};
-			for (int index = 0; index < 4; index++) stepsPanel.RowStyles.Add(new RowStyle(SizeType.Percent, 25F));
+			for (int index = 0; index < 4; index++) stepsPanel.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			stepsPanel.Controls.Add(CreateDiscordGuideStep(1,
 				korean ? "Discord 앱과 봇 만들기" : "Create a Discord app and bot",
 				korean ? "Developer Portal에서 새 애플리케이션을 만들고 Bot 페이지에서 봇을 추가합니다." : "Create an application in the Developer Portal and add its bot from the Bot page."), 0, 0);
@@ -130,27 +143,31 @@ internal static partial class Launcher
 			stepsPanel.Controls.Add(CreateDiscordGuideStep(4,
 				korean ? "MineHarbor에서 연결하기" : "Connect it in MineHarbor",
 				korean ? "백그라운드 운영을 켜고 토큰·ID·허용 서버를 입력한 뒤 저장 및 연결을 누릅니다." : "Enable Background operations, enter the token, IDs, and approved servers, then choose Save and connect."), 0, 3);
-			root.Controls.Add(stepsPanel, 0, 2);
+			stepsViewport.Controls.Add(stepsPanel);
+			root.Controls.Add(stepsViewport, 0, 2);
 
-			RoundedPanel security = new RoundedPanel
+			securityPanel = new RoundedPanel
 			{
 				Dock = DockStyle.Fill,
+				AutoSize = true,
+				AutoSizeMode = AutoSizeMode.GrowAndShrink,
 				CornerRadius = 12,
 				Tag = "input-surface",
 				Padding = new Padding(16, 10, 16, 10),
 				Margin = new Padding(0, 12, 0, 12),
 				AccessibleName = korean ? "Discord 보안 안내" : "Discord security note"
 			};
-			security.Controls.Add(new Label
+			securityLabel = new Label
 			{
-				Dock = DockStyle.Fill,
+				AutoSize = true,
 				TextAlign = ContentAlignment.MiddleLeft,
 				Text = korean
 					? "토큰은 현재 Windows 사용자만 복호화할 수 있게 저장됩니다. 임의 콘솔·셸·파일 명령은 Discord에 노출되지 않습니다."
 					: "The token is stored so only the current Windows user can decrypt it. Discord never exposes arbitrary console, shell, or file commands.",
 				Tag = "muted"
-			});
-			root.Controls.Add(security, 0, 3);
+			};
+			securityPanel.Controls.Add(securityLabel);
+			root.Controls.Add(securityPanel, 0, 3);
 
 			FlowLayoutPanel buttons = new FlowLayoutPanel
 			{
@@ -181,6 +198,15 @@ internal static partial class Launcher
 			EnsureButtonContentFits(portalButton);
 			EnsureButtonContentFits(startButton);
 			EnsureButtonContentFits(laterButton);
+			stepsViewport.ClientSizeChanged += delegate { UpdateDiscordGuideTextLayout(); };
+			securityPanel.ClientSizeChanged += delegate { UpdateDiscordGuideTextLayout(); };
+			Load += delegate
+			{
+				UpdateDiscordGuideTextLayout();
+				FitDiscordGuideToContent(root);
+				UpdateDiscordGuideTextLayout();
+			};
+			UpdateDiscordGuideTextLayout();
 		}
 
 		private RoundedPanel CreateDiscordGuideStep(int number, string title, string description)
@@ -188,6 +214,8 @@ internal static partial class Launcher
 			RoundedPanel card = new RoundedPanel
 			{
 				Dock = DockStyle.Fill,
+				AutoSize = true,
+				AutoSizeMode = AutoSizeMode.GrowAndShrink,
 				CornerRadius = 12,
 				Tag = "surface",
 				Padding = new Padding(14, 8, 14, 8),
@@ -195,7 +223,15 @@ internal static partial class Launcher
 				AccessibleName = number.ToString() + ". " + title,
 				AccessibleDescription = description
 			};
-			TableLayoutPanel content = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 2, RowCount = 1, Margin = Padding.Empty };
+			TableLayoutPanel content = new TableLayoutPanel
+			{
+				AutoSize = true,
+				AutoSizeMode = AutoSizeMode.GrowAndShrink,
+				Dock = DockStyle.Top,
+				ColumnCount = 2,
+				RowCount = 1,
+				Margin = Padding.Empty
+			};
 			content.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 52F));
 			content.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100F));
 			Label numberLabel = new Label
@@ -207,15 +243,69 @@ internal static partial class Launcher
 				AccessibleName = number.ToString()
 			};
 			stepNumbers.Add(numberLabel);
-			TableLayoutPanel copy = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 2, Margin = Padding.Empty };
+			TableLayoutPanel copy = new TableLayoutPanel
+			{
+				AutoSize = true,
+				AutoSizeMode = AutoSizeMode.GrowAndShrink,
+				Dock = DockStyle.Top,
+				ColumnCount = 1,
+				RowCount = 2,
+				Margin = Padding.Empty
+			};
 			copy.RowStyles.Add(new RowStyle(SizeType.AutoSize));
-			copy.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
+			copy.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			copy.Controls.Add(new Label { AutoSize = true, Text = title, Font = new Font(ThemeFonts.Body, 10.5F, FontStyle.Bold), Margin = new Padding(0, 1, 0, 2) }, 0, 0);
-			copy.Controls.Add(new Label { Dock = DockStyle.Fill, Text = description, Tag = "muted", AutoEllipsis = true }, 0, 1);
+			Label descriptionLabel = new Label
+			{
+				AutoSize = true,
+				Text = description,
+				Tag = "muted",
+				Margin = Padding.Empty
+			};
+			stepDescriptions.Add(descriptionLabel);
+			copy.Controls.Add(descriptionLabel, 0, 1);
 			content.Controls.Add(numberLabel, 0, 0);
 			content.Controls.Add(copy, 1, 0);
 			card.Controls.Add(content);
 			return card;
+		}
+
+		private void UpdateDiscordGuideTextLayout()
+		{
+			if (stepsViewport == null || stepsPanel == null || securityPanel == null || securityLabel == null) return;
+			int viewportWidth = stepsViewport.ClientSize.Width;
+			if (viewportWidth > 0)
+			{
+				// 세로 스크롤이 생겨도 가로 스크롤이 따라오지 않도록 항상 스크롤 막대 폭을 비워 둡니다.
+				int panelWidth = Math.Max(320, viewportWidth - SystemInformation.VerticalScrollBarWidth);
+				if (stepsPanel.Width != panelWidth) stepsPanel.Width = panelWidth;
+				int descriptionWidth = Math.Max(180, panelWidth - 52 - 28);
+				for (int index = 0; index < stepDescriptions.Count; index++)
+					stepDescriptions[index].MaximumSize = new Size(descriptionWidth, 0);
+			}
+			int securityWidth = securityPanel.ClientSize.Width - securityPanel.Padding.Horizontal;
+			if (securityWidth > 0) securityLabel.MaximumSize = new Size(Math.Max(220, securityWidth), 0);
+			stepsPanel.PerformLayout();
+			securityPanel.PerformLayout();
+		}
+
+		private void FitDiscordGuideToContent(TableLayoutPanel root)
+		{
+			if (root == null) return;
+			root.PerformLayout();
+			int nonClientHeight = Height - ClientSize.Height;
+			int contentWidth = Math.Max(320, root.ClientSize.Width - root.Padding.Horizontal);
+			int preferredClientHeight = root.Padding.Vertical;
+			for (int row = 0; row < root.RowCount; row++)
+			{
+				Control rowControl = row == 2 ? (Control)stepsPanel : root.GetControlFromPosition(0, row);
+				if (rowControl == null) continue;
+				preferredClientHeight += rowControl.GetPreferredSize(new Size(contentWidth, 0)).Height;
+				preferredClientHeight += (row == 2 ? stepsViewport.Margin : rowControl.Margin).Vertical;
+			}
+			int preferredHeight = preferredClientHeight + nonClientHeight;
+			int maximumHeight = Math.Max(MinimumSize.Height, Screen.FromControl(this).WorkingArea.Height - 24);
+			Height = Math.Max(MinimumSize.Height, Math.Min(maximumHeight, preferredHeight));
 		}
 
 		private void OpenDiscordDeveloperPortal()

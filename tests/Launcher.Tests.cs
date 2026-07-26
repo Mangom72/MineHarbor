@@ -2305,8 +2305,26 @@ internal static class LauncherTests
 		{
 			Equal(AutoScaleMode.Dpi, guide.AutoScaleMode, "Discord 등록 가이드 DPI 배율");
 			Equal(false, guide.AutoScroll, "Discord 등록 가이드 불필요한 전체 스크롤 없음");
+			Panel stepsViewport = (Panel)GetPrivateField(guideType, guide, "stepsViewport");
 			TableLayoutPanel steps = (TableLayoutPanel)GetPrivateField(guideType, guide, "stepsPanel");
+			Equal(true, stepsViewport.AutoScroll, "Discord 등록 단계의 작은 창 내부 스크롤");
+			Equal(true, steps.AutoSize, "Discord 등록 단계 내용 기반 높이");
 			Equal(4, steps.Controls.Count, "Discord 등록 가이드 단계 수");
+			for (int index = 0; index < steps.RowStyles.Count; index++)
+				Equal(SizeType.AutoSize, steps.RowStyles[index].SizeType, "Discord 등록 카드 내용 기반 행 " + index);
+			IList descriptions = (IList)GetPrivateField(guideType, guide, "stepDescriptions");
+			Equal(4, descriptions.Count, "Discord 등록 설명 수");
+			for (int index = 0; index < descriptions.Count; index++)
+			{
+				Label description = (Label)descriptions[index];
+				Equal(true, description.AutoSize, "Discord 등록 설명 자동 높이 " + index);
+				Equal(false, description.AutoEllipsis, "Discord 등록 설명 생략 금지 " + index);
+				if (description.MaximumSize.Width <= 0 || description.MaximumSize.Height != 0)
+					throw new InvalidOperationException("Discord 등록 설명의 줄바꿈 너비가 올바르지 않습니다.");
+			}
+			Label securityLabel = (Label)GetPrivateField(guideType, guide, "securityLabel");
+			Equal(true, securityLabel.AutoSize, "Discord 보안 안내 자동 높이");
+			Equal(false, securityLabel.AutoEllipsis, "Discord 보안 안내 생략 금지");
 			Button portal = (Button)GetPrivateField(guideType, guide, "portalButton");
 			Button start = (Button)GetPrivateField(guideType, guide, "startButton");
 			Button later = (Button)GetPrivateField(guideType, guide, "laterButton");
