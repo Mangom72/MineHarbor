@@ -4,6 +4,26 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.11.0] - 2026-07-26
+
+### Korean
+
+- **요일·일회성 예약**: 기존 반복 간격과 매일 시각에 선택 요일 및 `yyyy-MM-dd HH:mm` 일회성 일정을 추가했습니다. 기존 스키마 1 자동화 파일은 원본을 읽는 동안 덮어쓰지 않고 메모리에서 스키마 2로 호환하며, 미래 스키마는 보존한 채 거부합니다.
+- **놓친 작업 정책**: 컴퓨터 종료·절전·관리 창 중지로 지연된 작업을 다음 실행 때 한 번 실행하거나, 최대 지연 시간을 넘으면 건너뛰거나, 실행하지 않고 알림만 기록할 수 있습니다. 일회성 작업은 임대를 얻는 순간 다시 예약되지 않도록 비활성화하고 기존 실행 임대로 중복 실행을 계속 차단합니다.
+- **예약 미리보기 UX**: 예약 편집기에서 다음 예상 실행 시각, 작업 위험도, 서버가 꺼져 있을 때의 처리, 5분 이내 다른 작업 충돌을 저장 전에 표시합니다. 관리 도구는 한국어·영어 문구가 잘리지 않는 3×3 배치로 정돈했습니다.
+- **알림 및 운영 기록**: 메인 화면에 서버별 시작·종료·충돌·자동 재시작과 예약 결과를 모아 보는 `운영 기록`을 추가했습니다. 서버·중요도·읽음 상태 필터, 개별/전체 읽음, 새로고침과 CSV 내보내기를 지원합니다.
+- **로컬 감사 무결성**: `.mineharbor/operations-history.json`은 서버당 최대 500개만 저장하며 원자적 교체, 프로세스 간 뮤텍스, 최대 4MiB, 스키마·중복·시각 검증과 SHA-256 연속 해시를 사용합니다. 민감 표식·절대 서버 경로를 가리고, 손상이나 미래 스키마는 자동으로 덮어쓰지 않습니다.
+- **회귀 검증**: 기존 자동화 마이그레이션, 미래/손상 스키마 보존, 요일 계산, 지연 작업 건너뛰기, 일회성 중복 방지, 운영 기록 읽음 상태·가림·해시 변조·접근성과 기존 전체 기능을 28개 런처 테스트 그룹에서 검증합니다.
+
+### English
+
+- **Weekday and one-time schedules**: Selected weekdays and `yyyy-MM-dd HH:mm` one-time dates now complement interval and daily schedules. Existing schema-1 automation files migrate in memory without being overwritten during reads, while future schemas are preserved and rejected.
+- **Missed-run policies**: Jobs delayed by shutdown, sleep, or a closed management window can run once when available, skip after a bounded delay, or record a notification without running. One-time jobs are disabled as soon as their lease is claimed, and existing leases continue to prevent duplicates.
+- **Schedule preview UX**: Before saving, the editor shows the next expected run, action risk, offline-server behavior, and other jobs within five minutes. Main management tools now use a readable 3×3 layout for both Korean and English.
+- **Notifications and operations**: A new main Operations view aggregates server start, stop, crash, automatic restart, and scheduled-job results. It supports server/severity/read filters, selected or bulk read state, refresh, and CSV export.
+- **Local audit integrity**: Each `.mineharbor/operations-history.json` retains at most 500 entries and uses atomic replacement, a cross-process mutex, a 4 MiB limit, schema/duplicate/time validation, and a SHA-256 hash chain. Sensitive markers and absolute server paths are redacted; corrupt or future-schema files are never overwritten automatically.
+- **Regression coverage**: The 28 launcher test groups now cover legacy automation migration, future/corrupt schema preservation, weekday calculation, overdue skipping, one-time deduplication, operation read state, redaction, hash tampering, accessibility, and all previous features.
+
 ## [1.10.0] - 2026-07-26
 
 ### Korean

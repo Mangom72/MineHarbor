@@ -1,5 +1,18 @@
 ﻿# AI Agent Synchronization State
 
+## Codex Operations Foundation - 2026-07-26
+
+- **Current Version**: 1.11.0 (build 26.2.45.75)
+- **Branch**: `codex/operations-foundation`
+- **Status**: 고급 예약 신뢰성·놓친 작업 정책·변조 감지 운영 기록 구현 및 로컬 전체 검증 완료, GitHub PR·릴리스 검증 대기
+- 자동화 스키마를 2로 올려 반복 간격·매일에 선택 요일과 특정 날짜 한 번을 추가했습니다. 스키마 1은 읽을 때만 메모리에서 호환하고, 미래/손상 스키마는 원본을 덮어쓰지 않습니다.
+- 놓친 작업은 최대 지연 시간을 기준으로 다음 실행 때 한 번 실행, 건너뛰기, 알림만 기록을 선택할 수 있습니다. 일회성 작업은 임대 시 비활성화하고, 놓친 횟수만큼 무제한 실행하지 않습니다.
+- 예약 편집기는 다음 예상 실행, 위험도, 서버가 꺼졌을 때 처리와 5분 이내 충돌을 보여 줍니다. 메인 관리 도구는 양언어 3×3 배치로 정리했습니다.
+- 서버 시작·종료·충돌·자동 재시작과 예약 결과를 서버별 `.mineharbor/operations-history.json`에 최대 500개 보관합니다. 크기/스키마/중복/시각 검증, 원자적 교체, 경로별 프로세스 간 뮤텍스와 SHA-256 연속 해시를 사용하고 경로·IPv4·비밀값을 가립니다.
+- 메인 `운영 기록` 화면은 서버·중요도·읽음 상태 필터, 개별/전체 읽음, 새로고침과 CSV 내보내기를 지원합니다.
+- `Prepare-BuildResources.ps1`, `build.ps1 -SkipDependencyDownload`, `test.ps1 -LauncherPath artifacts\MineHarbor.exe`가 통과했습니다. 결과는 `VERSION_CONSISTENCY_OK`, `PASSED=28`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`입니다. 로컬에는 .NET 런타임만 있고 SDK가 없어 SDK 스타일 `net48` 빌드는 PR CI에서 수행해야 합니다.
+- 백그라운드 에이전트·시스템 트레이·Windows 알림·웹/Discord 원격 관리·클라우드 백업·Fabric/Forge/NeoForge 브리지는 이번 범위에 포함하지 않았습니다. 일정은 기존처럼 MineHarbor 메인 또는 여러 서버 관리 창이 열려 있을 때만 평가됩니다.
+
 ## Codex Step-by-step Command Builder - 2026-07-26
 
 - **Current Version**: 1.10.0 (build 26.2.45.74)

@@ -732,8 +732,16 @@ internal static partial class Launcher
 					{
 						throw new InvalidOperationException("관리 서버 프로세스를 시작하지 못했습니다.");
 					}
-					session.Process = process;
-				}
+					session.Process = process;
+					TryRecordOperationEvent(
+						profile.Directory,
+						"server",
+						"info",
+						automaticRestart ? "서버 자동 재시작 프로세스를 시작했습니다." : "멀티 서버 관리에서 서버 프로세스를 시작했습니다.",
+						automaticRestart ? "The automatic server restart process started." : "The server process started from multi-server management.",
+						automaticRestart ? "recovery" : "user",
+						false);
+				}
 				catch
 				{
 					process.Dispose();
@@ -742,11 +750,12 @@ internal static partial class Launcher
 				process.BeginOutputReadLine();
 				process.BeginErrorReadLine();
 			}
-			catch (Exception exception)
-			{
-				session.Status = ManagedText("시작 실패", "Start failed");
-				session.AddLine("[Launcher] " + exception.Message);
-				ShowManagedMessage("서버를 시작하지 못했습니다: " + exception.Message, "Could not start server: " + exception.Message, true);
+			catch (Exception exception)
+			{
+				session.Status = ManagedText("시작 실패", "Start failed");
+				session.AddLine("[Launcher] " + exception.Message);
+				TryRecordOperationEvent(profile.Directory, "server", "error", "서버 프로세스를 시작하지 못했습니다.", "The server process could not be started.", automaticRestart ? "recovery" : "user", false);
+				ShowManagedMessage("서버를 시작하지 못했습니다: " + exception.Message, "Could not start server: " + exception.Message, true);
 			}
 			RenderProfiles();
 		}
@@ -784,8 +793,23 @@ internal static partial class Launcher
 						session.AddLine("[Launcher] " + ManagedText("10분 안에 3회 충돌하여 자동 재시작을 중단했습니다.", "Automatic restart stopped after 3 crashes in 10 minutes."));
 					}
 				}
-			}
-			if (!IsDisposed)
+			}
+			if (session.StopRequested || exitCode == 0)
+			{
+				TryRecordOperationEvent(session.Profile.Directory, "server", "info", "서버 프로세스가 종료되었습니다.", "The server process stopped.", "launcher", false);
+			}
+			else
+			{
+				TryRecordOperationEvent(
+					session.Profile.Directory,
+					"server",
+					restart ? "warning" : "error",
+					restart ? "서버 충돌을 감지해 자동 재시작을 준비합니다." : "서버가 충돌했으며 자동 재시작을 중단했습니다.",
+					restart ? "A server crash was detected and an automatic restart is being prepared." : "The server crashed and automatic restart was stopped.",
+					"recovery",
+					false);
+			}
+			if (!IsDisposed)
 			{
 				try
 				{

@@ -24,7 +24,7 @@ if ($changeLog -notmatch ('(?m)^## \[' + [Regex]::Escape([string]$version.produc
 
 $build = Get-Content -LiteralPath (Join-Path $projectRoot 'build.ps1') -Raw
 $project = Get-Content -LiteralPath (Join-Path $projectRoot 'MineHarbor.csproj') -Raw
-foreach ($source in @('ContentManagementServices.cs', 'ContentManagementUi.cs', 'ServerAutomation.cs', 'ServerManagementFeatures.cs')) {
+foreach ($source in @('ContentManagementServices.cs', 'ContentManagementUi.cs', 'ServerAutomation.cs', 'ServerManagementFeatures.cs', 'OperationsHistory.cs')) {
     if ($build -notmatch [Regex]::Escape($source)) { throw "build.ps1 source list is missing $source." }
     if ($project -notmatch [Regex]::Escape($source)) { throw "MineHarbor.csproj source list is missing $source." }
 }

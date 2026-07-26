@@ -2101,18 +2101,19 @@ internal static partial class Launcher
 
 			toolActions.Location = new Point(18, 238);
 
-			toolActions.Size = new Size(card.ClientSize.Width - 36, 108);
+			toolActions.Size = new Size(card.ClientSize.Width - 36, 144);
 
 			toolActions.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
-			toolActions.ColumnCount = 4;
+			toolActions.ColumnCount = 3;
 
-			toolActions.RowCount = 2;
+			toolActions.RowCount = 3;
 
-			for (int column = 0; column < 4; column++) toolActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 25F));
+			for (int column = 0; column < 3; column++) toolActions.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 33.3333F));
 
-			toolActions.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
-			toolActions.RowStyles.Add(new RowStyle(SizeType.Percent, 50F));
+			toolActions.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3333F));
+			toolActions.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3333F));
+			toolActions.RowStyles.Add(new RowStyle(SizeType.Percent, 33.3333F));
 
 			card.Controls.Add(toolActions);
 
@@ -2186,7 +2187,17 @@ internal static partial class Launcher
 
 			playersButton.Click += delegate { RunUiAction(OpenPlayerManager); };
 
-			toolActions.Controls.Add(playersButton, 3, 0);
+			toolActions.Controls.Add(playersButton, 0, 1);
+
+			mainOperationsButton = CreateButton(Localization.T("Button.Operations"), 116);
+			SetButtonIcon(mainOperationsButton, ButtonIcon.Diagnostics);
+			Localize(mainOperationsButton, "Button.Operations");
+			mainOperationsButton.AccessibleDescription = "Tooltip.Operations";
+			mainOperationsButton.Tag = "secondary";
+			mainOperationsButton.Dock = DockStyle.Fill;
+			mainOperationsButton.Margin = new Padding(6, 5, 6, 5);
+			mainOperationsButton.Click += delegate { RunUiAction(OpenMainOperationsHistory); };
+			toolActions.Controls.Add(mainOperationsButton, 2, 2);
 
 			networkButton = CreateButton(Localization.T("Button.Network"), 110);
 
@@ -2202,7 +2213,7 @@ internal static partial class Launcher
 
 			networkButton.Click += delegate { RunUiAction(OpenNetworkTools); };
 
-			toolActions.Controls.Add(networkButton, 0, 1);
+			toolActions.Controls.Add(networkButton, 1, 1);
 
 			diagnosticsButton = CreateButton(Localization.T("Button.Diagnostics"), 110);
 
@@ -2218,7 +2229,7 @@ internal static partial class Launcher
 
 			diagnosticsButton.Click += delegate { CreateDiagnostics(); };
 
-			toolActions.Controls.Add(diagnosticsButton, 1, 1);
+			toolActions.Controls.Add(diagnosticsButton, 2, 1);
 
 			mainScheduleButton = CreateButton(Localization.T("Button.Schedules"), 110);
 			SetButtonIcon(mainScheduleButton, ButtonIcon.Backup);
@@ -2227,7 +2238,7 @@ internal static partial class Launcher
 			mainScheduleButton.Dock = DockStyle.Fill;
 			mainScheduleButton.Margin = new Padding(6, 5, 6, 5);
 			mainScheduleButton.Click += delegate { RunUiAction(OpenMainAutomationManager); };
-			toolActions.Controls.Add(mainScheduleButton, 2, 1);
+			toolActions.Controls.Add(mainScheduleButton, 0, 2);
 
 			mainDashboardButton = CreateButton(Localization.T("Button.Dashboard"), 110);
 			SetButtonIcon(mainDashboardButton, ButtonIcon.Diagnostics);
@@ -2236,7 +2247,7 @@ internal static partial class Launcher
 			mainDashboardButton.Dock = DockStyle.Fill;
 			mainDashboardButton.Margin = new Padding(6, 5, 6, 5);
 			mainDashboardButton.Click += delegate { RunUiAction(OpenMainStatusDashboard); };
-			toolActions.Controls.Add(mainDashboardButton, 3, 1);
+			toolActions.Controls.Add(mainDashboardButton, 1, 2);
 
 			Label featureList = new Label();
 
@@ -3109,6 +3120,7 @@ internal static partial class Launcher
 			diagnosticsButton.Enabled = enabled;
 			if (mainScheduleButton != null) mainScheduleButton.Enabled = enabled;
 			if (mainDashboardButton != null) mainDashboardButton.Enabled = enabled;
+			if (mainOperationsButton != null) mainOperationsButton.Enabled = enabled;
 
 			playersButton.Enabled = enabled && serverRunning;
 
@@ -3450,6 +3462,7 @@ internal static partial class Launcher
 
 			{
 
+				TryRecordActiveServerOperation("server", "warning", "서버 시작 작업이 취소되었습니다.", "Server startup was cancelled.", "user");
 				ShowNoticeKey("Notice.StartCanceled", false);
 
 			}
@@ -3458,6 +3471,7 @@ internal static partial class Launcher
 
 			{
 
+				TryRecordActiveServerOperation("server", "info", "서버가 안전하게 종료되었습니다.", "The server stopped safely.", "launcher");
 				if (string.IsNullOrEmpty(upnpCleanup))
 
 				{
@@ -3480,6 +3494,7 @@ internal static partial class Launcher
 
 			{
 
+				TryRecordActiveServerOperation("server", "error", "서버가 오류로 종료되었습니다. 콘솔과 진단 화면에서 원인을 확인해 주세요.", "The server exited with an error. Review the console and diagnostics.", "launcher");
 				ServerFailureAction failureAction;
 
 				string analysis = AnalyzeServerFailure(consoleHistory, out failureAction);
@@ -3743,6 +3758,7 @@ internal static partial class Launcher
 			}
 
 			serverRunning = true;
+			TryRecordActiveServerOperation("server", "info", "서버 프로세스가 시작되었습니다.", "The server process started.", "launcher");
 
 			SetStatusKey("Status.Starting", false);
 
