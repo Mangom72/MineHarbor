@@ -1,5 +1,21 @@
 ﻿# AI Agent Synchronization State
 
+## Codex Discord Remote Control Beta - 2026-07-26
+
+- **Current Version**: 1.15.0 (build 26.2.45.79)
+- **Branch**: `codex/discord-remote-v1.15.0`
+- **Status**: 사용자가 만든 Discord 봇과 명시적 허용 목록을 사용하는 길드 전용 원격 제어 베타 구현 및 릴리스 검증 중
+- Discord 연동은 별도 동의한 사용자 계정용 백그라운드 에이전트에서만 실행되며 공개 수신 포트나 관리자 권한 서비스를 만들지 않습니다. Discord Gateway와 REST API로 나가는 연결만 사용합니다.
+- 봇 토큰은 현재 Windows 사용자 범위 DPAPI로 암호화합니다. 애플리케이션·길드·채널, 허용 사용자 또는 역할, 허용 MineHarbor 서버를 모든 요청에서 다시 확인하며 설정은 크기·스키마 검증, 경로별 프로세스 간 뮤텍스와 원자적 교체를 사용합니다.
+- 길드 전용 `/mineharbor`는 도움말, 상태, 브리지 연결 시 플레이어, 최근 경고·오류, 시작, 백업, 안전 종료와 재시작만 제공합니다. 임의 콘솔·셸·파일 작업은 제공하지 않으며 외부 소유 프로세스는 기존 에이전트 경계대로 거부합니다.
+- 안전 종료와 재시작은 완성 작업을 바로 실행하지 않고 실제 대상·작업을 표시한 60초 단일 사용 버튼으로 같은 사용자에게 재확인합니다. 요청별 재생 방지, 사용자별 분당 10회 제한, 응답 길이 상한과 멘션 차단을 적용합니다.
+- 설정 화면은 토큰 마스킹과 기존 토큰 유지·명시적 삭제, 프로필 선택, 연결 상태를 제공하며 한국어·영어, 다크·라이트 테마, DPI, 키보드와 스크린 리더 정보를 포함합니다.
+- 로컬 검증은 DPAPI 평문 비저장, 손상·미래 스키마 보존, 사용자/역할·애플리케이션·길드·채널·프로필 권한, 확인 만료·재사용·다른 사용자 거부, 자동완성 범위, 속도 제한, 명령 화이트리스트와 UI 접근성을 포함합니다. 실제 Discord 길드와 봇 자격 증명은 사용하지 않습니다.
+- `Prepare-BuildResources.ps1`, `build.ps1 -SkipDependencyDownload`, `test.ps1`이 통과했습니다. 현재 결과는 `VERSION_CONSISTENCY_OK`, `PASSED=32`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`입니다.
+- `Publish-LocalRelease.ps1 -NoPublish`도 임시 RSA-3072/SHA-256 자체서명과 자산 7종 검증(`RELEASE_ARTIFACTS_PASSED=7`)을 통과하고 인증서·PFX를 정리했습니다. 서명된 Portable EXE로 전체 검사를 다시 통과했습니다.
+- 이 장치에는 .NET SDK가 없어 SDK 스타일 `net48` 빌드는 PR CI에서 검증해야 합니다. 공개 릴리스, 공개 자산 재다운로드와 `1.14.0 -> 1.15.0` 자동 업데이트 검증은 아직 남아 있습니다.
+- 웹 원격 관리, Discord에서의 임의 콘솔 명령, DM·여러 길드, 원격 파일 관리와 관리자 권한 서비스는 구현된 것으로 표시하지 않습니다.
+
 ## Codex Managed Server Live Handoff - 2026-07-26
 
 - **Current Version**: 1.14.0 (build 26.2.45.78)

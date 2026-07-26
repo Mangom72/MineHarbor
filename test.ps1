@@ -81,4 +81,19 @@ $bumpScript = Get-Content -LiteralPath (Join-Path $projectRoot 'scripts\bump-ver
 if ($bumpScript -notmatch 'WriteAllText' -or $bumpScript -notmatch '하나만 지정') {
     throw '버전 갱신의 UTF-8 저장 또는 모드 상호 배타 검증이 누락되었습니다.'
 }
+$discordSource = Get-Content -LiteralPath (Join-Path $projectRoot 'DiscordRemoteManagement.cs') -Raw
+if ($discordSource -notmatch 'ProtectedData\.Protect' -or $discordSource -notmatch 'DataProtectionScope\.CurrentUser') {
+    throw 'Discord 봇 토큰의 현재 사용자 범위 DPAPI 보호가 누락되었습니다.'
+}
+if ($discordSource -match '\b(?:HttpListener|TcpListener)\b') {
+    throw 'Discord 원격 제어에 공개 수신 리스너가 추가되었습니다.'
+}
+if ($discordSource -notmatch '\{\s*"intents",\s*0\s*\}' -or $discordSource -notmatch '"allowed_mentions"') {
+    throw 'Discord 특권 Intent 차단 또는 응답 멘션 차단이 누락되었습니다.'
+}
+if (($discordSource -match 'Process\.Start|cmd\.exe|powershell(?:\.exe)?') -or
+    ($discordSource -notmatch 'Unsupported remote command') -or
+    ($discordSource -match 'CreateDiscordSubcommand\("command"')) {
+    throw 'Discord 원격 제어의 명령 화이트리스트 경계가 누락되었거나 외부 실행 경로가 추가되었습니다.'
+}
 Write-Host 'SECURITY_REGRESSION_SCAN_OK'

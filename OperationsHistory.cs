@@ -284,6 +284,7 @@ internal static partial class Launcher
 			case "launcher":
 			case "recovery":
 			case "background-agent":
+			case "discord":
 				return normalized;
 			default:
 				return "system";

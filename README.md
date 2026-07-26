@@ -26,9 +26,9 @@
 | **Windows 설치 프로그램** | 시작 메뉴, 선택적 바탕화면 바로가기, 제거 기능 사용 | **[최신 Release 열기](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 | **Portable ZIP** | README와 라이선스를 포함한 묶음 보관 | **[최신 Release 열기](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 
-현재 소스 버전은 `v1.14.0`, 내부 빌드는 `26.2.45.78`입니다. MineHarbor 이름으로 배포된 Portable EXE는 같은 링크에서 계속 최신 파일을 받을 수 있습니다. 기존 설치의 `%LOCALAPPDATA%\MinecraftServerLauncher` 데이터는 자동으로 찾아 그대로 사용하며, 새 사용자 데이터 경로는 `%LOCALAPPDATA%\MineHarbor`입니다.
+현재 소스 버전은 `v1.15.0`, 내부 빌드는 `26.2.45.79`입니다. MineHarbor 이름으로 배포된 Portable EXE는 같은 링크에서 계속 최신 파일을 받을 수 있습니다. 기존 설치의 `%LOCALAPPDATA%\MinecraftServerLauncher` 데이터는 자동으로 찾아 그대로 사용하며, 새 사용자 데이터 경로는 `%LOCALAPPDATA%\MineHarbor`입니다.
 
-이 README는 로드맵이 아니라 현재 `v1.14.0` 소스와 자동 테스트, 공개 Release 자산에서 확인한 기능만 설명합니다. 서버 종류나 브리지 연결처럼 조건에 따라 달라지는 기능과 지원되지 않는 상태는 아래에 따로 표시합니다.
+이 README는 로드맵이 아니라 현재 `v1.15.0` 소스와 자동 테스트, 공개 Release 자산에서 확인한 기능만 설명합니다. 서버 종류나 브리지 연결처럼 조건에 따라 달라지는 기능과 지원되지 않는 상태는 아래에 따로 표시합니다.
 
 > [!WARNING]
 > 현재 릴리스 실행 파일은 요청된 자체서명 인증서로 무결성을 표시하지만 공개 인증 기관이 신뢰한 배포자 서명은 아닙니다. 따라서 Windows SmartScreen 경고가 나타날 수 있습니다. Release의 `SHA256SUMS.txt`와 GitHub 출처를 함께 확인해 주세요.
@@ -116,6 +116,8 @@ Paper/Purpur의 복사 옵션은 서버가 공식적으로 지원하지 않는 �
 - 백그라운드 운영(베타)을 켜면 창을 닫은 뒤에도 사용자 계정용 트레이 에이전트가 예약을 평가하며, Windows 로그인 자동 시작을 별도로 선택 가능
 - 사용자가 별도로 켠 경우 새 서버·예약·백업·콘텐츠·네트워크·업데이트·보안 운영 기록을 Windows 작업 표시줄 알림으로 표시
 - 알림 최소 중요도·종류·조용한 시간, 이전 기록 재생 방지와 8초 이내 다중 알림 요약
+- 사용자가 별도로 켠 경우 Discord 길드 전용 `/mineharbor`로 허용 서버의 상태·온라인 플레이어·최근 오류를 조회하고 시작·안전 종료·재시작·백업
+- Discord 봇 토큰의 현재 사용자 DPAPI 암호화, 사용자·역할·길드·채널·서버 허용 목록, 사용자별 속도 제한과 종료·재시작 60초 확인
 - SHA-256 무결성 확인과 임시 폴더 검증 후 안전 복원
 - 설정 변경 전 `server.properties` 백업
 - 사용자 승인 후에만 실행되는 런처 자동 업데이트와 실패 시 이전 EXE 복원
@@ -133,7 +135,9 @@ Paper/Purpur의 복사 옵션은 서버가 공식적으로 지원하지 않는 �
 - 에이전트가 소유하지 않은 실행 중 서버에는 명령·종료·실행 중 백업을 시도하지 않습니다. 메인 런처 내부에서 직접 시작한 서버와 외부 프로그램의 서버는 인계 대상으로 추정하지 않으며 기존처럼 안전 종료 또는 외부 소유 상태를 유지합니다.
 - 런처 업데이트 전에는 에이전트 서버를 먼저 안전 종료합니다. 제한 시간 안에 종료되지 않으면 서버 보호를 위해 업데이트와 에이전트 종료를 취소합니다.
 - Windows 알림은 별도 동의 후에만 표시되며 정보·경고·오류, 종류와 조용한 시간을 설정할 수 있습니다. 오래된 기록은 다시 알리지 않고 짧은 시간에 발생한 여러 사건은 하나로 요약합니다.
-- 관리자 권한 Windows 서비스는 설치하지 않으며, 로그온 전 실행과 원격 웹/Discord 제어는 아직 지원하지 않습니다.
+- Discord 원격 제어(베타)는 별도로 동의하고 사용자가 만든 봇을 연결한 경우에만 에이전트에서 실행됩니다. 공개 수신 포트를 열지 않는 Gateway 연결을 사용하며 `상태`, `플레이어`, `최근 오류`, `시작`, 확인형 `안전 종료`·`재시작`, `백업`만 제공합니다. 임의 콘솔·셸·파일 실행과 외부 소유 서버 제어는 차단합니다.
+- Discord 설정은 `서버 관리 → 백그라운드 → Discord 원격` 또는 에이전트 트레이에서 열 수 있습니다. 백그라운드 운영을 먼저 켠 뒤 사용자가 만든 봇의 토큰, 애플리케이션·서버·채널 ID, 허용 사용자 또는 역할과 허용 서버를 입력합니다. 자세한 설치·권한 경계는 [Discord 원격 제어 구조](docs/architecture/DISCORD_REMOTE_MANAGEMENT.md)를 참고하세요.
+- 관리자 권한 Windows 서비스는 설치하지 않으며, 로그온 전 실행과 웹 원격 관리는 아직 지원하지 않습니다.
 
 > [!WARNING]
 > 최신 버전에서 생성한 월드를 구버전 서버로 열면 월드가 손상될 수 있습니다. 런처는 위험한 다운그레이드를 차단하지만, 중요한 월드는 별도 장치에도 백업해 두는 것을 권장합니다.
@@ -221,7 +225,7 @@ flowchart TD
 | 운영체제와 런타임 | Windows 10/11 x64 및 .NET Framework 4.8. SDK 스타일 프로젝트도 호환성 검증용 `net48`을 유지합니다. |
 | 콘텐츠 공급자 | 자동 검색·의존성 해결·업데이트는 Modrinth를 사용합니다. 다른 출처의 JAR·ZIP은 파일 설치와 수동 파일 관리로 다룹니다. |
 | 일정 실행 | 기본값은 열린 MineHarbor 창에서 평가합니다. 사용자가 백그라운드 운영(베타)을 켜면 사용자 계정용 트레이 에이전트가 창을 닫은 뒤에도 평가합니다. 관리자 권한 Windows 서비스는 설치하지 않습니다. |
-| 운영 기록과 Windows 알림 | 서버 수명 주기, 에이전트와 예약 작업 결과를 로컬에 기록합니다. 선택형 작업 표시줄 알림은 백그라운드 에이전트가 실행 중일 때만 새 기록을 표시하며, Discord와 웹 원격 관리는 아직 제공하지 않습니다. |
+| 운영 기록·Windows 알림·Discord | 서버 수명 주기, 에이전트와 예약 작업 결과를 로컬에 기록합니다. 선택형 작업 표시줄 알림과 길드·채널·사용자·역할·서버 허용 목록을 적용한 Discord 원격 제어는 백그라운드 에이전트가 실행 중일 때만 동작합니다. 웹 원격 관리는 아직 제공하지 않습니다. |
 | 실시간 서버 정보 | 명령 브리지의 라이브 플레이어·TPS·MSPT·플러그인 명령은 Paper/Purpur 1.13 이상에서 선택적으로 지원합니다. 나머지 서버는 로컬 명령 자동완성을 사용하며 얻을 수 없는 지표는 `지원되지 않음`으로 표시합니다. |
 | 외부 접속 판정 | 일반 TCP 응답만으로 Minecraft 서버가 맞다고 확정하지 않습니다. MineHarbor가 만든 매핑의 사후 검사만 `확인됨`으로 표시합니다. |
 | 코드 서명 | 릴리스마다 자체서명하며 공개 인증 기관의 신뢰 서명은 제공하지 않습니다. |
@@ -289,6 +293,7 @@ PR과 `main` 푸시의 일반 CI는 버전·문서 일치, SDK 스타일 `net48`
 - [백그라운드 에이전트 구조](docs/architecture/BACKGROUND_AGENT.md)
 - [관리 서버 무중단 인계 구조](docs/architecture/MANAGED_SERVER_HANDOFF.md)
 - [Windows 알림 구조](docs/architecture/WINDOWS_NOTIFICATIONS.md)
+- [Discord 원격 제어 구조](docs/architecture/DISCORD_REMOTE_MANAGEMENT.md)
 - [Paper/Purpur 복사 설정 호환성](docs/architecture/DUPLICATION_COMPATIBILITY.md)
 - [빠른 명령 호환성](docs/architecture/QUICK_COMMAND_COMPATIBILITY.md)
 - [.NET 현대화 검토](docs/architecture/DOTNET_MODERNIZATION.md)
@@ -307,9 +312,9 @@ PR과 `main` 푸시의 일반 CI는 버전·문서 일치, SDK 스타일 `net48`
 | **Windows installer** | Start Menu, optional desktop shortcut, and uninstall support | **[Open the latest release](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 | **Portable ZIP** | Keep the launcher, README, and license together | **[Open the latest release](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 
-Current source version: `v1.14.0` · internal build: `26.2.45.78`. MineHarbor releases keep the same permanent Portable URL. Existing data under `%LOCALAPPDATA%\MinecraftServerLauncher` is detected and preserved; new user-data installations use `%LOCALAPPDATA%\MineHarbor`.
+Current source version: `v1.15.0` · internal build: `26.2.45.79`. MineHarbor releases keep the same permanent Portable URL. Existing data under `%LOCALAPPDATA%\MinecraftServerLauncher` is detected and preserved; new user-data installations use `%LOCALAPPDATA%\MineHarbor`.
 
-This README documents shipped behavior verified against the current `v1.14.0` source, automated tests, and public release assets—not roadmap items. Conditional and unsupported behavior is called out explicitly below.
+This README documents shipped behavior verified against the current `v1.15.0` source, automated tests, and public release assets—not roadmap items. Conditional and unsupported behavior is called out explicitly below.
 
 > [!WARNING]
 > Release executables carry the requested self-signed integrity signature, not a publisher identity trusted by a public certificate authority. Windows SmartScreen can therefore still warn. Verify the GitHub source and the release `SHA256SUMS.txt`.
@@ -350,6 +355,7 @@ The main window appears first while update, profile, and current version data lo
 - **Scheduling:** per-server backup, start, stop, restart, and command jobs on intervals, daily times, selected weekdays, or a one-time local date. Missed runs can execute once, skip, or create a notification after a bounded delay. The editor previews the next run, risk, offline behavior, and five-minute conflicts.
 - **Background operations (Beta):** after explicit opt-in, a per-user tray agent evaluates schedules after the GUI closes and can start, safely stop, restart, back up, and open a console for agent-owned servers. A running server started from multi-server management can now transfer to the agent without stopping when that window closes. Optional Windows sign-in startup does not install an elevated service. Same-user secured named-pipe IPC, per-child 256-bit tokens, exact PID/start-time ownership, cross-process schedule locks, lease recovery, resume checks, and safe updater shutdown prevent duplicate or unsafe ownership.
 - **Notifications and operations:** the main Operations view filters server lifecycle, crash/restart, and scheduled-job results by server, severity, and read state, and exports the visible list to CSV. Each server keeps up to 500 entries in `.mineharbor/operations-history.json` with atomic writes, a cross-process lock, and a verified SHA-256 hash chain. Opt-in Windows taskbar notifications support severity/category filters, quiet hours, startup replay suppression, and eight-second collapse of bursts.
+- **Discord remote control (Beta):** after a separate opt-in and user-supplied bot setup, the guild-only `/mineharbor` command can query approved-server status, bridge-backed online players, and recent errors, or request start, backup, confirmed safe stop, and confirmed restart. Current-user DPAPI token protection, guild/channel/user/role/profile allowlists, per-user throttling, 60-second single-use confirmations, and the existing agent ownership checks guard the boundary. No arbitrary console, shell, file execution, public listener, or control of externally owned servers is exposed.
 - **Content:** installed plugin/mod/data-pack inventory, managed/manual distinction, compatibility and dependency checks, individual or batch updates, enable/disable/recoverable removal, verified Modrinth search, and local-file or world-targeted data-pack installation. Blank searches return popular results with author, download count, and description. Data packs are installed under the selected `<world>/datapacks` folder after root `pack.mcmeta`, path, duplicate-entry, entry-count, and expanded-size checks.
 - **Dashboard:** status, uptime, Java CPU/memory/version, players, storage, warnings/errors, verified external access, next schedule, and bridge-provided TPS/MSPT without guessed values.
 - **Operations:** online-player autocomplete for whitelist, OP, kick and ban controls; command/player suggestions in the main and managed consoles; time-independent command suggestions in the scheduler; plus search → category → word-wrap console tools with separate warning, compatibility, and error filters.
@@ -367,7 +373,11 @@ Cross-process automation locks and PID/start-time leases prevent duplicate claim
 
 Windows taskbar notifications are separately opt-in and require the agent to be running. Settings cover severity, event categories, and midnight-spanning quiet hours. Existing history is not replayed when the agent starts, and bursts are summarized rather than repeatedly replacing one another. Notification text is re-sanitized and never includes raw commands.
 
-This beta does not install an elevated Windows service and does not run before sign-in. Web/Discord remote control remains unsupported.
+Discord remote control is another separate opt-in and requires a bot created and installed by the user. It uses an outbound Discord Gateway connection rather than a public inbound listener. The guild-only `/mineharbor` command exposes status, players when the bridge is connected, recent errors, start, backup, and 60-second-confirmed safe stop/restart for allowlisted profiles only. The token is current-user DPAPI protected; guild, channel, user or role, and profile checks plus rate limiting apply to every request. Arbitrary console, shell, and file execution remain unavailable.
+
+Open Discord setup from `Server management → Background → Discord remote` or from the agent tray. After enabling background operations, enter the user-created bot token, application/guild/channel IDs, allowed users or roles, and approved server profiles. See the [Discord remote-control architecture](docs/architecture/DISCORD_REMOTE_MANAGEMENT.md) for installation and trust boundaries.
+
+This beta does not install an elevated Windows service and does not run before sign-in. Web remote management remains unsupported.
 
 ## Quick commands and live suggestions
 
@@ -400,7 +410,7 @@ If access still fails, the manual guide shows the PC IPv4 address, default gatew
 | OS and runtime | Windows 10/11 x64 and .NET Framework 4.8. The parallel SDK-style project remains on `net48` for compatibility verification. |
 | Content providers | Automatic search, dependency resolution, and updates use Modrinth. JAR/ZIP files from other sources can be installed from file and are tracked separately. |
 | Scheduling | Open MineHarbor windows evaluate jobs by default. When the user enables Background operations (Beta), a per-user tray agent continues after the GUI closes. No elevated Windows service is installed. |
-| Operations history and Windows notifications | Server lifecycle, agent, and scheduled-job results are stored locally. Opt-in taskbar notifications show only new records while the background agent is running. Discord and web remote management are not implemented. |
+| Operations history, Windows notifications, and Discord | Server lifecycle, agent, and scheduled-job results are stored locally. Opt-in taskbar notifications and allowlisted guild-only Discord remote control run only with the background agent. Web remote management is not implemented. |
 | Live server data | Live players, TPS/MSPT, and plugin commands require the optional bridge on Paper/Purpur 1.13+. Other server types retain local completion, and unavailable metrics are shown as unsupported rather than estimated. |
 | External reachability | A generic TCP response does not prove Minecraft server identity. Only the post-check of a mapping created by MineHarbor is marked verified. |
 | Code signing | Releases are self-signed per build and do not carry a public-CA trusted publisher signature. |

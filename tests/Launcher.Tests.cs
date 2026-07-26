@@ -65,6 +65,7 @@ internal static class LauncherTests
 			TestBackgroundAgentSettings(temporary);
 			TestManagedServerHandoff(temporary);
 			TestWindowsNotifications(temporary);
+			TestDiscordRemoteManagement(temporary);
 			TestOperationsHistory(temporary);
 			TestDiagnosticRedaction(temporary);
 			TestQuickCommandsAndBridge(temporary);
@@ -104,6 +105,9 @@ internal static class LauncherTests
 			SetStaticField("ManagedChildOwnerProcessStartTicks", -1L);
 			SetStaticField("WindowsNotificationSettingsPathOverride", null);
 			SetStaticField("WindowsNotificationDisplayOverride", null);
+			SetStaticField("DiscordRemoteSettingsPathOverride", null);
+			SetStaticField("DiscordRemoteRunOverride", null);
+			SetStaticField("DiscordRemoteActionOverride", null);
 			if (Directory.Exists(temporary)) Directory.Delete(temporary, true);
 		}
 	}
@@ -2057,6 +2061,296 @@ internal static class LauncherTests
 		SetStaticField("StorageSettingsPathOverride", Path.Combine(root, "storage.properties"));
 		SetStaticField("LauncherUserDataDirectoryOverride", Path.Combine(root, "isolated-user-data"));
 		Pass();
+	}
+
+	private static void TestDiscordRemoteManagement(string root)
+	{
+		string settingsPath = Path.Combine(root, "discord-remote", "settings.json");
+		Directory.CreateDirectory(Path.GetDirectoryName(settingsPath));
+		SetStaticField("DiscordRemoteSettingsPathOverride", settingsPath);
+		Type settingsType = launcher.GetNestedType("DiscordRemoteSettings", BindingFlags.NonPublic);
+		object defaults = Invoke("ReadDiscordRemoteSettings", new object[0]);
+		Equal(1, GetField(defaults, "SchemaVersion"), "Discord 원격 설정 기본 스키마");
+		Equal(false, GetField(defaults, "Enabled"), "Discord 원격 기본 비활성화");
+
+		string clearToken = "test.token." + new string('x', 40);
+		string protectedToken = Convert.ToString(Invoke("ProtectDiscordBotToken", new object[] { clearToken }));
+		if (string.IsNullOrWhiteSpace(protectedToken) || protectedToken.Contains(clearToken))
+			throw new InvalidOperationException("Discord 봇 토큰이 안전하게 암호화되지 않았습니다.");
+		Equal(clearToken, Invoke("UnprotectDiscordBotToken", new object[] { protectedToken }), "현재 사용자 DPAPI Discord 토큰 복호화");
+
+		const string applicationId = "11111111111111111";
+		const string guildId = "22222222222222222";
+		const string channelId = "33333333333333333";
+		const string userId = "44444444444444444";
+		const string secondUserId = "55555555555555555";
+		const string roleId = "66666666666666666";
+		const string profile = "Discord 테스트 서버";
+		object settings = Activator.CreateInstance(settingsType, true);
+		SetPublic(settings, "Enabled", true);
+		SetPublic(settings, "ProtectedBotToken", protectedToken);
+		SetPublic(settings, "ApplicationId", applicationId);
+		SetPublic(settings, "GuildId", guildId);
+		SetPublic(settings, "ChannelId", channelId);
+		SetPublic(settings, "AllowedUserIds", new List<string> { userId, secondUserId });
+		SetPublic(settings, "AllowedRoleIds", new List<string> { roleId });
+		SetPublic(settings, "AllowedProfiles", new List<string> { profile });
+		Invoke("WriteDiscordRemoteSettings", new object[] { settings });
+		object loaded = Invoke("ReadDiscordRemoteSettings", new object[0]);
+		Equal(true, GetField(loaded, "Enabled"), "Discord 원격 명시적 동의 저장");
+		Equal(profile, ((IList)GetField(loaded, "AllowedProfiles"))[0], "Discord 허용 프로필 저장");
+		string storedJson = File.ReadAllText(settingsPath, Encoding.UTF8);
+		if (storedJson.Contains(clearToken)) throw new InvalidOperationException("Discord 봇 토큰이 설정 JSON에 평문으로 저장되었습니다.");
+		IList parsedIds = (IList)Invoke("ParseDiscordIdText", new object[] { userId + ", " + secondUserId + "\r\n" + userId });
+		Equal(2, parsedIds.Count, "Discord ID 목록 구분·중복 제거");
+		ExpectFailure(delegate { Invoke("ParseDiscordIdText", new object[] { "not-an-id" }); }, "잘못된 Discord ID 거부");
+		Type gatewayType = launcher.GetNestedType("DiscordGatewayClient", BindingFlags.NonPublic);
+		MethodInfo createCommand = gatewayType.GetMethod("CreateMineHarborCommandDefinition", BindingFlags.Static | BindingFlags.NonPublic);
+		IDictionary commandDefinition = (IDictionary)createCommand.Invoke(null, new object[0]);
+		Equal(8, ((IList)commandDefinition["options"]).Count, "Discord 길드 명령 하위 명령 수");
+		if (commandDefinition.Contains("contexts") || commandDefinition.Contains("integration_types"))
+			throw new InvalidOperationException("전역 명령 전용 Discord context 필드가 길드 명령 등록 본문에 포함되었습니다.");
+
+		Type processorType = launcher.GetNestedType("DiscordInteractionProcessor", BindingFlags.NonPublic);
+		int actions = 0;
+		Func<string, string, string, bool, string> actionOverride = delegate(string command, string selectedProfile, string actor, bool korean)
+		{
+			actions++;
+			return "OK " + command + " " + selectedProfile;
+		};
+		SetStaticField("DiscordRemoteActionOverride", actionOverride);
+		object processor = Activator.CreateInstance(
+			processorType,
+			BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+			null,
+			new object[] { loaded, null },
+			null);
+		DateTime now = new DateTime(2026, 7, 26, 12, 0, 0, DateTimeKind.Utc);
+
+		Dictionary<string, object> wrongApplicationInteraction =
+			NewDiscordInteraction("70000000000000000", 2, guildId, channelId, userId, null, "status", profile, null, "ko");
+		wrongApplicationInteraction["application_id"] = "99999999999999999";
+		object wrongApplication = InvokeInstance(processor, "Process", new object[] { wrongApplicationInteraction, now });
+		if (Convert.ToString(GetField(wrongApplication, "Content")).IndexOf("권한", StringComparison.OrdinalIgnoreCase) < 0)
+			throw new InvalidOperationException("다른 Discord 애플리케이션 요청이 차단되지 않았습니다.");
+		Equal(0, actions, "다른 Discord 애플리케이션 요청은 서버 작업 미실행");
+
+		object unauthorized = InvokeInstance(processor, "Process", new object[]
+		{
+			NewDiscordInteraction("70000000000000001", 2, "99999999999999999", channelId, userId, null, "status", profile, null, "ko"),
+			now
+		});
+		if (Convert.ToString(GetField(unauthorized, "Content")).IndexOf("권한", StringComparison.OrdinalIgnoreCase) < 0)
+			throw new InvalidOperationException("허용되지 않은 Discord 길드 요청이 차단되지 않았습니다.");
+		Equal(0, actions, "권한 없는 Discord 요청은 서버 작업 미실행");
+
+		object status = InvokeInstance(processor, "Process", new object[]
+		{
+			NewDiscordInteraction("70000000000000002", 2, guildId, channelId, userId, null, "status", profile, null, "ko"),
+			now
+		});
+		if (Convert.ToString(GetField(status, "Content")).IndexOf("OK status", StringComparison.Ordinal) < 0)
+			throw new InvalidOperationException("허용된 Discord 상태 요청이 처리되지 않았습니다.");
+		Equal(1, actions, "허용된 Discord 상태 작업 단일 실행");
+
+		object unknown = InvokeInstance(processor, "Process", new object[]
+		{
+			NewDiscordInteraction("70000000000000003", 2, guildId, channelId, userId, null, "command", profile, null, "ko"),
+			now
+		});
+		if (Convert.ToString(GetField(unknown, "Content")).IndexOf("지원하지", StringComparison.OrdinalIgnoreCase) < 0)
+			throw new InvalidOperationException("Discord 임의 콘솔 명령 진입이 차단되지 않았습니다.");
+		Equal(1, actions, "Discord 임의 콘솔 명령 서버 작업 미실행");
+
+		object roleAuthorized = InvokeInstance(processor, "Process", new object[]
+		{
+			NewDiscordInteraction("70000000000000004", 2, guildId, channelId, "77777777777777777", new string[] { roleId }, "status", profile, null, "en-US"),
+			now
+		});
+		if (Convert.ToString(GetField(roleAuthorized, "Content")).IndexOf("OK status", StringComparison.Ordinal) < 0)
+			throw new InvalidOperationException("허용된 Discord 역할 요청이 처리되지 않았습니다.");
+
+		object stopRequest = InvokeInstance(processor, "Process", new object[]
+		{
+			NewDiscordInteraction("70000000000000005", 2, guildId, channelId, userId, null, "stop", profile, null, "ko"),
+			now
+		});
+		IList rows = (IList)GetField(stopRequest, "Components");
+		Equal(1, rows.Count, "Discord 안전 종료 확인 행");
+		IDictionary row = (IDictionary)rows[0];
+		IList buttons = (IList)row["components"];
+		Equal(2, buttons.Count, "Discord 안전 종료 확인·취소 버튼");
+		string confirmId = Convert.ToString(((IDictionary)buttons[0])["custom_id"]);
+		Equal(2, actions, "Discord 종료 선택만으로 서버 작업 미실행");
+
+		object wrongOwner = InvokeInstance(processor, "Process", new object[]
+		{
+			NewDiscordInteraction("70000000000000006", 3, guildId, channelId, secondUserId, null, null, null, confirmId, "ko"),
+			now.AddSeconds(1)
+		});
+		if (Convert.ToString(GetField(wrongOwner, "Content")).IndexOf("권한", StringComparison.OrdinalIgnoreCase) < 0)
+			throw new InvalidOperationException("다른 Discord 사용자의 확인 버튼 사용이 차단되지 않았습니다.");
+		Equal(2, actions, "다른 사용자의 확인으로 서버 작업 미실행");
+
+		object confirmed = InvokeInstance(processor, "Process", new object[]
+		{
+			NewDiscordInteraction("70000000000000007", 3, guildId, channelId, userId, null, null, null, confirmId, "ko"),
+			now.AddSeconds(2)
+		});
+		if (Convert.ToString(GetField(confirmed, "Content")).IndexOf("OK stop", StringComparison.Ordinal) < 0)
+			throw new InvalidOperationException("Discord 안전 종료 확인이 실행되지 않았습니다.");
+		Equal(3, actions, "Discord 안전 종료 확인 후 단일 실행");
+
+		object replay = InvokeInstance(processor, "Process", new object[]
+		{
+			NewDiscordInteraction("70000000000000008", 3, guildId, channelId, userId, null, null, null, confirmId, "ko"),
+			now.AddSeconds(3)
+		});
+		if (Convert.ToString(GetField(replay, "Content")).IndexOf("이미", StringComparison.OrdinalIgnoreCase) < 0
+			&& Convert.ToString(GetField(replay, "Content")).IndexOf("만료", StringComparison.OrdinalIgnoreCase) < 0)
+			throw new InvalidOperationException("Discord 확인 버튼 재사용이 차단되지 않았습니다.");
+		Equal(3, actions, "Discord 확인 버튼 재사용 서버 작업 미실행");
+
+		object expiringRequest = InvokeInstance(processor, "Process", new object[]
+		{
+			NewDiscordInteraction("70000000000000009", 2, guildId, channelId, userId, null, "restart", profile, null, "ko"),
+			now
+		});
+		IList expiringRows = (IList)GetField(expiringRequest, "Components");
+		string expiringId = Convert.ToString(((IDictionary)((IList)((IDictionary)expiringRows[0])["components"])[0])["custom_id"]);
+		object expired = InvokeInstance(processor, "Process", new object[]
+		{
+			NewDiscordInteraction("70000000000000010", 3, guildId, channelId, userId, null, null, null, expiringId, "ko"),
+			now.AddSeconds(61)
+		});
+		if (Convert.ToString(GetField(expired, "Content")).IndexOf("만료", StringComparison.OrdinalIgnoreCase) < 0)
+			throw new InvalidOperationException("Discord 확인 요청 만료가 적용되지 않았습니다.");
+		Equal(3, actions, "만료된 Discord 확인 서버 작업 미실행");
+
+		object autocomplete = InvokeInstance(processor, "Process", new object[]
+		{
+			NewDiscordInteraction("70000000000000011", 4, guildId, channelId, userId, null, "status", "Dis", null, "ko"),
+			now
+		});
+		Equal(true, GetField(autocomplete, "IsAutocomplete"), "Discord 서버 자동완성 응답");
+		Equal(1, ((IList)GetField(autocomplete, "Choices")).Count, "허용된 Discord 서버만 자동완성");
+
+		object limitedProcessor = Activator.CreateInstance(
+			processorType,
+			BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+			null,
+			new object[] { loaded, null },
+			null);
+		object limited = null;
+		for (int index = 0; index < 11; index++)
+		{
+			limited = InvokeInstance(limitedProcessor, "Process", new object[]
+			{
+				NewDiscordInteraction((71000000000000000L + index).ToString(), 2, guildId, channelId, userId, null, "help", null, null, "ko"),
+				now
+			});
+		}
+		if (Convert.ToString(GetField(limited, "Content")).IndexOf("너무", StringComparison.OrdinalIgnoreCase) < 0)
+			throw new InvalidOperationException("Discord 사용자별 요청 속도 제한이 적용되지 않았습니다.");
+
+		SetStaticField("DiscordRemoteActionOverride", new Func<string, string, string, bool, string>(delegate { return new string('x', 2400); }));
+		object trimProcessor = Activator.CreateInstance(
+			processorType,
+			BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+			null,
+			new object[] { loaded, null },
+			null);
+		object trimmed = InvokeInstance(trimProcessor, "Process", new object[]
+		{
+			NewDiscordInteraction("72000000000000000", 2, guildId, channelId, userId, null, "status", profile, null, "ko"),
+			now
+		});
+		if (Convert.ToString(GetField(trimmed, "Content")).Length > 1800)
+			throw new InvalidOperationException("Discord 응답 길이 상한이 적용되지 않았습니다.");
+		SetStaticField("DiscordRemoteActionOverride", null);
+
+		File.WriteAllText(settingsPath, "{\"SchemaVersion\":999}", Encoding.UTF8);
+		ExpectFailure(delegate { Invoke("ReadDiscordRemoteSettings", new object[0]); }, "미래 Discord 설정 스키마 거부");
+		Equal("{\"SchemaVersion\":999}", File.ReadAllText(settingsPath, Encoding.UTF8), "미래 Discord 설정 원본 보존");
+		File.WriteAllText(settingsPath, "{ broken", Encoding.UTF8);
+		ExpectFailure(delegate { Invoke("ReadDiscordRemoteSettings", new object[0]); }, "손상된 Discord 설정 차단");
+		Equal("{ broken", File.ReadAllText(settingsPath, Encoding.UTF8), "손상된 Discord 설정 원본 보존");
+		File.Delete(settingsPath);
+		SetPublic(settings, "Enabled", false);
+		Invoke("WriteDiscordRemoteSettings", new object[] { settings });
+		Type formType = launcher.GetNestedType("DiscordRemoteSettingsForm", BindingFlags.NonPublic);
+		using (Form form = (Form)Activator.CreateInstance(formType, true))
+		{
+			Equal(AutoScaleMode.Dpi, form.AutoScaleMode, "Discord 원격 설정 UI DPI 배율");
+			CheckBox enabled = (CheckBox)GetPrivateField(formType, form, "enabledBox");
+			TextBox token = (TextBox)GetPrivateField(formType, form, "tokenBox");
+			CheckedListBox profiles = (CheckedListBox)GetPrivateField(formType, form, "profilesBox");
+			if (string.IsNullOrWhiteSpace(enabled.AccessibleName) || string.IsNullOrWhiteSpace(enabled.AccessibleDescription)
+				|| string.IsNullOrWhiteSpace(token.AccessibleName) || string.IsNullOrWhiteSpace(token.AccessibleDescription)
+				|| string.IsNullOrWhiteSpace(profiles.AccessibleName) || string.IsNullOrWhiteSpace(profiles.AccessibleDescription))
+				throw new InvalidOperationException("Discord 원격 설정 접근성 정보가 없습니다.");
+			if (!token.UseSystemPasswordChar) throw new InvalidOperationException("Discord 봇 토큰 입력이 가려지지 않습니다.");
+		}
+		SetStaticField("DiscordRemoteSettingsPathOverride", null);
+		SetStaticField("DiscordRemoteRunOverride", null);
+		SetStaticField("DiscordRemoteActionOverride", null);
+		Pass();
+	}
+
+	private static Dictionary<string, object> NewDiscordInteraction(
+		string id,
+		int type,
+		string guildId,
+		string channelId,
+		string userId,
+		string[] roles,
+		string command,
+		string profile,
+		string customId,
+		string locale)
+	{
+		Dictionary<string, object> interaction = new Dictionary<string, object>
+		{
+			{ "id", id },
+			{ "application_id", "11111111111111111" },
+			{ "type", type },
+			{ "guild_id", guildId },
+			{ "channel_id", channelId },
+			{ "locale", locale ?? "en-US" },
+			{ "member", new Dictionary<string, object>
+				{
+					{ "user", new Dictionary<string, object> { { "id", userId } } },
+					{ "roles", roles ?? new string[0] }
+				}
+			}
+		};
+		Dictionary<string, object> data = new Dictionary<string, object>();
+		if (type == 3) data["custom_id"] = customId;
+		else
+		{
+			data["name"] = "mineharbor";
+			Dictionary<string, object> subcommand = new Dictionary<string, object>
+			{
+				{ "type", 1 },
+				{ "name", command ?? string.Empty }
+			};
+			if (profile != null)
+			{
+				subcommand["options"] = new object[]
+				{
+					new Dictionary<string, object>
+					{
+						{ "type", 3 },
+						{ "name", "server" },
+						{ "value", profile },
+						{ "focused", type == 4 }
+					}
+				};
+			}
+			data["options"] = new object[] { subcommand };
+		}
+		interaction["data"] = data;
+		return interaction;
 	}
 
 	private static void TestOperationsHistory(string root)
