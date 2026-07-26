@@ -1,8 +1,9 @@
 ﻿# CODEX_HANDOFF.md
 
-## 0.0 Current implementation state (v1.12.0 in progress)
+## 0.0 Current implementation state (v1.12.0 released)
 
-- Feature branch: `codex/background-agent-v1.12.0`
+- Release-state branch: `codex/v1.12.0-release-state` (feature: `codex/background-agent-v1.12.0`)
+- Pull request [#32](https://github.com/Mangom72/MineHarbor/pull/32) is merged. PR CI `30186372130`, main CI `30186411385`, and release run `30186453428` passed.
 - Version source of truth: `version.json` = 1.12.0 / build 26.2.45.76
 - The opt-in per-user `MineHarbor.exe --background-agent` owns tray-started managed-profile children and continues schedules after GUI exit. It does not install an elevated service.
 - The tray provides profile start, safe stop, restart, immediate backup, console, stop-all, pause/resume, open GUI, and complete exit. The agent console reuses themed controls, local completion, and exact-command risk confirmation.
@@ -10,7 +11,8 @@
 - The agent refuses to command, stop, or live-back-up a running server it did not start. Managed children validate parent PID/start time and attempt a safe `stop` if the parent disappears.
 - Automation JSON read-modify-write paths now use a path-derived cross-process mutex in addition to PID/start-time leases. Resume events re-evaluate existing bounded missed-run policies.
 - Launcher update and agent exit request safe stops and abort rather than force exiting when an owned server misses the timeout.
-- Local verification currently passes 29 launcher test groups, 10 bridge protocol cases, Portable version/smoke, modern-dialog, and security scans. PR/main CI, self-signed release, public-asset download, and v1.11.0→v1.12.0 update verification remain to be completed.
+- Local verification passes 29 launcher test groups, 10 bridge protocol cases, Portable version/smoke, modern-dialog, and security scans. PR and main CI also passed the .NET 10 SDK warning-as-error `net48` build.
+- The [v1.12.0 release](https://github.com/Mangom72/MineHarbor/releases/tag/v1.12.0) contains seven verified public assets. The release workflow removed its temporary self-signed certificate/PFX, and an independent download confirmed `RELEASE_ARTIFACTS_PASSED=7`, `PUBLISHED_ASSETS_MODE_OK`, and `PUBLIC_AUTO_UPDATE_OK=1.11.0->1.12.0` before rerunning the full suite against the updated executable.
 - Windows notifications, web/Discord remote control, elevated/pre-sign-in service operation, cloud backup, Fabric/Forge/NeoForge bridges, and lossless transfer of a GUI-owned running server are not claimed.
 
 ## 0.1 Current implementation state (v1.11.0 released)
