@@ -1,5 +1,16 @@
 ﻿# AI Agent Synchronization State
 
+## Claude Full Re-inspection - 2026-07-26
+
+- **Current Version**: 1.16.0 (build 26.2.45.84)
+- **Branch**: `claude/remote-control-u4tvpt` (v1.15.4 병합 후 main에서 다시 시작)
+- **Status**: 2차 전체 점검을 마치고 발견한 결함 2건과 저위험 기능 2건을 적용해 v1.16.0 릴리스 진행
+- 1차에서 고친 `SanitizeOperationMessage`의 IPv6 누락과 **같은 계열의 결함이 `RedactDiagnosticText`에도 있었습니다.** 진단 번들에는 `logs/latest.log`와 크래시 리포트가 들어가고 사용자가 지원 요청 시 이를 공유하므로, IPv6로 접속한 플레이어 주소가 그대로 나갈 수 있었습니다. IPv6 패턴을 `OperationIPv6AddressPattern` 상수로 빼서 운영 기록과 진단 번들이 같은 기준을 쓰도록 했습니다.
+- `RedactDiagnosticText`가 `string.Replace`로 대소문자를 정확히 맞춰야만 경로를 가렸습니다. Windows 경로는 대소문자를 구분하지 않으므로 로그에 다른 표기로 남은 사용자 폴더와 서버 경로가 노출됐습니다. 운영 기록과 같은 `ReplaceOperationText`(OrdinalIgnoreCase)를 쓰고 `Path.GetFullPath` 정규화도 함께 적용했습니다.
+- 기능: 진단 번들에 최근 운영 기록 200건을 `operations-history.txt`로 추가했습니다. 기록 시점에 이미 가려진 내용만 사용하므로 새로운 노출 경로는 없습니다.
+- 기능: `/mineharbor help`가 현재 허용된 서버 이름을 함께 보여 줍니다. 순수 프로세서 로직이라 기존 테스트 하네스로 검증됩니다.
+- 점검했지만 결함을 찾지 못한 영역: 백업 복원(manifest SHA-256 + `ValidateBackupRelativePath` + `GetSafeBackupDestination` + `FileMode.CreateNew`), UPnP 매핑 소유권 보호, SSDP `LOCATION` 검증(응답 주소와 사설 IP 일치 요구), 다운로드 호스트 허용 목록(정확 일치 또는 `.suffix`), Discord 상호작용 권한·확인·속도 제한 경계.
+- **다음 담당자에게 남기는 알려진 문제**: 제품 전반의 예외 메시지가 한국어 단일 언어라 영어 UI에서도 한국어 오류가 그대로 표시됩니다(`ShowMineHarborDialog(this, exception.Message, ...)` 형태가 12곳 이상). 수백 개 문자열을 손봐야 하는 대규모 작업이라 이번 범위에서 제외했습니다. 별도 작업으로 예외 메시지 이중 언어화를 권장합니다.
 ## Claude UI/UX/Security Review - 2026-07-26
 
 - **Current Version**: 1.15.4 (build 26.2.45.83)

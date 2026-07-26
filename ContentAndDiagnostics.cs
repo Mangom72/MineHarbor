@@ -1079,6 +1079,7 @@ internal static partial class Launcher
 			using (ZipArchive archive = new ZipArchive(stream, ZipArchiveMode.Create))
 			{
 				AddDiagnosticText(archive, "system-summary.txt", BuildSystemSummary(options));
+				AddDiagnosticText(archive, "operations-history.txt", BuildOperationsHistorySummary(serverDirectory));
 				AddDiagnosticFileIfPresent(archive, serverDirectory, Path.Combine(serverDirectory, "server.properties"), "server.properties");
 				AddDiagnosticFileIfPresent(archive, serverDirectory, Path.Combine(serverDirectory, ".launcher-properties-configured"), "launcher-profile.properties");
 				AddDiagnosticFileIfPresent(archive, serverDirectory, Path.Combine(serverDirectory, ".launcher-server-runtime"), "launcher-runtime.properties");
@@ -1122,6 +1123,48 @@ internal static partial class Launcher
 		return builder.ToString();
 	}
 
+	// 최근 운영 기록을 함께 담아 지원 요청 시 문제 발생 순서를 확인할 수 있게 합니다.
+	// 각 항목은 기록 시점에 이미 SanitizeOperationMessage로 가려져 있으므로 그대로 사용합니다.
+	private static string BuildOperationsHistorySummary(string serverDirectory)
+	{
+		const int maximumEntries = 200;
+		StringBuilder builder = new StringBuilder();
+		builder.AppendLine("MineHarbor operations history (most recent last)");
+		OperationsHistoryDocument document;
+		try
+		{
+			document = ReadOperationsHistory(serverDirectory);
+		}
+		catch (Exception exception)
+		{
+			builder.AppendLine("history-unavailable=" + exception.GetType().Name);
+			return builder.ToString();
+		}
+		if (document == null || document.Entries == null || document.Entries.Count == 0)
+		{
+			builder.AppendLine("entry-count=0");
+			return builder.ToString();
+		}
+		int start = Math.Max(0, document.Entries.Count - maximumEntries);
+		builder.AppendLine("entry-count=" + document.Entries.Count.ToString(CultureInfo.InvariantCulture));
+		builder.AppendLine("included-entry-count=" + (document.Entries.Count - start).ToString(CultureInfo.InvariantCulture));
+		builder.AppendLine();
+		for (int i = start; i < document.Entries.Count; i++)
+		{
+			OperationsHistoryEntry entry = document.Entries[i];
+			if (entry == null) continue;
+			builder.AppendLine(string.Join("\t", new string[]
+			{
+				entry.CreatedUtc ?? string.Empty,
+				entry.Severity ?? string.Empty,
+				entry.Category ?? string.Empty,
+				entry.Source ?? string.Empty,
+				entry.MessageEn ?? entry.MessageKo ?? string.Empty
+			}));
+		}
+		return builder.ToString();
+	}
+
 	private static void AddDiagnosticFileIfPresent(ZipArchive archive, string serverDirectory, string sourcePath, string entryName)
 	{
 		if (!File.Exists(sourcePath))
@@ -1150,16 +1193,23 @@ internal static partial class Launcher
 	private static string RedactDiagnosticText(string text, string serverDirectory)
 	{
 		string result = text ?? string.Empty;
+		// Windows 경로는 대소문자를 가리지 않으므로 로그에 다른 표기로 남은 경로도 함께 가립니다.
 		string userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
 		if (!string.IsNullOrEmpty(userProfile))
 		{
-			result = result.Replace(userProfile, "%USERPROFILE%");
+			result = ReplaceOperationText(result, userProfile, "%USERPROFILE%");
 		}
-		if (!string.IsNullOrEmpty(serverDirectory))
+		if (!string.IsNullOrWhiteSpace(serverDirectory))
 		{
-			result = result.Replace(serverDirectory, "%SERVER_DIRECTORY%");
+			string fullServerDirectory = serverDirectory;
+			try { fullServerDirectory = Path.GetFullPath(serverDirectory); }
+			catch { }
+			result = ReplaceOperationText(result, fullServerDirectory, "%SERVER_DIRECTORY%");
+			result = ReplaceOperationText(result, serverDirectory, "%SERVER_DIRECTORY%");
 		}
 		result = Regex.Replace(result, "(?im)^(owner-name|rcon\\.password|resource-pack-prompt|server-ip)\\s*=.*$", "$1=<redacted>");
+		// 접속 로그에는 IPv4뿐 아니라 IPv6 주소도 남으므로 운영 기록과 같은 기준으로 가립니다.
+		result = Regex.Replace(result, OperationIPv6AddressPattern, "<ip-redacted>");
 		result = Regex.Replace(result, "(?<![0-9])(?:[0-9]{1,3}\\.){3}[0-9]{1,3}(?![0-9])", "<ip-redacted>");
 		return result;
 	}

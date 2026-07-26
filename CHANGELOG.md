@@ -4,6 +4,21 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.16.0] - 2026-07-26
+
+### Korean
+
+- **진단 번들 IPv6 주소 가림**: 진단 번들의 `latest.log`와 크래시 리포트에서 IPv4만 가리고 IPv6로 접속한 플레이어 주소는 그대로 남던 문제를 수정했습니다. 운영 기록과 동일한 기준을 사용하며 로그 시각(`12:34:56`)은 지우지 않습니다.
+- **진단 번들 경로 가림 강화**: Windows 경로는 대소문자를 구분하지 않는데도 정확히 같은 표기만 가려, 로그에 다른 대소문자로 남은 사용자 폴더와 서버 경로가 노출되던 문제를 수정했습니다.
+- **진단 번들에 운영 기록 추가**: 최근 운영 기록 200건을 `operations-history.txt`로 함께 담아 지원 요청 시 문제 발생 순서를 확인할 수 있습니다. 각 항목은 기록 시점에 이미 가려진 내용만 사용합니다.
+- **Discord 도움말에 서버 목록 표시**: `/mineharbor help`가 현재 사용할 수 있는 서버 이름을 함께 보여 줍니다. 프로필 이름을 추측하지 않아도 되며, 서버가 많으면 일부만 표시하고 남은 개수를 알려 줍니다.
+
+### English
+
+- **IPv6 addresses redacted in diagnostic bundles**: `latest.log` and crash reports inside a diagnostic bundle redacted only IPv4 addresses, leaving the addresses of players connecting over IPv6 intact. The bundle now uses the same rule as the operations history and still preserves log timestamps (`12:34:56`).
+- **Stronger path redaction in diagnostic bundles**: Windows paths are case-insensitive, but only exact-case matches were redacted, so user folders and server paths written with different casing leaked into shared bundles.
+- **Operations history included in diagnostic bundles**: the 200 most recent operations-history entries are now written to `operations-history.txt` so support requests show the order events happened in. Only content already redacted at record time is included.
+- **Discord help lists available servers**: `/mineharbor help` now shows the server names you can actually use, so profile names no longer have to be guessed. With many servers it lists a subset and reports how many were omitted.
 ## [1.15.4] - 2026-07-26
 
 ### Korean

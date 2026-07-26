@@ -459,9 +459,7 @@ internal static partial class Launcher
 			if (string.IsNullOrEmpty(command))
 				return MessageReply(Text(korean, "실행할 하위 명령이 없습니다.", "No subcommand was provided."));
 			if (string.Equals(command, "help", StringComparison.Ordinal))
-				return MessageReply(Text(korean,
-					"`/mineharbor`는 상태·플레이어·최근 오류 조회와 시작·안전 종료·재시작·백업을 지원합니다. 임의 콘솔 명령은 지원하지 않습니다.",
-					"`/mineharbor` supports status, players, recent errors, start, safe stop, restart, and backup. Arbitrary console commands are not supported."));
+				return MessageReply(CreateHelpText(korean));
 			if (!(string.Equals(command, "status", StringComparison.Ordinal)
 				|| string.Equals(command, "players", StringComparison.Ordinal)
 				|| string.Equals(command, "errors", StringComparison.Ordinal)
@@ -537,6 +535,30 @@ internal static partial class Launcher
 				reply = Execute(pending.Command, pending.Profile, userId, pending.Korean);
 			reply.UpdateOriginal = true;
 			return reply;
+		}
+
+		// 도움말에 실제로 사용할 수 있는 서버 이름을 함께 보여 주어 프로필 이름을 추측하지 않게 합니다.
+		private string CreateHelpText(bool korean)
+		{
+			string help = Text(korean,
+				"`/mineharbor`는 상태·플레이어·최근 오류 조회와 시작·안전 종료·재시작·백업을 지원합니다. 임의 콘솔 명령은 지원하지 않습니다.",
+				"`/mineharbor` supports status, players, recent errors, start, safe stop, restart, and backup. Arbitrary console commands are not supported.");
+			List<string> profiles = settings.AllowedProfiles;
+			if (profiles == null || profiles.Count == 0)
+				return help + "\n" + Text(korean,
+					"아직 허용된 서버가 없습니다. MineHarbor의 Discord 원격 제어 설정에서 관리할 서버를 선택해 주세요.",
+					"No servers are approved yet. Choose the servers to manage in MineHarbor's Discord remote-control settings.");
+			int listed = Math.Min(profiles.Count, DiscordRemoteMaximumStatusProfiles);
+			List<string> names = new List<string>();
+			for (int index = 0; index < listed; index++) names.Add("`" + profiles[index] + "`");
+			string line = Text(korean, "사용할 수 있는 서버: ", "Available servers: ") + string.Join(", ", names.ToArray());
+			int omitted = profiles.Count - listed;
+			if (omitted > 0)
+			{
+				string count = omitted.ToString(CultureInfo.InvariantCulture);
+				line += Text(korean, " 외 " + count + "개", " and " + count + " more");
+			}
+			return help + "\n" + line;
 		}
 
 		private DiscordInteractionReply ProcessAllStatus(string userId, bool korean)
