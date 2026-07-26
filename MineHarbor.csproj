@@ -45,6 +45,7 @@
     <Compile Include="BackgroundAgent.cs" />
     <Compile Include="ServerManagementFeatures.cs" />
     <Compile Include="OperationsHistory.cs" />
+    <Compile Include="WindowsNotifications.cs" />
     <Compile Include="ManagedServerDashboard.cs" />
     <Compile Include="ServerTrash.cs" />
     <Compile Include="NetworkAndPlayerTools.cs" />

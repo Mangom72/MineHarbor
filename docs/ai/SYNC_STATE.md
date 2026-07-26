@@ -1,5 +1,18 @@
 ﻿# AI Agent Synchronization State
 
+## Codex Opt-in Windows Notifications - 2026-07-26
+
+- **Current Version**: 1.13.0 (build 26.2.45.77)
+- **Branch**: `codex/windows-notifications-v1.13.0`
+- **Status**: 선택형 Windows 작업 표시줄 알림, 중요도·종류·조용한 시간, 이전 기록 재생 방지와 폭주 요약을 구현하고 로컬 검증 완료, PR/릴리스 검증 진행 예정
+- 알림은 기본 비활성화이며 백그라운드 에이전트가 실행 중일 때만 기존 트레이 `NotifyIcon`으로 새 운영 기록을 표시합니다. 운영 기록, 백그라운드 설정과 트레이에서 알림 설정 화면을 열 수 있습니다.
+- `windows-notifications.json`은 사용자 데이터에 최대 64KiB 스키마 검증, 경로별 프로세스 간 뮤텍스와 원자적 교체로 저장합니다. 손상·미래 스키마 원본을 덮어쓰지 않습니다.
+- 최소 중요도는 정보·경고·오류, 종류는 서버·예약·백업·콘텐츠·네트워크·업데이트/보안으로 나누며 자정을 지나는 조용한 시간을 지원합니다.
+- 에이전트 시작 시 서버별 최신 기록만 기준점으로 저장해 과거 기록을 다시 알리지 않습니다. 대기 항목은 최대 50개이고 8초 안에 여러 건이 생기면 가장 중요한 최신 사건과 추가 개수로 요약합니다.
+- 알림 문구는 운영 기록에서 가린 절대 서버 경로·IPv4·토큰·비밀번호·웹훅 형태를 다시 정리하고 명령 원문을 표시하지 않습니다. 알림 실패는 서버 제어·백업·예약 실행에서 격리합니다.
+- `Prepare-BuildResources.ps1`, `build.ps1 -SkipDependencyDownload`, `test.ps1 -LauncherPath artifacts\MineHarbor.exe`의 1차 검증이 통과했습니다. 현재 결과는 `VERSION_CONSISTENCY_OK`, `PASSED=30`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`입니다.
+- Windows 알림 내구 저장소·동작 버튼, 플레이어 접속·퇴장 전용 알림, 웹/Discord 원격 관리와 GUI 소유 실행 서버의 무손실 이전은 구현된 것으로 표시하지 않습니다.
+
 ## Codex Background Operations Beta - 2026-07-26
 
 - **Current Version**: 1.12.0 (build 26.2.45.76)
