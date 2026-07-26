@@ -3,8 +3,8 @@
 ## Codex Discord Registration Onboarding - 2026-07-26
 
 - **Current Version**: 1.15.1 (build 26.2.45.80)
-- **Branch**: `codex/discord-onboarding-v1.15.1`
-- **Status**: Discord 미등록 진입 가이드 구현 및 로컬 릴리스 후보 검증 완료
+- **Branch**: `codex/v1.15.1-release-state` (기능 브랜치: `codex/discord-onboarding-v1.15.1`)
+- **Status**: Discord 미등록 진입 가이드를 구현해 [PR #40](https://github.com/Mangom72/MineHarbor/pull/40)을 병합하고 [v1.15.1 정식 릴리스](https://github.com/Mangom72/MineHarbor/releases/tag/v1.15.1) 공개 검증 완료
 - 보호된 토큰, 유효한 애플리케이션·길드·채널 ID, 허용 사용자 또는 역할과 허용 서버 프로필이 모두 등록되지 않은 상태에서 Discord 메뉴에 들어가면 4단계 가이드를 먼저 표시합니다.
 - 가이드는 Discord 앱·봇 생성, 길드 설치, ID 복사, MineHarbor 연결 순서를 기존 테마의 둥근 카드로 설명합니다. `설정 시작`만 설정 화면으로 이동하며 `나중에`와 `Esc`는 아무 설정도 바꾸지 않습니다.
 - 설정 화면에 가이드를 다시 여는 보조 버튼을 추가했고, 이미 등록된 사용자는 바로 기존 설정 화면으로 이동합니다.
@@ -14,6 +14,8 @@
 - `Prepare-BuildResources.ps1`, 프레임워크 빌드와 자체서명 `Publish-LocalRelease.ps1 -NoPublish`가 통과했습니다. 임시 인증서/PFX를 정리했고 `RELEASE_ARTIFACTS_PASSED=7`을 확인했습니다.
 - 일반 및 자체서명 Portable EXE에서 각각 `VERSION_CONSISTENCY_OK`, `PASSED=32`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`가 통과했습니다.
 - 기존 클릭 관통 통합 검사는 실제 마우스 이동과 650ms 보호 시간에 의존해 사용 중인 PC에서 간헐적으로 실패할 수 있었습니다. 제품 동작은 바꾸지 않고 테스트가 보호 핸들·좌표·만료 시각을 명시적으로 준비하도록 결정적으로 수정했습니다.
+- [PR CI](https://github.com/Mangom72/MineHarbor/actions/runs/30196858135)와 [main CI](https://github.com/Mangom72/MineHarbor/actions/runs/30196903438)는 .NET 10 SDK 경고=오류 `net48` 빌드, Portable·브리지 빌드, 전체 테스트와 검증 자산 업로드까지 통과했습니다.
+- [릴리스 워크플로](https://github.com/Mangom72/MineHarbor/actions/runs/30196946031)는 임시 RSA-3072/SHA-256 자체서명 인증서를 제거하고 공개 자산 7종을 검증했습니다. 공개 자산을 별도 폴더에 다시 내려받아 `RELEASE_ARTIFACTS_PASSED=7`, `PUBLISHED_ASSETS_MODE_OK`, `PUBLIC_AUTO_UPDATE_OK=1.15.0->1.15.1`을 확인했으며 공개 EXE로 32개 테스트 그룹과 브리지 10개를 다시 통과했습니다.
 
 ## Codex Discord Remote Control Beta - 2026-07-26
 
