@@ -4,6 +4,24 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.15.1] - 2026-07-26
+
+### Korean
+
+- **Discord 첫 연결 가이드**: Discord 메뉴에 처음 들어갈 때 봇 토큰, 애플리케이션·서버·채널 ID, 허용 사용자 또는 역할과 허용 서버가 아직 등록되지 않았다면 4단계 시작 가이드를 먼저 표시합니다.
+- **현대형 온보딩 UI**: 기존 다크·라이트 테마와 둥근 카드·버튼을 사용하고, Discord 앱 생성·길드 설치·ID 복사·MineHarbor 연결 순서를 한 화면에 정리했습니다. 창 전체에 불필요한 스크롤을 만들지 않으며 DPI, 키보드와 스크린 리더 정보를 지원합니다.
+- **안전한 진입 흐름**: 가이드에서 명시적으로 `설정 시작`을 선택한 경우에만 기존 설정 화면으로 이동합니다. `나중에` 또는 `Esc`는 설정을 변경하지 않으며, 이미 등록된 사용자는 가이드를 건너뜁니다. 설정 화면에서도 가이드를 다시 열 수 있습니다.
+- **보안 경계 유지**: Developer Portal은 고정된 공식 HTTPS 주소만 열고, 토큰의 현재 사용자 DPAPI 보호와 임의 콘솔·셸·파일 명령 차단을 가이드에서 명확히 안내합니다.
+- **회귀 검증**: 미등록·등록 상태 판정, 진입 분기, 4개 단계 카드, 접근성 이름, `Enter`·`Esc` 동작과 기존 Discord 원격 제어 검사를 32개 런처 테스트 그룹 안에서 함께 검사합니다.
+
+### English
+
+- **First-run Discord guide**: entering the Discord menu now shows a four-step onboarding guide when no bot token, application/guild/channel IDs, allowed user or role, and approved server profile have been registered.
+- **Modern onboarding UI**: the guide reuses MineHarbor's dark/light palette, rounded cards, and managed buttons to explain app creation, guild installation, ID collection, and MineHarbor connection in one view. It avoids unnecessary whole-form scrolling and supports DPI scaling, keyboard operation, and screen readers.
+- **Explicit setup transition**: only `Start setup` advances to the existing settings form. `Not now` or `Esc` changes nothing, while complete registrations skip the guide. The guide can also be reopened from the settings footer.
+- **Security boundary preserved**: the portal button opens only the fixed official HTTPS Developer Portal URL, and the guide calls out current-user DPAPI token protection plus the absence of arbitrary console, shell, or file commands.
+- **Regression coverage**: the existing 32 launcher groups now also check unregistered/registered detection, entry routing, four step cards, accessible labels, and `Enter`/`Esc` behavior alongside the Discord remote-control suite.
+
 ## [1.15.0] - 2026-07-26
 
 ### Korean

@@ -1,5 +1,18 @@
 ﻿# CODEX_HANDOFF.md
 
+## 0.00000 Current implementation state (v1.15.1 candidate)
+
+- Working branch: `codex/discord-onboarding-v1.15.1`
+- Version source of truth: `version.json` = 1.15.1 / build 26.2.45.80
+- Entering Discord remote settings without a complete protected token, valid application/guild/channel IDs, an allowed user or role, and an approved profile now opens a four-step registration guide first.
+- The guide reuses the launcher palette, rounded cards, and managed buttons; supports Korean/English, DPI, keyboard, and screen readers; and avoids whole-form scrolling. Only Start setup advances, while Not now/Escape changes nothing.
+- Complete registrations skip onboarding. The settings footer can reopen the guide without changing saved settings.
+- The only external link is the fixed official HTTPS Discord Developer Portal. Current-user DPAPI storage, all allowlists, ownership checks, confirmations, throttling, and the arbitrary-console/shell/file prohibition are unchanged.
+- The existing Discord test group now covers registration detection, onboarding routing, four cards, accessible actions, and Enter/Escape mapping. A temporary visual harness confirmed the Korean layout without reading or modifying real Discord credentials.
+- Resource preparation, the framework build, and the local self-signed release candidate passed. The temporary certificate/PFX was removed and `RELEASE_ARTIFACTS_PASSED=7` was reported.
+- Both the ordinary and signed Portable executable passed version consistency, all 32 launcher groups, Portable version/smoke, 10 bridge cases, modern-dialog scan, and security regression scan.
+- The existing modeless-window click-through integration test was made deterministic by explicitly arming its handle, cursor point, and guard deadline; production click-guard behavior is unchanged.
+
 ## 0.0000 Current implementation state (v1.15.0 released)
 
 - Release-state branch: `codex/v1.15.0-release-state` (feature: `codex/discord-remote-v1.15.0`)
