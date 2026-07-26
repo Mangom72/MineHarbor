@@ -42,6 +42,7 @@
     <Compile Include="ContentManagementServices.cs" />
     <Compile Include="ContentManagementUi.cs" />
     <Compile Include="ServerAutomation.cs" />
+    <Compile Include="BackgroundAgent.cs" />
     <Compile Include="ServerManagementFeatures.cs" />
     <Compile Include="OperationsHistory.cs" />
     <Compile Include="ManagedServerDashboard.cs" />

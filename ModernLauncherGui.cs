@@ -623,6 +623,7 @@ internal static partial class Launcher
 		Application.SetCompatibleTextRenderingDefault(false);
 
 		ApplyLauncherTaskbarIdentity();
+		StartConfiguredBackgroundAgent();
 
 		launcherForm = new LauncherForm();
 
@@ -4588,7 +4589,14 @@ internal static partial class Launcher
 		{
 
 			string questionKey = GetLauncherCloseQuestionKey(workflowRunning, serverRunning);
-			DialogResult result = ShowMineHarborDialog(this, Localization.T(questionKey), Localization.T("Close.Title"), MessageBoxButtons.YesNo, serverRunning ? MessageBoxIcon.Warning : MessageBoxIcon.Question);
+			string closeQuestion = Localization.T(questionKey);
+			if (IsBackgroundAgentRunning())
+			{
+				closeQuestion += Localization.CurrentLanguage == Localization.Korean
+					? "\n\n백그라운드 에이전트의 예약 작업과 에이전트가 시작한 서버는 계속 운영됩니다."
+					: "\n\nSchedules and servers started by the background agent will continue running.";
+			}
+			DialogResult result = ShowMineHarborDialog(this, closeQuestion, Localization.T("Close.Title"), MessageBoxButtons.YesNo, serverRunning ? MessageBoxIcon.Warning : MessageBoxIcon.Question);
 
 			if (result != DialogResult.Yes)
 

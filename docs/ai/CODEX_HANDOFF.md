@@ -1,5 +1,18 @@
 ﻿# CODEX_HANDOFF.md
 
+## 0.0 Current implementation state (v1.12.0 in progress)
+
+- Feature branch: `codex/background-agent-v1.12.0`
+- Version source of truth: `version.json` = 1.12.0 / build 26.2.45.76
+- The opt-in per-user `MineHarbor.exe --background-agent` owns tray-started managed-profile children and continues schedules after GUI exit. It does not install an elevated service.
+- The tray provides profile start, safe stop, restart, immediate backup, console, stop-all, pause/resume, open GUI, and complete exit. The agent console reuses themed controls, local completion, and exact-command risk confirmation.
+- GUI/agent IPC is a bounded local named pipe whose ACL grants the current Windows SID only. No LAN listener, arbitrary shell, or executable launch API is exposed.
+- The agent refuses to command, stop, or live-back-up a running server it did not start. Managed children validate parent PID/start time and attempt a safe `stop` if the parent disappears.
+- Automation JSON read-modify-write paths now use a path-derived cross-process mutex in addition to PID/start-time leases. Resume events re-evaluate existing bounded missed-run policies.
+- Launcher update and agent exit request safe stops and abort rather than force exiting when an owned server misses the timeout.
+- Local verification currently passes 29 launcher test groups, 10 bridge protocol cases, Portable version/smoke, modern-dialog, and security scans. PR/main CI, self-signed release, public-asset download, and v1.11.0→v1.12.0 update verification remain to be completed.
+- Windows notifications, web/Discord remote control, elevated/pre-sign-in service operation, cloud backup, Fabric/Forge/NeoForge bridges, and lossless transfer of a GUI-owned running server are not claimed.
+
 ## 0.1 Current implementation state (v1.11.0 released)
 
 - Release-state branch: `codex/v1.11.0-release-state` (feature: `codex/operations-foundation`)

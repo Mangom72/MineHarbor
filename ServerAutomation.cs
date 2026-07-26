@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.Drawing;
 using System.Globalization;
 using System.IO;
+using System.Security.Cryptography;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Script.Serialization;
@@ -116,10 +118,35 @@ internal static partial class Launcher
 		ValidateServerAutomationConfiguration(configuration);
 		lock (AutomationFileLock)
 		{
-			string path = GetAutomationConfigurationPath(serverDirectory);
-			Directory.CreateDirectory(Path.GetDirectoryName(path));
-			WriteJsonAtomic(path, configuration);
-			WriteBackupRetentionCount(serverDirectory, configuration.RetentionCount);
+			WithAutomationCrossProcessLock(serverDirectory, delegate
+			{
+				string path = GetAutomationConfigurationPath(serverDirectory);
+				Directory.CreateDirectory(Path.GetDirectoryName(path));
+				WriteJsonAtomic(path, configuration);
+				WriteBackupRetentionCount(serverDirectory, configuration.RetentionCount);
+				return 0;
+			});
+		}
+	}
+
+	private static T WithAutomationCrossProcessLock<T>(string serverDirectory, Func<T> action)
+	{
+		string path = GetAutomationConfigurationPath(serverDirectory);
+		using (SHA256 hash = SHA256.Create())
+		{
+			string suffix = BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(Path.GetFullPath(path).ToUpperInvariant()))).Replace("-", string.Empty).Substring(0, 24);
+			using (Mutex mutex = new Mutex(false, "Local\\MineHarbor.Automation." + suffix))
+			{
+				bool entered = false;
+				try
+				{
+					try { entered = mutex.WaitOne(TimeSpan.FromSeconds(5)); }
+					catch (AbandonedMutexException) { entered = true; }
+					if (!entered) throw new IOException("다른 MineHarbor 프로세스가 예약 설정을 갱신하고 있습니다.");
+					return action();
+				}
+				finally { if (entered) mutex.ReleaseMutex(); }
+			}
 		}
 	}
 
@@ -251,6 +278,8 @@ internal static partial class Launcher
 	{
 		lock (AutomationFileLock)
 		{
+			return WithAutomationCrossProcessLock(serverDirectory, delegate
+			{
 			ServerAutomationConfiguration configuration = ReadServerAutomationConfigurationUnlocked(serverDirectory);
 			List<AutomationJobClaim> claims = new List<AutomationJobClaim>();
 			List<ServerAutomationJob> missedNotifications = new List<ServerAutomationJob>();
@@ -324,6 +353,7 @@ internal static partial class Launcher
 					false);
 			}
 			return claims;
+			});
 		}
 	}
 
@@ -332,9 +362,11 @@ internal static partial class Launcher
 		ServerAutomationJob completed = null;
 		lock (AutomationFileLock)
 		{
+			WithAutomationCrossProcessLock(claim.ServerDirectory, delegate
+			{
 			ServerAutomationConfiguration configuration = ReadServerAutomationConfigurationUnlocked(claim.ServerDirectory);
 			ServerAutomationJob match = configuration.Jobs.Find(delegate(ServerAutomationJob item) { return string.Equals(item.Id, claim.Job.Id, StringComparison.OrdinalIgnoreCase); });
-			if (match == null) return;
+			if (match == null) return 0;
 			match.Running = false;
 			match.LeaseUtc = null;
 			match.LeaseProcessId = 0;
@@ -344,6 +376,8 @@ internal static partial class Launcher
 			string path = GetAutomationConfigurationPath(claim.ServerDirectory);
 			WriteJsonAtomic(path, configuration);
 			completed = CloneAutomationJob(match);
+			return 0;
+			});
 		}
 		if (completed != null) RecordAutomationCompletionHistory(claim.ServerDirectory, completed, result);
 	}

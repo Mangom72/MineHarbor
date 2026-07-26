@@ -96,7 +96,9 @@ internal static partial class Launcher
 		private readonly ToolTip serverListToolTip;
 		private readonly Dictionary<string, ManagedServerSession> sessions = new Dictionary<string, ManagedServerSession>(StringComparer.OrdinalIgnoreCase);
 		private readonly List<ManagedProfileRecord> profiles = new List<ManagedProfileRecord>();
-		private readonly System.Windows.Forms.Timer refreshTimer;
+		private readonly System.Windows.Forms.Timer refreshTimer;
+		private BackgroundAgentResponse backgroundAgentSnapshot;
+		private DateTime nextBackgroundAgentRefreshUtc = DateTime.MinValue;
 		private bool closingAfterStop;
 
 		public MultiServerDashboardForm(string rootDirectory)
@@ -260,7 +262,7 @@ internal static partial class Launcher
 			refreshTimer.Interval = 1000;
 			refreshTimer.Tick += delegate { RenderProfiles(); ProcessAutomationTimerTick(); };
 			refreshTimer.Start();
-			Shown += delegate { ReloadProfiles(); };
+			Shown += delegate { RefreshBackgroundAgentSnapshot(true); ReloadProfiles(); };
 			FormClosing += OnDashboardClosing;
 			FormClosed += delegate { refreshTimer.Stop(); refreshTimer.Dispose(); serverListToolTip.Dispose(); DisposeManagementFeatures(); };
 			ApplySimpleDialogTheme(this);
@@ -337,9 +339,10 @@ internal static partial class Launcher
 				{
 					ManagedProfileRecord profile = profiles[i];
 					ManagedServerSession session;
-					sessions.TryGetValue(profile.Name, out session);
-					string status = GetManagedStatus(session);
-					if (session == null && IsLocalTcpPortListening(profile.Port))
+					sessions.TryGetValue(profile.Name, out session);
+					BackgroundAgentProfileState agentState = GetBackgroundAgentProfileState(profile.Name);
+					string status = agentState != null ? agentState.Status : GetManagedStatus(session);
+					if (session == null && agentState == null && IsLocalTcpPortListening(profile.Port))
 					{
 						status = ManagedText("다른 창에서 실행 중", "Running in another window");
 					}
@@ -617,14 +620,28 @@ internal static partial class Launcher
 			File.WriteAllText(Path.Combine(configuredDirectory, ".launcher-properties-configured"), configuredMarker, new UTF8Encoding(false));
 		}
 
-		private void StartSelected()
-		{
-			ManagedProfileRecord profile = GetSelectedProfile();
-			if (profile != null)
-			{
+		private void StartSelected()
+		{
+			ManagedProfileRecord profile = GetSelectedProfile();
+			if (profile != null)
+			{
+				if (HasConnectedBackgroundAgent())
+				{
+					BackgroundAgentResponse response = SendBackgroundAgentRequest("start", profile.Name, null, 2000);
+					if (response == null || !response.Success)
+					{
+						ShowManagedMessage(
+							"백그라운드 시작 요청에 실패했습니다: " + (response == null ? "에이전트에 연결할 수 없습니다." : response.Message),
+							"Background start request failed: " + (response == null ? "Could not connect to the agent." : response.Message),
+							true);
+					}
+					RefreshBackgroundAgentSnapshot(true);
+					RenderProfiles();
+					return;
+				}
 				StartSessionWithPreBackup(profile, false);
-			}
-		}
+			}
+		}
 
 		private void StartSession(ManagedProfileRecord profile, bool automaticRestart)
 		{
@@ -823,9 +840,25 @@ internal static partial class Launcher
 			if (restart) ScheduleManagedRestart(session);
 		}
 
-		private void StopSelected()
-		{
-			ManagedServerSession session = GetSelectedSession();
+		private void StopSelected()
+		{
+			ManagedProfileRecord selectedProfile = GetSelectedProfile();
+			BackgroundAgentProfileState agentState = selectedProfile == null ? null : GetBackgroundAgentProfileState(selectedProfile.Name);
+			if (selectedProfile != null && agentState != null && agentState.Running)
+			{
+				BackgroundAgentResponse response = SendBackgroundAgentRequest("stop", selectedProfile.Name, null, 2000);
+				if (response == null || !response.Success)
+				{
+					ShowManagedMessage(
+						"백그라운드 안전 종료 요청에 실패했습니다: " + (response == null ? "에이전트에 연결할 수 없습니다." : response.Message),
+						"Background safe-stop request failed: " + (response == null ? "Could not connect to the agent." : response.Message),
+						true);
+				}
+				RefreshBackgroundAgentSnapshot(true);
+				RenderProfiles();
+				return;
+			}
+			ManagedServerSession session = GetSelectedSession();
 			if (session == null || !IsManagedSessionRunning(session))
 			{
 				return;
@@ -875,9 +908,16 @@ internal static partial class Launcher
 			RenderProfiles();
 		}
 
-		private void OpenSelectedConsole()
-		{
-			ManagedServerSession session = GetSelectedSession();
+		private void OpenSelectedConsole()
+		{
+			ManagedProfileRecord profile = GetSelectedProfile();
+			BackgroundAgentProfileState agentState = profile == null ? null : GetBackgroundAgentProfileState(profile.Name);
+			if (profile != null && agentState != null && agentState.Running)
+			{
+				using (BackgroundAgentConsoleForm form = new BackgroundAgentConsoleForm(profile.Name)) form.ShowDialog(this);
+				return;
+			}
+			ManagedServerSession session = GetSelectedSession();
 			if (session == null)
 			{
 				return;
@@ -1113,14 +1153,16 @@ internal static partial class Launcher
 
 		private void UpdateActions()
 		{
-			ManagedProfileRecord profile = GetSelectedProfile();
-			ManagedServerSession session = GetSelectedSession();
-			bool running = IsManagedSessionRunning(session);
+			ManagedProfileRecord profile = GetSelectedProfile();
+			ManagedServerSession session = GetSelectedSession();
+			BackgroundAgentProfileState agentState = profile == null ? null : GetBackgroundAgentProfileState(profile.Name);
+			bool agentRunning = agentState != null && agentState.Running;
+			bool running = IsManagedSessionRunning(session) || agentRunning;
 			bool managedPortConflict = profile != null && !running && IsPortUsedByManagedSession(profile.Port, profile.Name);
 			bool runningElsewhere = profile != null && !running && !managedPortConflict && IsLocalTcpPortListening(profile.Port);
 			startButton.Enabled = profile != null && !running && !runningElsewhere;
 			stopButton.Enabled = running;
-			consoleButton.Enabled = session != null;
+			consoleButton.Enabled = session != null || agentRunning;
 			createButton.Enabled = !mainServerBusy;
 			importButton.Enabled = !mainServerBusy;
 			activateButton.Enabled = profile != null && !mainServerBusy;
@@ -1130,7 +1172,38 @@ internal static partial class Launcher
 			deleteButton.Enabled = profile != null && !mainServerBusy && !running && !runningElsewhere;
 			trashButton.Enabled = !mainServerBusy;
 			UpdateManagementFeatureActions(profile, running || runningElsewhere);
-		}
+		}
+
+		private void RefreshBackgroundAgentSnapshot(bool force)
+		{
+			if (!force && DateTime.UtcNow < nextBackgroundAgentRefreshUtc) return;
+			nextBackgroundAgentRefreshUtc = DateTime.UtcNow.AddSeconds(2);
+			backgroundAgentSnapshot = SendBackgroundAgentRequest("status", null, null, force ? 700 : 120);
+			if (backgroundAgentButton != null)
+			{
+				backgroundAgentButton.Text = backgroundAgentSnapshot != null && backgroundAgentSnapshot.Success
+					? ManagedText("백그라운드 ●", "Background ●")
+					: ManagedText("백그라운드", "Background");
+			}
+			restartBox.Enabled = !HasConnectedBackgroundAgent();
+			restartBox.Text = HasConnectedBackgroundAgent()
+				? ManagedText("에이전트 설정에서 자동 재시작 관리", "Crash restart is managed in agent settings")
+				: ManagedText("충돌 시 자동 재시작", "Restart after crash");
+		}
+
+		private bool HasConnectedBackgroundAgent()
+		{
+			return backgroundAgentSnapshot != null && backgroundAgentSnapshot.Success;
+		}
+
+		private BackgroundAgentProfileState GetBackgroundAgentProfileState(string profileName)
+		{
+			if (!HasConnectedBackgroundAgent() || backgroundAgentSnapshot.Profiles == null) return null;
+			return backgroundAgentSnapshot.Profiles.Find(delegate(BackgroundAgentProfileState item)
+			{
+				return item != null && string.Equals(item.Name, profileName, StringComparison.OrdinalIgnoreCase);
+			});
+		}
 
 		private void ShowManagedMessage(string korean, string english, bool warning)
 		{
@@ -1369,15 +1442,15 @@ internal static partial class Launcher
 					Console.WriteLine("[경고] 부모 프로세스의 시작 시간을 확인할 수 없습니다 (접근 권한 등). 부모 프로세스 PID 검사만 진행합니다: " + ex.Message);
 				}
 				
-				Thread monitorThread = new Thread((ThreadStart)delegate
-				{
-					try
-					{
-						parentProcess.WaitForExit();
-						Environment.Exit(0);
-					}
-					catch { Environment.Exit(0); }
-				});
+				Thread monitorThread = new Thread((ThreadStart)delegate
+				{
+					try
+					{
+						parentProcess.WaitForExit();
+						StopManagedChildAfterParentExit();
+					}
+					catch { StopManagedChildAfterParentExit(); }
+				});
 				monitorThread.IsBackground = true;
 				monitorThread.Start();
 			}
@@ -1392,11 +1465,32 @@ internal static partial class Launcher
 		ManagedChildMode = true;
 		ManagedProfileOverride = profile;
 		StartManagedChildInputRelay();
-		exitCode = Run();
-		return true;
-	}
-
-	private static void StartManagedChildInputRelay()
+		exitCode = Run();
+		return true;
+	}
+
+	private static void StopManagedChildAfterParentExit()
+	{
+		bool running;
+		lock (ServerProcessLock) running = currentServerProcess != null && !currentServerProcess.HasExited;
+		if (running)
+		{
+			try
+			{
+				SendServerCommand("stop");
+				for (int attempt = 0; attempt < 120; attempt++)
+				{
+					lock (ServerProcessLock) running = currentServerProcess != null && !currentServerProcess.HasExited;
+					if (!running) break;
+					Thread.Sleep(250);
+				}
+			}
+			catch { }
+		}
+		Environment.Exit(0);
+	}
+
+	private static void StartManagedChildInputRelay()
 	{
 		Thread relay = new Thread((ThreadStart)delegate
 		{

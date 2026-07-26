@@ -1,5 +1,19 @@
 ﻿# AI Agent Synchronization State
 
+## Codex Background Operations Beta - 2026-07-26
+
+- **Current Version**: 1.12.0 (build 26.2.45.76)
+- **Branch**: `codex/background-agent-v1.12.0`
+- **Status**: 사용자 계정용 백그라운드 에이전트·트레이·로컬 IPC·예약 프로세스 간 중복 방지 구현 및 로컬 검증 완료, PR/릴리스 검증 진행 예정
+- 백그라운드 운영은 기본 비활성화이며 `서버 관리 → 백그라운드`의 명시적 동의 후에만 `MineHarbor.exe --background-agent`를 실행합니다. Windows 로그인 자동 시작과 충돌 재시작은 별도 선택 사항입니다.
+- 트레이에서 서버별 시작·안전 종료·재시작·즉시 백업·콘솔, 전체 안전 종료, 예약 일시 중지와 완전 종료를 지원합니다. 에이전트 콘솔은 기존 자동완성과 위험 명령 확인을 재사용합니다.
+- IPC는 현재 Windows SID 파생 이름과 해당 SID 전용 ACL을 가진 로컬 이름 있는 파이프를 사용합니다. 요청 16KiB, 응답 256KiB, 수신 3초 상한을 적용하고 외부 네트워크나 임의 셸 실행을 제공하지 않습니다.
+- 에이전트가 직접 시작한 관리 자식만 소유하며 다른 프로세스가 같은 포트를 사용하면 명령·종료·실행 중 백업을 거부합니다. 관리 자식은 부모가 사라졌을 때 서버에 `stop`을 먼저 보냅니다.
+- 자동화 파일은 서버 경로별 Windows 뮤텍스와 PID·시작 시각 임대를 함께 사용해 GUI/에이전트 중복 청구를 차단합니다. 절전 복귀 시 기존 놓친 작업 정책을 다시 평가합니다.
+- 에이전트와 런처 업데이트는 소유 서버가 제한 시간 안에 안전 종료된 경우에만 계속하며, 실패하면 강제 종료 대신 취소합니다.
+- `Prepare-BuildResources.ps1`, Portable `build.ps1`과 전체 `test.ps1`이 통과했습니다. 현재 결과는 `VERSION_CONSISTENCY_OK`, `PASSED=29`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`입니다.
+- Windows 알림, 웹/Discord 원격 관리, 관리자 권한 서비스, 로그인 전 실행, GUI가 직접 시작한 실행 중 서버의 무손실 소유권 이전은 구현된 것으로 표시하지 않습니다.
+
 ## Codex Operations Foundation - 2026-07-26
 
 - **Current Version**: 1.11.0 (build 26.2.45.75)
