@@ -2242,6 +2242,18 @@ internal static class LauncherTests
 		Equal(true, GetField(autocomplete, "IsAutocomplete"), "Discord 서버 자동완성 응답");
 		Equal(1, ((IList)GetField(autocomplete, "Choices")).Count, "허용된 Discord 서버만 자동완성");
 
+		// 도움말은 프로필 이름을 추측하지 않도록 실제 사용 가능한 서버를 함께 보여 줍니다.
+		object helpReply = InvokeInstance(processor, "Process", new object[]
+		{
+			NewDiscordInteraction("72500000000000000", 2, guildId, channelId, userId, null, "help", null, null, "ko"),
+			now
+		});
+		string helpContent = Convert.ToString(GetField(helpReply, "Content"));
+		if (helpContent.IndexOf(profile, StringComparison.Ordinal) < 0)
+			throw new InvalidOperationException("Discord 도움말에 사용 가능한 서버가 표시되지 않았습니다.");
+		if (helpContent.IndexOf("임의 콘솔", StringComparison.Ordinal) < 0)
+			throw new InvalidOperationException("Discord 도움말의 임의 콘솔 명령 차단 안내가 사라졌습니다.");
+
 		// 서버 지정 없는 전체 상태 조회는 프로필마다 조회를 한 번씩 하므로 개수를 제한하고,
 		// 응답 길이 상한에 걸려 남은 서버가 조용히 사라지지 않도록 생략 수를 알려야 합니다.
 		object manyProfileSettings = Activator.CreateInstance(settingsType, true);
@@ -2574,6 +2586,23 @@ internal static class LauncherTests
 		string input = "owner-name=SecretOwner\nserver-ip=192.168.0.10\nrcon.password=secret\npath=" + server;
 		string redacted = Convert.ToString(Invoke("RedactDiagnosticText", new object[] { input, server }));
 		if (redacted.Contains("SecretOwner") || redacted.Contains("192.168.0.10") || redacted.Contains("secret") || redacted.Contains(server)) throw new InvalidOperationException("진단 정보 민감값이 남아 있습니다.");
+
+		// 접속 로그의 IPv6 주소는 가리되 같은 줄의 로그 시각은 남아야 합니다.
+		string ipv6Input = "[12:34:56] Steve[/[2001:db8:85a3::8a2e:370:7334]:52341] lost connection";
+		string ipv6Redacted = Convert.ToString(Invoke("RedactDiagnosticText", new object[] { ipv6Input, server }));
+		if (ipv6Redacted.IndexOf("2001:db8", StringComparison.OrdinalIgnoreCase) >= 0)
+			throw new InvalidOperationException("진단 정보 IPv6 주소가 남아 있습니다.");
+		if (ipv6Redacted.IndexOf("<ip-redacted>", StringComparison.Ordinal) < 0)
+			throw new InvalidOperationException("진단 정보 IPv6 주소가 대체 문구로 바뀌지 않았습니다.");
+		if (ipv6Redacted.IndexOf("12:34:56", StringComparison.Ordinal) < 0)
+			throw new InvalidOperationException("진단 정보 로그 시각이 IPv6 가림에 함께 지워졌습니다.");
+
+		// Windows 경로는 대소문자를 가리지 않으므로 다른 표기로 남은 서버 경로도 가려야 합니다.
+		const string caseDirectory = @"C:\MineHarborDiagnosticTest\Servers\Alpha";
+		string caseInput = "loading world from " + caseDirectory.ToLowerInvariant() + @"\world";
+		string caseRedacted = Convert.ToString(Invoke("RedactDiagnosticText", new object[] { caseInput, caseDirectory }));
+		if (caseRedacted.IndexOf("MineHarborDiagnosticTest", StringComparison.OrdinalIgnoreCase) >= 0)
+			throw new InvalidOperationException("대소문자가 다른 서버 경로가 진단 정보에 남아 있습니다.");
 		Pass();
 	}
 
