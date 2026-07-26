@@ -1,8 +1,9 @@
 ﻿# CODEX_HANDOFF.md
 
-## 0.000000 Current implementation state (v1.15.2 candidate)
+## 0.000000 Current implementation state (v1.15.2 released)
 
-- Working branch: `codex/discord-guide-layout-v1.15.2`
+- Release-state branch: `codex/v1.15.2-release-state` (feature: `codex/discord-guide-layout-v1.15.2`)
+- Pull request [#42](https://github.com/Mangom72/MineHarbor/pull/42) is merged. PR CI `30197975862`, main CI `30198027033`, and release run `30198124837` passed.
 - Version source of truth: `version.json` = 1.15.2 / build 26.2.45.81
 - The reported dark-theme guide clipped the second wrapped lines because four fixed 25-percent rows and a fixed 76px security row did not account for DPI/font wrapping.
 - Step rows, cards, descriptions, and the security note now use content-driven height. Ellipsis is disabled so required setup and security copy cannot be silently hidden.
@@ -11,6 +12,7 @@
 - The existing Discord test group now asserts auto-sized rows, wrapped labels, no ellipsis, and the scoped step scroll container.
 - Resource preparation, the framework build, and the ordinary Portable executable passed version consistency, all 32 launcher groups, Portable version/smoke, 10 bridge cases, modern-dialog scan, and security regression scan.
 - The local self-signed release candidate passed `RELEASE_ARTIFACTS_PASSED=7`, removed its temporary certificate/PFX, and passed the same full suite again against the signed Portable executable.
+- The [v1.15.2 release](https://github.com/Mangom72/MineHarbor/releases/tag/v1.15.2) contains seven verified public assets. The workflow removed its temporary RSA-3072/SHA-256 certificate/PFX, and an independent public download confirmed `RELEASE_ARTIFACTS_PASSED=7`, `PUBLISHED_ASSETS_MODE_OK`, and `PUBLIC_AUTO_UPDATE_OK=1.15.1->1.15.2` before rerunning all 32 launcher groups and 10 bridge cases against the public executable.
 
 ## 0.00000 Current implementation state (v1.15.1 released)
 
