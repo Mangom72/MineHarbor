@@ -299,6 +299,12 @@ internal static partial class Launcher
 			string fullPath = Path.GetFullPath(serverDirectory);
 			text = ReplaceOperationText(text, fullPath, "[server]");
 		}
+		// IPv6로 접속한 플레이어 주소도 IPv4와 동일하게 가립니다. 로그 시각(12:34:56)이 지워지지 않도록
+		// 압축 표기(::)를 쓰거나 8개 그룹을 모두 갖춘 주소만 대상으로 합니다.
+		text = Regex.Replace(
+			text,
+			@"(?<![0-9A-Za-z_:.])(?:(?:[0-9A-Fa-f]{1,4}:){7}[0-9A-Fa-f]{1,4}|(?:[0-9A-Fa-f]{1,4}:){1,7}:(?:[0-9A-Fa-f]{1,4}(?::[0-9A-Fa-f]{1,4}){0,6})?)(?:%[0-9A-Za-z._-]{1,32})?(?![0-9A-Za-z_:])",
+			"[IP]");
 		text = Regex.Replace(text, @"(?<![\d.])(?:\d{1,3}\.){3}\d{1,3}(?![\d.])", delegate(Match match)
 		{
 			string[] octets = match.Value.Split('.');

@@ -2610,8 +2610,10 @@ internal static partial class Launcher
 			string[] allowedHosts = new string[1] { "maven.minecraftforge.net" };
 			DownloadFileWithUserAgent(installerUrl, temporaryPath, GenericServerUserAgent, allowedHosts);
 			string checksumText = DownloadTextWithUserAgent(installerUrl + ".sha256", GenericServerUserAgent).Trim();
-			string expectedSha256 = checksumText.Split(new char[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)[0];
-			if (expectedSha256.Length != 64 || !HashMatches(temporaryPath, expectedSha256))
+			// 체크섬 응답이 비어 있거나 형식이 다르면 인덱스 예외 대신 검증 실패로 처리합니다.
+			string[] checksumParts = checksumText.Split(new char[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+			string expectedSha256 = checksumParts.Length > 0 ? checksumParts[0] : string.Empty;
+			if (!IsValidSha256(expectedSha256) || !HashMatches(temporaryPath, expectedSha256))
 			{
 				throw new InvalidDataException("Forge Installer의 SHA-256 검증에 실패했습니다.");
 			}
@@ -2663,8 +2665,10 @@ internal static partial class Launcher
 			Console.WriteLine("NeoForge Installer " + neoForgeVersion + "을 내려받는 중...");
 			DownloadFileWithUserAgent(installerUrl, temporaryPath, GetLauncherIntegrationUserAgent());
 			string checksumText = DownloadTextWithUserAgent(installerUrl + ".sha256", GetLauncherIntegrationUserAgent()).Trim();
-			string expectedSha256 = checksumText.Split(new char[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries)[0];
-			if (expectedSha256.Length != 64 || !HashMatches(temporaryPath, expectedSha256))
+			// 체크섬 응답이 비어 있거나 형식이 다르면 인덱스 예외 대신 검증 실패로 처리합니다.
+			string[] checksumParts = checksumText.Split(new char[] { ' ', '\t', '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries);
+			string expectedSha256 = checksumParts.Length > 0 ? checksumParts[0] : string.Empty;
+			if (!IsValidSha256(expectedSha256) || !HashMatches(temporaryPath, expectedSha256))
 			{
 				throw new InvalidDataException("NeoForge Installer의 SHA-256 검증에 실패했습니다.");
 			}

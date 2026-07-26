@@ -22,6 +22,7 @@ internal static partial class Launcher
 	private const int DiscordRemoteMaximumGatewayBytes = 1048576;
 	private const int DiscordRemoteMaximumHttpBytes = 1048576;
 	private const int DiscordRemoteRequestsPerMinute = 10;
+	private const int DiscordRemoteMaximumStatusProfiles = 15;
 	private const int DiscordRemoteConfirmationSeconds = 60;
 	private static readonly object DiscordRemoteSettingsProcessLock = new object();
 	private static readonly byte[] DiscordRemoteCredentialEntropy = Encoding.UTF8.GetBytes("MineHarbor.DiscordRemoteCredential.v1");
@@ -540,17 +541,25 @@ internal static partial class Launcher
 
 		private DiscordInteractionReply ProcessAllStatus(string userId, bool korean)
 		{
+			// 전체 상태는 프로필마다 서버 조회를 한 번씩 하므로 한 응답에서 다루는 수를 제한하고,
+			// 생략된 서버는 잘라내는 대신 몇 개가 남았는지 알려 줍니다.
 			List<string> lines = new List<string>();
-			foreach (string profile in settings.AllowedProfiles)
+			int reported = Math.Min(settings.AllowedProfiles.Count, DiscordRemoteMaximumStatusProfiles);
+			for (int index = 0; index < reported; index++)
 			{
-				DiscordRemoteActionResult result = actionHandler(new DiscordRemoteAction
-				{
-					Command = "status",
-					Profile = profile,
-					ActorId = userId,
-					Korean = korean
-				});
-				lines.Add(result == null ? profile + ": " + Text(korean, "상태를 확인할 수 없음", "Status unavailable") : result.Message);
+				string profile = settings.AllowedProfiles[index];
+				DiscordRemoteActionResult result = RunAction("status", profile, userId, korean);
+				lines.Add(result == null || string.IsNullOrWhiteSpace(result.Message)
+					? "`" + profile + "` · " + Text(korean, "상태를 확인할 수 없음", "Status unavailable")
+					: result.Message);
+			}
+			int omitted = settings.AllowedProfiles.Count - reported;
+			if (omitted > 0)
+			{
+				string count = omitted.ToString(CultureInfo.InvariantCulture);
+				lines.Add(Text(korean,
+					"그 외 " + count + "개 서버는 생략했습니다. `/mineharbor status server:<서버 이름>`으로 확인해 주세요.",
+					count + " more server(s) omitted. Use `/mineharbor status server:<name>` to check them."));
 			}
 			return MessageReply(string.Join("\n", lines.ToArray()));
 		}
@@ -606,36 +615,37 @@ internal static partial class Launcher
 			return reply;
 		}
 
-		private DiscordInteractionReply Execute(string command, string profile, string userId, bool korean)
+		private DiscordRemoteActionResult RunAction(string command, string profile, string userId, bool korean)
 		{
-			DiscordRemoteActionResult result;
 			try
 			{
 				if (DiscordRemoteActionOverride != null)
 				{
 					string overridden = DiscordRemoteActionOverride(command, profile, userId, korean);
-					result = new DiscordRemoteActionResult { Success = overridden != null, Message = overridden ?? Text(korean, "테스트 작업 실패", "Test action failed") };
+					return new DiscordRemoteActionResult { Success = overridden != null, Message = overridden ?? Text(korean, "테스트 작업 실패", "Test action failed") };
 				}
-				else
+				if (actionHandler == null) throw new InvalidOperationException("Discord 원격 작업 처리기가 없습니다.");
+				return actionHandler(new DiscordRemoteAction
 				{
-					if (actionHandler == null) throw new InvalidOperationException("Discord 원격 작업 처리기가 없습니다.");
-					result = actionHandler(new DiscordRemoteAction
-					{
-						Command = command,
-						Profile = profile,
-						ActorId = userId,
-						Korean = korean
-					});
-				}
+					Command = command,
+					Profile = profile,
+					ActorId = userId,
+					Korean = korean
+				});
 			}
 			catch (Exception exception)
 			{
-				result = new DiscordRemoteActionResult
+				return new DiscordRemoteActionResult
 				{
 					Success = false,
 					Message = Text(korean, "요청 처리 실패: ", "Request failed: ") + exception.GetType().Name
 				};
 			}
+		}
+
+		private DiscordInteractionReply Execute(string command, string profile, string userId, bool korean)
+		{
+			DiscordRemoteActionResult result = RunAction(command, profile, userId, korean);
 			if (result == null) result = new DiscordRemoteActionResult { Success = false, Message = Text(korean, "응답 없음", "No response") };
 			return MessageReply((result.Success ? "✅ " : "⚠️ ") + result.Message);
 		}

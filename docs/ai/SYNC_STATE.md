@@ -1,5 +1,21 @@
 ﻿# AI Agent Synchronization State
 
+## Claude UI/UX/Security Review - 2026-07-26
+
+- **Current Version**: 1.15.4 (build 26.2.45.83)
+- **Branch**: `claude/remote-control-u4tvpt`
+- **Status**: 원격 제어 경로를 중심으로 UI·UX·취약점 감사를 마치고 6건을 수정, 회귀 테스트를 추가해 v1.15.4 릴리스 진행 중
+- 로그 가림 함수가 IPv4만 `[IP]`로 바꾸고 IPv6 주소는 그대로 통과시키던 문제를 확인했습니다. `SanitizeOperationMessage`는 운영 기록·Windows 알림·Discord `/mineharbor errors` 응답이 모두 거쳐 가는 지점이라, IPv6로 접속한 플레이어 주소가 Discord 채널까지 그대로 나갈 수 있었습니다. 압축 표기(`::`)나 8개 그룹을 모두 갖춘 주소만 가리도록 해 로그 시각(`12:34:56`)과 `Class::method` 표기는 보존합니다.
+- 서버를 지정하지 않은 `/mineharbor status`가 허용 프로필 전체를 이어 붙인 뒤 1800자에서 잘려 뒤쪽 서버가 조용히 사라지고, 프로필마다 `FindProfile` → `ReadManagedProfiles` 전체 디렉터리 조회를 반복하던 문제를 확인했습니다. 한 응답에서 다루는 서버를 15개로 제한하고 생략 개수와 개별 조회 방법을 한국어·영어로 안내합니다.
+- `ProcessAllStatus`가 `DiscordRemoteActionOverride`와 `actionHandler == null`을 무시하고 처리기를 직접 호출하던 경로를 `RunAction` 공용 헬퍼로 정리했습니다. `Execute`의 동작은 그대로입니다.
+- Discord 설정 창에서 `저장된 토큰 제거`가 켜져 있으면 `Discord 원격 제어 사용`을 눌러도 `UpdateEnabledState`가 즉시 되돌려 아무 설명 없이 꺼지던 문제를 수정했습니다. 이제 마지막에 선택한 쪽이 남고 반대쪽이 자동 해제되며, 토큰 제거의 결과를 검증 문구로 먼저 알려 줍니다.
+- 여러 줄 입력의 예시 문구가 `ContentAlignment.MiddleLeft`로 상자 한가운데 떠서 실제 입력 시작 위치와 어긋나던 문제를 수정했습니다(`CreateModernTextBoxSurface`). 한 줄 입력의 세로 가운데 정렬은 유지합니다.
+- Discord 설정 창을 닫을 때 입력 컨트롤에 남던 평문 봇 토큰을 지웁니다. 저장 경로의 현재 사용자 범위 DPAPI 보호는 그대로입니다.
+- Forge·NeoForge Installer의 `.sha256` 응답이 비어 있으면 `Split(...)[0]`에서 `IndexOutOfRangeException`으로 중단되던 문제를 검증 실패 처리로 바꾸고 `IsValidSha256` 형식 검사를 추가했습니다.
+- 회귀 테스트는 IPv6 가림과 로그 시각 보존, 전체 상태 조회 개수 제한과 생략 안내, 체크박스 상호 배타 동작과 안내 문구, 예시 문구 정렬, 창을 닫을 때의 토큰 제거를 확인합니다.
+- 실제 Discord 자격 증명, 사용자 서버 데이터, 공유기 설정과 UPnP 매핑은 사용하거나 변경하지 않았습니다.
+- 감사 환경에는 .NET SDK와 PowerShell이 없어 로컬 빌드를 하지 못했으므로, `build-release.yml`을 발행 없이(`publish_release: false`) 브랜치에서 실행해 검증했습니다([run #75](https://github.com/Mangom72/MineHarbor/actions/runs/30214672591)). `dotnet build -p:TreatWarningsAsErrors=true`, `build.ps1`, `test.ps1`, `Test-VersionConsistency.ps1`이 모두 통과했고 `VERSION_CONSISTENCY_OK`와 `RELEASE_ARTIFACTS_PASSED=7`을 확인했습니다.
+
 ## Codex Discord Allowlist UX Fix - 2026-07-26
 
 - **Current Version**: 1.15.3 (build 26.2.45.82)
