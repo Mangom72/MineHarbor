@@ -43,6 +43,7 @@
     <Compile Include="ContentManagementUi.cs" />
     <Compile Include="ServerAutomation.cs" />
     <Compile Include="BackgroundAgent.cs" />
+    <Compile Include="ManagedServerHandoff.cs" />
     <Compile Include="ServerManagementFeatures.cs" />
     <Compile Include="OperationsHistory.cs" />
     <Compile Include="WindowsNotifications.cs" />

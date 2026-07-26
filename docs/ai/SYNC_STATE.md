@@ -1,5 +1,19 @@
 ﻿# AI Agent Synchronization State
 
+## Codex Managed Server Live Handoff - 2026-07-26
+
+- **Current Version**: 1.14.0 (build 26.2.45.78)
+- **Branch**: `codex/server-handoff-v1.14.0`
+- **Status**: 구현·전체 로컬 검증 완료, PR·릴리스 게시 전
+- 백그라운드 운영이 켜져 있을 때 멀티 서버 관리가 이 버전의 `--managed-profile` 제어 채널로 시작한 실행 중 서버를 중단하지 않고 사용자 계정용 에이전트로 인계할 수 있습니다. 창 닫기는 인계, 모두 안전 종료, 취소를 구분합니다.
+- 관리 자식마다 현재 사용자 SID 전용 난수 이름 파이프와 실행별 256비트 토큰을 사용합니다. 에이전트와 자식은 등록 프로필, 자식·기존 소유자·새 소유자의 PID와 시작 시각을 모두 확인하고 원자적으로 소유권을 전환합니다.
+- 자식이 제한된 최근 로그와 명령 경로를 보유하고 안전한 출력 래퍼가 이전 부모의 닫힌 표준 출력 쓰기를 격리하므로 인계 뒤 에이전트 콘솔·안전 종료·재시작·실행 중 백업·예약 명령이 계속 동작합니다.
+- 응답 유실은 에이전트가 자식의 실제 새 소유자 상태를 다시 확인한 뒤 세션을 등록하며, GUI 요청도 멱등 재시도합니다. 부분 실패 시 창과 실패 서버의 기존 소유권은 유지하고 성공한 서버만 에이전트가 관리합니다.
+- 실제 Minecraft 서버 대신 현재 프로세스와 임시 현재 사용자 파이프를 사용하는 회귀 검사를 추가했습니다. 파이프·토큰 검증, PID 재사용 차단, 잘못된 소유자 거부, 원자적 전환, 전환 응답 유실 복구, 중복 요청, 명령 단일 전달과 로그 유지를 포함해 런처 테스트는 31개 그룹입니다.
+- `Prepare-BuildResources.ps1`, `build.ps1 -SkipDependencyDownload`, `test.ps1 -LauncherPath artifacts\MineHarbor.exe`가 통과했습니다. 현재 결과는 `VERSION_CONSISTENCY_OK`, `PASSED=31`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`, `BRIDGE_PROTOCOL_PASSED=10`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`입니다.
+- `Publish-LocalRelease.ps1 -NoPublish`도 임시 RSA-3072/SHA-256 자체서명과 자산 7종 검증(`RELEASE_ARTIFACTS_PASSED=7`)을 통과하고 인증서·PFX를 정리했습니다. 서명된 Portable EXE로 전체 검사를 다시 통과했습니다.
+- 메인 런처 내부에서 직접 호스팅하는 Java 서버, 사용자가 직접 시작한 서버와 외부 프로그램 서버는 무중단 인계 대상으로 표시하지 않습니다. 관리자 권한 서비스, 로그인 전 운영, 웹/Discord 원격 관리도 지원되지 않습니다.
+
 ## Codex Opt-in Windows Notifications - 2026-07-26
 
 - **Current Version**: 1.13.0 (build 26.2.45.77)

@@ -1,5 +1,6 @@
 ﻿﻿using System;
 using System.Collections;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.Reflection;
@@ -13,9 +14,16 @@ using System.Threading.Tasks;
 using System.Collections.Generic;
 using System.IO.Compression;
 using System.Text.RegularExpressions;
+using System.Web.Script.Serialization;
 
 internal static class LauncherTests
 {
+	private sealed class ThrowingTextWriter : TextWriter
+	{
+		public override Encoding Encoding { get { return Encoding.UTF8; } }
+		public override void WriteLine(string value) { throw new IOException("닫힌 부모 출력 파이프"); }
+	}
+
 	private static int passed;
 	private static Type launcher;
 
@@ -55,6 +63,7 @@ internal static class LauncherTests
 			TestContentManagement(temporary);
 			TestServerAutomationAndDashboard(temporary);
 			TestBackgroundAgentSettings(temporary);
+			TestManagedServerHandoff(temporary);
 			TestWindowsNotifications(temporary);
 			TestOperationsHistory(temporary);
 			TestDiagnosticRedaction(temporary);
@@ -90,6 +99,9 @@ internal static class LauncherTests
 			SetStaticField("BackgroundAgentPipeNameOverride", null);
 			SetStaticField("BackgroundAgentStartupRegistrationOverride", null);
 			SetStaticField("BackgroundAgentDisableTrayForTests", false);
+			SetStaticField("ManagedChildControlTransportOverride", null);
+			SetStaticField("ManagedChildOwnerProcessId", -1);
+			SetStaticField("ManagedChildOwnerProcessStartTicks", -1L);
 			SetStaticField("WindowsNotificationSettingsPathOverride", null);
 			SetStaticField("WindowsNotificationDisplayOverride", null);
 			if (Directory.Exists(temporary)) Directory.Delete(temporary, true);
@@ -1731,6 +1743,219 @@ internal static class LauncherTests
 		Pass();
 	}
 
+	private static void TestManagedServerHandoff(string root)
+	{
+		string dataRoot = Path.Combine(root, "handoff-data");
+		string profileDirectory = Path.Combine(dataRoot, "servers", "인계 테스트 서버");
+		Directory.CreateDirectory(profileDirectory);
+		File.WriteAllText(
+			Path.Combine(profileDirectory, ".launcher-properties-configured"),
+			"launcher-settings-version=7\r\nprofile-name=인계 테스트 서버\r\nserver-type=paper\r\nminecraft-version=1.21.11\r\nmemory-gb=2\r\n",
+			Encoding.UTF8);
+		File.WriteAllText(Path.Combine(profileDirectory, "server.properties"), "server-port=25591\r\n", Encoding.UTF8);
+		File.WriteAllText(Path.Combine(profileDirectory, "eula.txt"), "eula=true\r\n", Encoding.UTF8);
+		SetStaticField("StorageSettingsPathOverride", Path.Combine(root, "handoff-storage.properties"));
+		SetStaticField("LauncherUserDataDirectoryOverride", Path.Combine(root, "handoff-user"));
+		Invoke("SaveDataStorageSettings", new object[] { "custom", dataRoot });
+		SetStaticField("BackgroundAgentSettingsPathOverride", Path.Combine(root, "handoff-background.json"));
+		SetStaticField("BackgroundAgentPipeNameOverride", "MineHarbor.Handoff.Tests." + Guid.NewGuid().ToString("N"));
+		SetStaticField("WindowsNotificationSettingsPathOverride", Path.Combine(root, "handoff-notifications.json"));
+		SetStaticField("BackgroundAgentDisableTrayForTests", true);
+
+		string pipeName = Convert.ToString(Invoke("CreateManagedChildControlPipeName", new object[0]));
+		string token = Convert.ToString(Invoke("CreateManagedChildControlToken", new object[0]));
+		Equal(true, pipeName.StartsWith("MineHarbor.ManagedChild.", StringComparison.Ordinal), "관리 자식 제어 파이프 난수 이름");
+		Equal(64, token.Length, "관리 자식 제어 토큰 길이");
+		Invoke("ValidateManagedChildControlValues", new object[] { pipeName, token });
+		ExpectFailure(delegate { Invoke("ValidateManagedChildControlValues", new object[] { "MineHarbor.ManagedChild.bad", token }); }, "잘못된 관리 자식 파이프 거부");
+		ExpectFailure(delegate { Invoke("ValidateManagedChildControlValues", new object[] { pipeName, new string('0', 63) }); }, "잘못된 관리 자식 토큰 거부");
+
+		int currentProcessId;
+		long currentProcessStartTicks;
+		using (Process current = Process.GetCurrentProcess())
+		{
+			currentProcessId = current.Id;
+			currentProcessStartTicks = current.StartTime.Ticks;
+		}
+		Equal(true, Invoke("IsExactProcessIdentityAlive", new object[] { currentProcessId, currentProcessStartTicks }), "PID와 시작 시각 소유자 확인");
+		Equal(false, Invoke("IsExactProcessIdentityAlive", new object[] { currentProcessId, currentProcessStartTicks + 1 }), "PID 재사용 시작 시각 불일치 차단");
+		SetStaticField("ManagedChildOwnerProcessId", 123);
+		SetStaticField("ManagedChildOwnerProcessStartTicks", 456L);
+		object[] wrongOwner = { 124, 456L, currentProcessId, currentProcessStartTicks, null };
+		Equal(false, Invoke("TryTransferManagedChildOwner", wrongOwner), "현재 소유자가 다른 인계 거부");
+		object[] validOwner = { 123, 456L, currentProcessId, currentProcessStartTicks, null };
+		Equal(true, Invoke("TryTransferManagedChildOwner", validOwner), "검증된 새 소유자로 원자적 전환");
+		Equal(currentProcessId, GetStaticField("ManagedChildOwnerProcessId"), "전환된 소유자 PID");
+		Equal(currentProcessStartTicks, GetStaticField("ManagedChildOwnerProcessStartTicks"), "전환된 소유자 시작 시각");
+		((IList)GetStaticField("ManagedChildOutputLines")).Clear();
+		Invoke("CaptureManagedChildOutput", new object[] { "인계 제어 로그" });
+		Type safeWriterType = launcher.GetNestedType("ManagedChildSafeTeeWriter", BindingFlags.NonPublic);
+		using (TextWriter safeWriter = (TextWriter)Activator.CreateInstance(
+			safeWriterType,
+			BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+			null,
+			new object[] { new ThrowingTextWriter() },
+			null))
+		{
+			safeWriter.WriteLine("부모 출력 종료 후 로그");
+		}
+		Equal(2, ((IList)GetStaticField("ManagedChildOutputLines")).Count, "부모 출력 파이프 종료 후 자식 로그 유지");
+		Type controlServerType = launcher.GetNestedType("ManagedChildControlServer", BindingFlags.NonPublic);
+		object controlServer = Activator.CreateInstance(
+			controlServerType,
+			BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+			null,
+			new object[] { "인계 테스트 서버", pipeName, token },
+			null);
+		InvokeInstance(controlServer, "Start", new object[0]);
+		try
+		{
+			object statusRequest = Invoke("NewManagedChildControlRequest", new object[] { token, "status", null });
+			object statusResponse = null;
+			for (int attempt = 0; attempt < 20 && statusResponse == null; attempt++)
+			{
+				Thread.Sleep(25);
+				statusResponse = Invoke("SendManagedChildControlRequest", new object[] { pipeName, statusRequest, 500 });
+			}
+			if (statusResponse == null) throw new InvalidOperationException("실제 관리 자식 제어 파이프에 연결하지 못했습니다.");
+			Equal(true, GetField(statusResponse, "Success"), "현재 사용자 관리 자식 제어 파이프");
+			Equal(currentProcessId, GetField(statusResponse, "OwnerProcessId"), "제어 파이프 소유자 상태");
+			object logsRequest = Invoke("NewManagedChildControlRequest", new object[] { token, "logs", null });
+			object logsResponse = Invoke("SendManagedChildControlRequest", new object[] { pipeName, logsRequest, 1000 });
+			IList controlLines = (IList)GetField(logsResponse, "Lines");
+			Equal(2, controlLines.Count, "자식 보유 최근 로그 조회");
+			object wrongTokenRequest = Invoke("NewManagedChildControlRequest", new object[] { new string('0', 64), "status", null });
+			object wrongTokenResponse = Invoke("SendManagedChildControlRequest", new object[] { pipeName, wrongTokenRequest, 1000 });
+			Equal(false, GetField(wrongTokenResponse, "Success"), "잘못된 제어 토큰 인증 거부");
+		}
+		finally
+		{
+			((IDisposable)controlServer).Dispose();
+		}
+
+		Type settingsType = launcher.GetNestedType("BackgroundAgentSettings", BindingFlags.NonPublic);
+		object settings = Activator.CreateInstance(settingsType, true);
+		SetPublic(settings, "Enabled", true);
+		Invoke("WriteBackgroundAgentSettings", new object[] { settings });
+
+		int commands = 0;
+		bool loseFirstTransferResponse = true;
+		JavaScriptSerializer serializer = new JavaScriptSerializer();
+		Func<string, string, int, string> transport = delegate(string requestedPipe, string requestJson, int timeout)
+		{
+			Equal(pipeName, requestedPipe, "인계 제어 파이프 대상");
+			Dictionary<string, object> request = serializer.Deserialize<Dictionary<string, object>>(requestJson);
+			Equal(token, Convert.ToString(request["Token"]), "인계 제어 토큰 전달");
+			string command = Convert.ToString(request["Command"]);
+			int ownerId = currentProcessId;
+			long ownerStart = currentProcessStartTicks;
+			if (string.Equals(command, "transfer-owner", StringComparison.Ordinal))
+			{
+				ownerId = Convert.ToInt32(request["NewOwnerProcessId"]);
+				ownerStart = Convert.ToInt64(request["NewOwnerProcessStartTicks"]);
+			}
+			if (string.Equals(command, "command", StringComparison.Ordinal)) commands++;
+			Dictionary<string, object> response = new Dictionary<string, object>
+			{
+				{ "SchemaVersion", 1 },
+				{ "Success", true },
+				{ "Message", "ok" },
+				{ "Profile", "인계 테스트 서버" },
+				{ "ChildProcessId", currentProcessId },
+				{ "ChildProcessStartTicks", currentProcessStartTicks },
+				{ "OwnerProcessId", ownerId },
+				{ "OwnerProcessStartTicks", ownerStart },
+				{ "ServerRunning", true },
+				{ "Lines", string.Equals(command, "logs", StringComparison.Ordinal) ? new string[] { "인계 전 로그", "인계 후 로그" } : new string[0] }
+			};
+			if (string.Equals(command, "transfer-owner", StringComparison.Ordinal) && loseFirstTransferResponse)
+			{
+				loseFirstTransferResponse = false;
+				return null;
+			}
+			return serializer.Serialize(response);
+		};
+		SetStaticField("ManagedChildControlTransportOverride", transport);
+
+		Type descriptorType = launcher.GetNestedType("ManagedChildHandoffDescriptor", BindingFlags.NonPublic);
+		object descriptor = Activator.CreateInstance(descriptorType, true);
+		SetPublic(descriptor, "Profile", "인계 테스트 서버");
+		SetPublic(descriptor, "PipeName", pipeName);
+		SetPublic(descriptor, "Token", token);
+		SetPublic(descriptor, "ChildProcessId", currentProcessId);
+		SetPublic(descriptor, "ChildProcessStartTicks", currentProcessStartTicks);
+		SetPublic(descriptor, "OwnerProcessId", currentProcessId);
+		SetPublic(descriptor, "OwnerProcessStartTicks", currentProcessStartTicks);
+		string descriptorJson = serializer.Serialize(descriptor);
+		Equal("인계 테스트 서버", GetField(Invoke("ParseManagedChildHandoffDescriptor", new object[] { descriptorJson, "인계 테스트 서버" }), "Profile"), "인계 설명 검증");
+		string invalidDescriptor = descriptorJson.Replace(token, new string('z', 64));
+		ExpectFailure(delegate { Invoke("ParseManagedChildHandoffDescriptor", new object[] { invalidDescriptor, "인계 테스트 서버" }); }, "잘못된 인계 토큰 거부");
+		object previousOwnerDescriptor = Activator.CreateInstance(descriptorType, true);
+		SetPublic(previousOwnerDescriptor, "Profile", "인계 테스트 서버");
+		SetPublic(previousOwnerDescriptor, "PipeName", pipeName);
+		SetPublic(previousOwnerDescriptor, "Token", token);
+		SetPublic(previousOwnerDescriptor, "ChildProcessId", currentProcessId);
+		SetPublic(previousOwnerDescriptor, "ChildProcessStartTicks", currentProcessStartTicks);
+		SetPublic(previousOwnerDescriptor, "OwnerProcessId", 123);
+		SetPublic(previousOwnerDescriptor, "OwnerProcessStartTicks", 456L);
+		Equal(true, Invoke("IsManagedChildHandoffComplete", new object[] { previousOwnerDescriptor }), "인계 응답 유실 후 새 소유자 상태 복구");
+
+		Type contextType = launcher.GetNestedType("BackgroundAgentContext", BindingFlags.NonPublic);
+		object context = Activator.CreateInstance(contextType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { settings }, null);
+		try
+		{
+			object ping = null;
+			for (int attempt = 0; attempt < 20 && ping == null; attempt++)
+			{
+				Thread.Sleep(50);
+				ping = Invoke("SendBackgroundAgentRequest", new object[] { "ping", null, null, 500 });
+			}
+			if (ping == null) throw new InvalidOperationException("인계 테스트 에이전트 IPC에 연결하지 못했습니다.");
+			object adopt = Invoke("SendBackgroundAgentRequest", new object[] { "adopt", "인계 테스트 서버", descriptorJson, 3000 });
+			Equal(true, GetField(adopt, "Success"), "소유권 전환 응답 유실 후 실행 중 서버 인계");
+			object duplicate = Invoke("SendBackgroundAgentRequest", new object[] { "adopt", "인계 테스트 서버", descriptorJson, 3000 });
+			Equal(true, GetField(duplicate, "Success"), "인계 응답 유실 후 중복 요청 멱등 처리");
+			object status = Invoke("SendBackgroundAgentRequest", new object[] { "status", null, null, 1000 });
+			IList profileStates = (IList)GetField(status, "Profiles");
+			Equal(1, profileStates.Count, "인계 서버 에이전트 상태 등록");
+			Equal(currentProcessId, GetField(profileStates[0], "ProcessId"), "인계 서버 프로세스 ID 유지");
+			object commandResponse = Invoke("SendBackgroundAgentRequest", new object[] { "command", "인계 테스트 서버", "list", 1000 });
+			Equal(true, GetField(commandResponse, "Success"), "인계 서버 명령 제어 채널");
+			Equal(1, commands, "인계 서버 명령 한 번만 전달");
+			object logs = Invoke("SendBackgroundAgentRequest", new object[] { "logs", "인계 테스트 서버", null, 1000 });
+			Equal(true, GetField(logs, "Success"), "인계 서버 로그 제어 채널");
+			IList lines = (IList)GetField(logs, "Lines");
+			Equal(2, lines.Count, "인계 전후 최근 로그 유지");
+			Type dashboardType = launcher.GetNestedType("MultiServerDashboardForm", BindingFlags.NonPublic);
+			using (Form dashboard = (Form)Activator.CreateInstance(
+				dashboardType,
+				BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic,
+				null,
+				new object[] { dataRoot, false },
+				null))
+			{
+				dashboardType.GetField("handoffInProgress", BindingFlags.Instance | BindingFlags.NonPublic).SetValue(dashboard, true);
+				FormClosingEventArgs closing = new FormClosingEventArgs(CloseReason.UserClosing, false);
+				InvokeInstance(dashboard, "OnDashboardClosing", new object[] { dashboard, closing });
+				Equal(true, closing.Cancel, "인계 진행 중 추가 창 닫기 차단");
+			}
+		}
+		finally
+		{
+			((IDisposable)context).Dispose();
+			SetStaticField("ManagedChildControlTransportOverride", null);
+			SetStaticField("ManagedChildOwnerProcessId", -1);
+			SetStaticField("ManagedChildOwnerProcessStartTicks", -1L);
+			SetStaticField("BackgroundAgentDisableTrayForTests", false);
+			SetStaticField("BackgroundAgentSettingsPathOverride", null);
+			SetStaticField("BackgroundAgentPipeNameOverride", null);
+			SetStaticField("WindowsNotificationSettingsPathOverride", null);
+			SetStaticField("StorageSettingsPathOverride", Path.Combine(root, "storage.properties"));
+			SetStaticField("LauncherUserDataDirectoryOverride", Path.Combine(root, "isolated-user-data"));
+		}
+		Pass();
+	}
+
 	private static void TestWindowsNotifications(string root)
 	{
 		string settingsPath = Path.Combine(root, "windows-notifications", "settings.json");
@@ -2281,6 +2506,7 @@ internal static class LauncherTests
 	private static object GetMember(object instance, string name) { PropertyInfo property = instance.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic); return property != null ? property.GetValue(instance, null) : GetField(instance, name); }
 	private static void SetMember(object instance, string name, object value) { PropertyInfo property = instance.GetType().GetProperty(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic); if (property != null) property.SetValue(instance, value, null); else instance.GetType().GetField(name, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic).SetValue(instance, value); }
 	private static object GetPrivateField(Type type, object instance, string name) { return type.GetField(name, BindingFlags.Instance | BindingFlags.NonPublic).GetValue(instance); }
+	private static object GetStaticField(string name) { return launcher.GetField(name, BindingFlags.Static | BindingFlags.NonPublic).GetValue(null); }
 	private static void SetStaticField(string name, object value) { launcher.GetField(name, BindingFlags.Static | BindingFlags.NonPublic).SetValue(null, value); }
 	private static void SetPublic(object instance, string name, object value) { instance.GetType().GetField(name, BindingFlags.Instance | BindingFlags.Public).SetValue(instance, value); }
 	private static object CreateContentManifestEntry(string id, string projectId, string fileName, string[] dependencies)
