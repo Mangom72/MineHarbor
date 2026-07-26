@@ -1,8 +1,9 @@
 ﻿# CODEX_HANDOFF.md
 
-## 0.00000 Current implementation state (v1.15.1 candidate)
+## 0.00000 Current implementation state (v1.15.1 released)
 
-- Working branch: `codex/discord-onboarding-v1.15.1`
+- Release-state branch: `codex/v1.15.1-release-state` (feature: `codex/discord-onboarding-v1.15.1`)
+- Pull request [#40](https://github.com/Mangom72/MineHarbor/pull/40) is merged. PR CI `30196858135`, main CI `30196903438`, and release run `30196946031` passed.
 - Version source of truth: `version.json` = 1.15.1 / build 26.2.45.80
 - Entering Discord remote settings without a complete protected token, valid application/guild/channel IDs, an allowed user or role, and an approved profile now opens a four-step registration guide first.
 - The guide reuses the launcher palette, rounded cards, and managed buttons; supports Korean/English, DPI, keyboard, and screen readers; and avoids whole-form scrolling. Only Start setup advances, while Not now/Escape changes nothing.
@@ -12,6 +13,7 @@
 - Resource preparation, the framework build, and the local self-signed release candidate passed. The temporary certificate/PFX was removed and `RELEASE_ARTIFACTS_PASSED=7` was reported.
 - Both the ordinary and signed Portable executable passed version consistency, all 32 launcher groups, Portable version/smoke, 10 bridge cases, modern-dialog scan, and security regression scan.
 - The existing modeless-window click-through integration test was made deterministic by explicitly arming its handle, cursor point, and guard deadline; production click-guard behavior is unchanged.
+- The [v1.15.1 release](https://github.com/Mangom72/MineHarbor/releases/tag/v1.15.1) contains seven verified public assets. The workflow removed its temporary RSA-3072/SHA-256 certificate/PFX, and an independent public download confirmed `RELEASE_ARTIFACTS_PASSED=7`, `PUBLISHED_ASSETS_MODE_OK`, and `PUBLIC_AUTO_UPDATE_OK=1.15.0->1.15.1` before rerunning all 32 launcher groups and 10 bridge cases against the public executable.
 
 ## 0.0000 Current implementation state (v1.15.0 released)
 
