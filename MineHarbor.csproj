@@ -43,6 +43,7 @@
     <Compile Include="ContentManagementUi.cs" />
     <Compile Include="ServerAutomation.cs" />
     <Compile Include="ServerManagementFeatures.cs" />
+    <Compile Include="OperationsHistory.cs" />
     <Compile Include="ManagedServerDashboard.cs" />
     <Compile Include="ServerTrash.cs" />
     <Compile Include="NetworkAndPlayerTools.cs" />

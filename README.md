@@ -26,9 +26,9 @@
 | **Windows 설치 프로그램** | 시작 메뉴, 선택적 바탕화면 바로가기, 제거 기능 사용 | **[최신 Release 열기](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 | **Portable ZIP** | README와 라이선스를 포함한 묶음 보관 | **[최신 Release 열기](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 
-현재 소스 버전은 `v1.10.0`, 내부 빌드는 `26.2.45.74`입니다. MineHarbor 이름으로 배포된 Portable EXE는 같은 링크에서 계속 최신 파일을 받을 수 있습니다. 기존 설치의 `%LOCALAPPDATA%\MinecraftServerLauncher` 데이터는 자동으로 찾아 그대로 사용하며, 새 사용자 데이터 경로는 `%LOCALAPPDATA%\MineHarbor`입니다.
+현재 소스 버전은 `v1.11.0`, 내부 빌드는 `26.2.45.75`입니다. MineHarbor 이름으로 배포된 Portable EXE는 같은 링크에서 계속 최신 파일을 받을 수 있습니다. 기존 설치의 `%LOCALAPPDATA%\MinecraftServerLauncher` 데이터는 자동으로 찾아 그대로 사용하며, 새 사용자 데이터 경로는 `%LOCALAPPDATA%\MineHarbor`입니다.
 
-이 README는 로드맵이 아니라 현재 `v1.10.0` 소스와 자동 테스트, 공개 Release 자산에서 확인한 기능만 설명합니다. 서버 종류나 브리지 연결처럼 조건에 따라 달라지는 기능과 지원되지 않는 상태는 아래에 따로 표시합니다.
+이 README는 로드맵이 아니라 현재 `v1.11.0` 소스와 자동 테스트, 공개 Release 자산에서 확인한 기능만 설명합니다. 서버 종류나 브리지 연결처럼 조건에 따라 달라지는 기능과 지원되지 않는 상태는 아래에 따로 표시합니다.
 
 > [!WARNING]
 > 현재 릴리스 실행 파일은 요청된 자체서명 인증서로 무결성을 표시하지만 공개 인증 기관이 신뢰한 배포자 서명은 아닙니다. 따라서 Windows SmartScreen 경고가 나타날 수 있습니다. Release의 `SHA256SUMS.txt`와 GitHub 출처를 함께 확인해 주세요.
@@ -106,8 +106,11 @@ Paper/Purpur의 복사 옵션은 서버가 공식적으로 지원하지 않는 �
 - 서버 파일 자동 업데이트 옵션과 수동 `서버 업글`
 - 서버 종류·Minecraft 버전 변경 전 호환성 경고와 백업
 - 전체 프로필 수동 백업, 보존 개수 설정, 내보내기와 외부 백업 가져오기
-- 서버별 정기 백업, 시작 전·종료 후 백업, 반복 간격 또는 매일 시각을 지정한 예약 시작·종료·재시작·명령 실행과 즉시 실행
-- 예약 재시작 전 플레이어 공지, 다음 실행 시각과 최근 결과, 개수·기간·총용량 백업 보존 정책
+- 서버별 정기 백업, 시작 전·종료 후 백업, 반복 간격·매일·선택 요일·특정 날짜 한 번을 지정한 예약 시작·종료·재시작·명령 실행과 즉시 실행
+- 컴퓨터 종료·절전 등으로 놓친 작업을 다음 실행 때 한 번 실행하거나 건너뛰거나 알림만 남기는 정책과 최대 지연 시간
+- 예약 편집기의 다음 실행·위험도·서버가 꺼졌을 때 처리·5분 이내 충돌 미리보기, 재시작 전 플레이어 공지, 최근 결과와 개수·기간·총용량 백업 보존 정책
+- 메인 `운영 기록`에서 서버 시작·종료·충돌·자동 재시작과 예약 결과를 서버/중요도/읽음 상태로 필터링하고 CSV로 내보내기
+- 서버별 `.mineharbor/operations-history.json`의 최대 500개 로컬 기록, 원자적 저장, 프로세스 간 잠금과 SHA-256 연속 해시 변조 감지
 - 일정은 MineHarbor 관리 창이 실행 중일 때 평가되며 별도 Windows 백그라운드 서비스는 설치하지 않음
 - SHA-256 무결성 확인과 임시 폴더 검증 후 안전 복원
 - 설정 변경 전 `server.properties` 백업
@@ -200,6 +203,7 @@ flowchart TD
 | 운영체제와 런타임 | Windows 10/11 x64 및 .NET Framework 4.8. SDK 스타일 프로젝트도 호환성 검증용 `net48`을 유지합니다. |
 | 콘텐츠 공급자 | 자동 검색·의존성 해결·업데이트는 Modrinth를 사용합니다. 다른 출처의 JAR·ZIP은 파일 설치와 수동 파일 관리로 다룹니다. |
 | 일정 실행 | MineHarbor의 메인 창 또는 여러 서버 관리 창이 실행 중일 때만 평가됩니다. 별도 Windows 서비스는 설치하지 않습니다. |
+| 운영 기록 | 서버 수명 주기와 예약 작업 결과를 로컬에 기록합니다. Windows 알림, Discord, 웹 원격 관리와 백그라운드 에이전트는 아직 제공하지 않습니다. |
 | 실시간 서버 정보 | 명령 브리지의 라이브 플레이어·TPS·MSPT·플러그인 명령은 Paper/Purpur 1.13 이상에서 선택적으로 지원합니다. 나머지 서버는 로컬 명령 자동완성을 사용하며 얻을 수 없는 지표는 `지원되지 않음`으로 표시합니다. |
 | 외부 접속 판정 | 일반 TCP 응답만으로 Minecraft 서버가 맞다고 확정하지 않습니다. MineHarbor가 만든 매핑의 사후 검사만 `확인됨`으로 표시합니다. |
 | 코드 서명 | 릴리스마다 자체서명하며 공개 인증 기관의 신뢰 서명은 제공하지 않습니다. |
@@ -282,9 +286,9 @@ PR과 `main` 푸시의 일반 CI는 버전·문서 일치, SDK 스타일 `net48`
 | **Windows installer** | Start Menu, optional desktop shortcut, and uninstall support | **[Open the latest release](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 | **Portable ZIP** | Keep the launcher, README, and license together | **[Open the latest release](https://github.com/Mangom72/MineHarbor/releases/latest)** |
 
-Current source version: `v1.10.0` · internal build: `26.2.45.74`. MineHarbor releases keep the same permanent Portable URL. Existing data under `%LOCALAPPDATA%\MinecraftServerLauncher` is detected and preserved; new user-data installations use `%LOCALAPPDATA%\MineHarbor`.
+Current source version: `v1.11.0` · internal build: `26.2.45.75`. MineHarbor releases keep the same permanent Portable URL. Existing data under `%LOCALAPPDATA%\MinecraftServerLauncher` is detected and preserved; new user-data installations use `%LOCALAPPDATA%\MineHarbor`.
 
-This README documents shipped behavior verified against the current `v1.10.0` source, automated tests, and public release assets—not roadmap items. Conditional and unsupported behavior is called out explicitly below.
+This README documents shipped behavior verified against the current `v1.11.0` source, automated tests, and public release assets—not roadmap items. Conditional and unsupported behavior is called out explicitly below.
 
 > [!WARNING]
 > Release executables carry the requested self-signed integrity signature, not a publisher identity trusted by a public certificate authority. Windows SmartScreen can therefore still warn. Verify the GitHub source and the release `SHA256SUMS.txt`.
@@ -322,8 +326,9 @@ The main window appears first while update, profile, and current version data lo
 - **Presets and settings:** survival difficulties, hardcore, normal or flat creative worlds, common `server.properties` controls, and version-aware Paper/Purpur switches for TNT/carpet/rail, gravity-block, and tripwire-hook duplication. Modern servers use `config/paper-global.yml`; legacy servers use nested `settings.unsupported-settings` in `paper.yml`. Paper-only keys are not written to Spigot, Vanilla, or modded servers; custom JARs require detected Paper keys. Changes preserve unrelated YAML and keep pre-change backups under `.mineharbor/configuration-backups`.
 - **Compatible runtimes:** automatic Java 8/11/16/17/21/25 selection and download; explicit Java selection for custom JARs.
 - **Updates and backups:** optional server auto-update, manual upgrades, staged profile restore, SHA-256 verification, export, scheduled or start/stop-hook backups, and count/day/size retention.
-- **Scheduling:** per-server backup, start, stop, restart, and command jobs on an interval or at a daily local time, with Run now, player warnings, execution leases, next-run times, and latest results.
+- **Scheduling:** per-server backup, start, stop, restart, and command jobs on intervals, daily times, selected weekdays, or a one-time local date. Missed runs can execute once, skip, or create a notification after a bounded delay. The editor previews the next run, risk, offline behavior, and five-minute conflicts.
 - **Scheduling scope:** jobs are evaluated while a MineHarbor management window is running; this release does not install a separate Windows background service.
+- **Notifications and operations:** the main Operations view filters server lifecycle, crash/restart, and scheduled-job results by server, severity, and read state, and exports the visible list to CSV. Each server keeps up to 500 entries in `.mineharbor/operations-history.json` with atomic writes, a cross-process lock, and a verified SHA-256 hash chain.
 - **Content:** installed plugin/mod/data-pack inventory, managed/manual distinction, compatibility and dependency checks, individual or batch updates, enable/disable/recoverable removal, verified Modrinth search, and local-file or world-targeted data-pack installation. Blank searches return popular results with author, download count, and description. Data packs are installed under the selected `<world>/datapacks` folder after root `pack.mcmeta`, path, duplicate-entry, entry-count, and expanded-size checks.
 - **Dashboard:** status, uptime, Java CPU/memory/version, players, storage, warnings/errors, verified external access, next schedule, and bridge-provided TPS/MSPT without guessed values.
 - **Operations:** online-player autocomplete for whitelist, OP, kick and ban controls; command/player suggestions in the main and managed consoles; time-independent command suggestions in the scheduler; plus search → category → word-wrap console tools with separate warning, compatibility, and error filters.
@@ -362,6 +367,7 @@ If access still fails, the manual guide shows the PC IPv4 address, default gatew
 | OS and runtime | Windows 10/11 x64 and .NET Framework 4.8. The parallel SDK-style project remains on `net48` for compatibility verification. |
 | Content providers | Automatic search, dependency resolution, and updates use Modrinth. JAR/ZIP files from other sources can be installed from file and are tracked separately. |
 | Scheduling | Jobs are evaluated only while the MineHarbor main or multi-server management window is running; no Windows background service is installed. |
+| Operations history | Server lifecycle and scheduled-job results are stored locally. Windows notifications, Discord, web remote management, and a background agent are not implemented in this release. |
 | Live server data | Live players, TPS/MSPT, and plugin commands require the optional bridge on Paper/Purpur 1.13+. Other server types retain local completion, and unavailable metrics are shown as unsupported rather than estimated. |
 | External reachability | A generic TCP response does not prove Minecraft server identity. Only the post-check of a mapping created by MineHarbor is marked verified. |
 | Code signing | Releases are self-signed per build and do not carry a public-CA trusted publisher signature. |

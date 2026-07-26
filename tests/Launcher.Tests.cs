@@ -54,6 +54,7 @@ internal static class LauncherTests
 			TestModrinthHash(temporary);
 			TestContentManagement(temporary);
 			TestServerAutomationAndDashboard(temporary);
+			TestOperationsHistory(temporary);
 			TestDiagnosticRedaction(temporary);
 			TestQuickCommandsAndBridge(temporary);
 			Console.WriteLine("PASSED=" + passed);
@@ -725,7 +726,13 @@ internal static class LauncherTests
 				Panel consolePanel = (Panel)GetPrivateField(formType, form, "consolePanel");
 				TableLayoutPanel workspace = quickPanel.Parent as TableLayoutPanel;
 				object consoleSuggestions = GetPrivateField(formType, form, "consoleCommandSuggestions");
+				Button operationsButton = (Button)GetPrivateField(formType, form, "mainOperationsButton");
+				TableLayoutPanel toolActions = operationsButton.Parent as TableLayoutPanel;
 				if (workspace == null) throw new InvalidOperationException("빠른 명령과 콘솔이 분리된 작업 영역을 사용하지 않습니다.");
+				if (toolActions == null || toolActions.ColumnCount != 3 || toolActions.RowCount != 3) throw new InvalidOperationException("관리 도구가 읽기 쉬운 3×3 배치를 사용하지 않습니다.");
+				Equal(2, toolActions.GetColumn(operationsButton), "운영 기록 버튼 열");
+				Equal(2, toolActions.GetRow(operationsButton), "운영 기록 버튼 행");
+				AssertButtonTextFits(operationsButton, "영어 운영 기록");
 				Equal(DockStyle.Fill, quickPanel.Dock, "빠른 명령 고정 열 채우기");
 				Equal(1, workspace.GetColumn(quickPanel), "빠른 명령 오른쪽 고정 열");
 				Equal(0, workspace.GetColumn(consolePanel), "콘솔 왼쪽 전용 열");
@@ -1455,7 +1462,7 @@ internal static class LauncherTests
 		File.WriteAllText(Path.Combine(server, "world", "level.dat"), "world");
 		File.WriteAllText(Path.Combine(server, "server.properties"), "level-name=world\r\n");
 		object configuration = Invoke("ReadServerAutomationConfiguration", new object[] { server });
-		Equal(1, GetField(configuration, "SchemaVersion"), "자동화 설정 스키마 기본값");
+		Equal(2, GetField(configuration, "SchemaVersion"), "자동화 설정 스키마 기본값");
 		Type jobType = launcher.GetNestedType("ServerAutomationJob", BindingFlags.NonPublic);
 		object job = Activator.CreateInstance(jobType, true);
 		SetPublic(job, "Id", "scheduled-backup");
@@ -1489,11 +1496,66 @@ internal static class LauncherTests
 		Invoke("CompleteAutomationJob", new object[] { recoveredClaims[0], DateTime.UtcNow, "lease-recovered" });
 
 		string automationPath = Convert.ToString(Invoke("GetAutomationConfigurationPath", new object[] { server }));
+		File.WriteAllText(automationPath, "{\"SchemaVersion\":1,\"Jobs\":[]}", Encoding.UTF8);
+		object migrated = Invoke("ReadServerAutomationConfiguration", new object[] { server });
+		Equal(2, GetField(migrated, "SchemaVersion"), "기존 자동화 스키마 메모리 마이그레이션");
+		Equal("{\"SchemaVersion\":1,\"Jobs\":[]}", File.ReadAllText(automationPath, Encoding.UTF8), "읽기 중 기존 자동화 파일 미변경");
+		File.WriteAllText(automationPath, "{\"SchemaVersion\":999,\"Jobs\":[]}", Encoding.UTF8);
+		ExpectFailure(delegate { Invoke("ReadServerAutomationConfiguration", new object[] { server }); }, "미래 자동화 스키마 거부");
+		Equal("{\"SchemaVersion\":999,\"Jobs\":[]}", File.ReadAllText(automationPath, Encoding.UTF8), "미래 자동화 스키마 원본 보존");
 		File.WriteAllText(automationPath, "{ broken", Encoding.UTF8);
 		ExpectFailure(delegate { Invoke("ReadServerAutomationConfiguration", new object[] { server }); }, "손상된 자동화 설정 차단");
 		Equal("{ broken", File.ReadAllText(automationPath, Encoding.UTF8), "손상된 자동화 설정 원본 보존");
 		File.Delete(automationPath);
 		ExpectFailure(delegate { Invoke("ValidateScheduledCommand", new object[] { "say first\nstop" }); }, "예약 명령 줄바꿈 차단");
+
+		object weekly = Activator.CreateInstance(jobType, true);
+		SetPublic(weekly, "Id", "weekly-test");
+		SetPublic(weekly, "Name", "요일 일정");
+		SetPublic(weekly, "Action", "backup");
+		SetPublic(weekly, "ScheduleKind", "weekly");
+		SetPublic(weekly, "DailyLocalTime", "04:00");
+		SetPublic(weekly, "Weekdays", "Monday,Wednesday");
+		DateTime weeklyNext = (DateTime)Invoke("CalculateNextAutomationRunUtc", new object[] { weekly, DateTime.UtcNow });
+		DayOfWeek localDay = weeklyNext.ToLocalTime().DayOfWeek;
+		if (localDay != DayOfWeek.Monday && localDay != DayOfWeek.Wednesday) throw new InvalidOperationException("요일 일정이 선택하지 않은 요일을 계산했습니다.");
+		if (weeklyNext <= DateTime.UtcNow) throw new InvalidOperationException("요일 일정의 다음 실행 시각이 미래가 아닙니다.");
+		SetPublic(weekly, "Weekdays", "1");
+		ExpectFailure(delegate { Invoke("CalculateNextAutomationRunUtc", new object[] { weekly, DateTime.UtcNow }); }, "숫자형 요일 값 거부");
+
+		object skippedConfiguration = Invoke("ReadServerAutomationConfiguration", new object[] { server });
+		object skipped = Activator.CreateInstance(jobType, true);
+		SetPublic(skipped, "Id", "missed-skip");
+		SetPublic(skipped, "Name", "놓친 작업");
+		SetPublic(skipped, "Action", "backup");
+		SetPublic(skipped, "ScheduleKind", "interval");
+		SetPublic(skipped, "IntervalMinutes", 60);
+		SetPublic(skipped, "MissedRunPolicy", "skip");
+		SetPublic(skipped, "MaximumDelayMinutes", 10);
+		SetPublic(skipped, "NextRunUtc", DateTime.UtcNow.AddHours(-2).ToString("o"));
+		((IList)GetField(skippedConfiguration, "Jobs")).Add(skipped);
+		Invoke("WriteServerAutomationConfiguration", new object[] { server, skippedConfiguration });
+		Equal(0, ((IList)Invoke("ClaimDueAutomationJobs", new object[] { server, DateTime.UtcNow })).Count, "최대 지연 초과 작업 건너뛰기");
+		object skippedAfter = ((IList)GetField(Invoke("ReadServerAutomationConfiguration", new object[] { server }), "Jobs"))[0];
+		if (Convert.ToString(GetField(skippedAfter, "LastResult")).IndexOf("건너뜀", StringComparison.OrdinalIgnoreCase) < 0)
+			throw new InvalidOperationException("놓친 작업의 건너뛰기 결과가 기록되지 않았습니다.");
+		((IList)GetField(skippedConfiguration, "Jobs")).Clear();
+		object once = Activator.CreateInstance(jobType, true);
+		SetPublic(once, "Id", "once-test");
+		SetPublic(once, "Name", "일회성 백업");
+		SetPublic(once, "Action", "backup");
+		SetPublic(once, "ScheduleKind", "once");
+		SetPublic(once, "OnceLocalDateTime", DateTime.Now.AddMinutes(-1).ToString("yyyy-MM-dd HH:mm"));
+		SetPublic(once, "MissedRunPolicy", "run-once");
+		SetPublic(once, "NextRunUtc", DateTime.UtcNow.AddSeconds(-5).ToString("o"));
+		((IList)GetField(skippedConfiguration, "Jobs")).Add(once);
+		Invoke("WriteServerAutomationConfiguration", new object[] { server, skippedConfiguration });
+		IList onceClaims = (IList)Invoke("ClaimDueAutomationJobs", new object[] { server, DateTime.UtcNow });
+		Equal(1, onceClaims.Count, "일회성 예약 한 번 임대");
+		object onceStored = ((IList)GetField(Invoke("ReadServerAutomationConfiguration", new object[] { server }), "Jobs"))[0];
+		Equal(false, GetField(onceStored, "Enabled"), "일회성 예약 재실행 비활성화");
+		Equal(0, ((IList)Invoke("ClaimDueAutomationJobs", new object[] { server, DateTime.UtcNow })).Count, "일회성 예약 중복 실행 차단");
+		Invoke("CompleteAutomationJob", new object[] { onceClaims[0], DateTime.UtcNow, "once-completed" });
 
 		string backups = Path.Combine(server, "server-backups");
 		Directory.CreateDirectory(backups);
@@ -1535,9 +1597,13 @@ internal static class LauncherTests
 		using (Form jobForm = (Form)Activator.CreateInstance(automationJobFormType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { null }, null))
 		{
 			ComboBox action = (ComboBox)GetPrivateField(automationJobFormType, jobForm, "actionBox");
+			ComboBox schedule = (ComboBox)GetPrivateField(automationJobFormType, jobForm, "scheduleBox");
 			TextBox command = (TextBox)GetPrivateField(automationJobFormType, jobForm, "commandBox");
 			action.SelectedIndex = 4;
 			Equal(true, command.Enabled, "예약 명령 입력 활성화");
+			Equal(4, schedule.Items.Count, "고급 예약 방식 표시");
+			Label preview = (Label)GetPrivateField(automationJobFormType, jobForm, "previewLabel");
+			if (string.IsNullOrWhiteSpace(preview.AccessibleName) || string.IsNullOrWhiteSpace(preview.Text)) throw new InvalidOperationException("예약 미리보기 접근성 정보가 없습니다.");
 			if (GetPrivateField(automationJobFormType, jobForm, "commandSuggestions") == null) throw new InvalidOperationException("예약 명령 자동완성이 연결되지 않았습니다.");
 		}
 		Type dashboardFormType = launcher.GetNestedType("ServerStatusDashboardForm", BindingFlags.NonPublic);
@@ -1546,6 +1612,50 @@ internal static class LauncherTests
 			dashboard.Show(); Application.DoEvents(); dashboard.Close(); Application.DoEvents();
 			CancellationTokenSource closedCancellation = (CancellationTokenSource)GetPrivateField(dashboardFormType, dashboard, "cancellation");
 			Equal(true, closedCancellation.IsCancellationRequested, "UI 종료 후 비동기 콜백 취소");
+		}
+		Pass();
+	}
+
+	private static void TestOperationsHistory(string root)
+	{
+		string serversRoot = Path.Combine(root, "operations-root");
+		string server = Path.Combine(serversRoot, "운영 기록 서버");
+		Directory.CreateDirectory(server);
+		File.WriteAllText(Path.Combine(server, ".launcher-properties-configured"), "launcher-settings-version=7\r\nprofile-name=운영 기록 서버\r\nserver-type=paper\r\nminecraft-version=1.21.11\r\nmemory-gb=2\r\n", Encoding.UTF8);
+		File.WriteAllText(Path.Combine(server, "server.properties"), "server-port=25565\r\n", Encoding.UTF8);
+		Invoke("RecordOperationEvent", new object[] { server, "server", "info", "서버 시작", "Server started", "launcher", false });
+		Invoke("RecordOperationEvent", new object[] { server, "automation", "warning", "경로 " + server + "\n IP=192.168.1.2 token=secret", "Path " + server + "\n IP=192.168.1.2 token=secret", "automation", false });
+		object document = Invoke("ReadOperationsHistory", new object[] { server });
+		IList entries = (IList)GetField(document, "Entries");
+		Equal(2, entries.Count, "운영 기록 항목 저장");
+		object first = entries[0];
+		object second = entries[1];
+		Equal(GetField(first, "Hash"), GetField(second, "PreviousHash"), "운영 기록 연속 해시");
+		string sanitized = Convert.ToString(GetField(second, "MessageKo"));
+		if (sanitized.Contains(server) || sanitized.Contains("192.168.1.2") || sanitized.Contains("secret") || sanitized.Contains("\n")) throw new InvalidOperationException("운영 기록 민감 정보 가림이 적용되지 않았습니다.");
+		Equal(true, Invoke("MarkOperationEventRead", new object[] { server, GetField(first, "Id"), true }), "운영 기록 읽음 처리");
+		document = Invoke("ReadOperationsHistory", new object[] { server });
+		Equal(true, GetField(((IList)GetField(document, "Entries"))[0], "IsRead"), "운영 기록 읽음 상태 저장");
+
+		string historyPath = Convert.ToString(Invoke("GetOperationsHistoryPath", new object[] { server }));
+		string validJson = File.ReadAllText(historyPath, Encoding.UTF8);
+		string tamperedJson = validJson.Replace("서버 시작", "서버 변조");
+		File.WriteAllText(historyPath, tamperedJson, Encoding.UTF8);
+		ExpectFailure(delegate { Invoke("ReadOperationsHistory", new object[] { server }); }, "운영 기록 해시 변조 차단");
+		Equal(tamperedJson, File.ReadAllText(historyPath, Encoding.UTF8), "손상된 운영 기록 원본 보존");
+		File.WriteAllText(historyPath, validJson, Encoding.UTF8);
+		string futureJson = validJson.Replace("\"SchemaVersion\":1", "\"SchemaVersion\":999");
+		File.WriteAllText(historyPath, futureJson, Encoding.UTF8);
+		ExpectFailure(delegate { Invoke("ReadOperationsHistory", new object[] { server }); }, "미래 운영 기록 스키마 거부");
+		Equal(futureJson, File.ReadAllText(historyPath, Encoding.UTF8), "미래 운영 기록 원본 보존");
+		File.WriteAllText(historyPath, validJson, Encoding.UTF8);
+
+		Type formType = launcher.GetNestedType("OperationsHistoryForm", BindingFlags.NonPublic);
+		using (Form form = (Form)Activator.CreateInstance(formType, BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic, null, new object[] { serversRoot }, null))
+		{
+			Equal(AutoScaleMode.Dpi, form.AutoScaleMode, "운영 기록 UI DPI 배율");
+			ListView list = (ListView)GetPrivateField(formType, form, "historyList");
+			if (string.IsNullOrWhiteSpace(list.AccessibleName) || string.IsNullOrWhiteSpace(list.AccessibleDescription)) throw new InvalidOperationException("운영 기록 목록 접근성 정보가 없습니다.");
 		}
 		Pass();
 	}
