@@ -1,0 +1,9 @@
+# decompiled/Launcher.decompiled.cs 는 CRLF·CR·LF가 섞여 있습니다. Git이 줄바꿈을 정규화하면
+# 실제 변경이 몇 줄이어도 파일 전체가 바뀐 것처럼 보이므로, 모든 소스를 바이트 그대로 다룹니다.
+* -text
+
+# 바이너리 자산은 diff 대상이 아닙니다.
+*.ico binary
+*.jar binary
+*.exe binary
+*.zip binary
