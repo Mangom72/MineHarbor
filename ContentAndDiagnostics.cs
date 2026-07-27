@@ -583,7 +583,7 @@ internal static partial class Launcher
 	{
 		if (depth > 12)
 		{
-			throw new InvalidDataException("콘텐츠 의존성 단계가 지나치게 깊습니다.");
+			throw Localized(new InvalidDataException("콘텐츠 의존성 단계가 지나치게 깊습니다."), "The content dependency chain is nested too deeply.");
 		}
 		if (string.IsNullOrEmpty(projectId) || !visited.Add(projectId))
 		{
@@ -622,7 +622,7 @@ internal static partial class Launcher
 		object[] versions = new JavaScriptSerializer().DeserializeObject(DownloadModrinthText(url)) as object[];
 		if (versions == null || versions.Length == 0)
 		{
-			throw new InvalidDataException("선택한 서버 버전과 로더에 맞는 콘텐츠 파일을 찾지 못했습니다.");
+			throw Localized(new InvalidDataException("선택한 서버 버전과 로더에 맞는 콘텐츠 파일을 찾지 못했습니다."), "No content file was found for the selected server version and loader.");
 		}
 		Dictionary<string, object> selected = null;
 		for (int pass = 0; pass < 2 && selected == null; pass++)
@@ -645,7 +645,7 @@ internal static partial class Launcher
 		}
 		if (selected == null)
 		{
-			throw new InvalidDataException("설치 가능한 콘텐츠 릴리스를 찾지 못했습니다.");
+			throw Localized(new InvalidDataException("설치 가능한 콘텐츠 릴리스를 찾지 못했습니다."), "No installable content release was found.");
 		}
 		object[] files = selected.ContainsKey("files") ? selected["files"] as object[] : null;
 		Dictionary<string, object> selectedFile = null;
@@ -670,7 +670,7 @@ internal static partial class Launcher
 		}
 		if (selectedFile == null)
 		{
-			throw new InvalidDataException("콘텐츠 다운로드 파일을 찾지 못했습니다.");
+			throw Localized(new InvalidDataException("콘텐츠 다운로드 파일을 찾지 못했습니다."), "The downloaded content file was not found.");
 		}
 		ModrinthFileInfo info = new ModrinthFileInfo();
 		info.ProjectId = projectId;
@@ -710,19 +710,19 @@ internal static partial class Launcher
 		Uri uri;
 		if (string.IsNullOrWhiteSpace(info.FileName) || !info.FileName.EndsWith(".jar", StringComparison.OrdinalIgnoreCase) || Path.GetFileName(info.FileName) != info.FileName)
 		{
-			throw new InvalidDataException("Modrinth가 안전한 JAR 파일명을 제공하지 않았습니다.");
+			throw Localized(new InvalidDataException("Modrinth가 안전한 JAR 파일명을 제공하지 않았습니다."), "Modrinth did not provide a safe JAR file name.");
 		}
 		if (!Uri.TryCreate(info.Url, UriKind.Absolute, out uri) || uri.Scheme != Uri.UriSchemeHttps || !uri.Host.Equals("cdn.modrinth.com", StringComparison.OrdinalIgnoreCase))
 		{
-			throw new InvalidDataException("Modrinth CDN 다운로드 주소를 검증하지 못했습니다.");
+			throw Localized(new InvalidDataException("Modrinth CDN 다운로드 주소를 검증하지 못했습니다."), "Could not verify the Modrinth CDN download address.");
 		}
 		if (info.Size <= 0 || info.Size > 536870912L)
 		{
-			throw new InvalidDataException("콘텐츠 파일 크기가 허용 범위를 벗어났습니다.");
+			throw Localized(new InvalidDataException("콘텐츠 파일 크기가 허용 범위를 벗어났습니다."), "The content file size is outside the allowed range.");
 		}
 		if ((string.IsNullOrEmpty(info.Sha512) || info.Sha512.Length != 128) && (string.IsNullOrEmpty(info.Sha1) || info.Sha1.Length != 40))
 		{
-			throw new InvalidDataException("콘텐츠 파일의 무결성 해시를 확인하지 못했습니다.");
+			throw Localized(new InvalidDataException("콘텐츠 파일의 무결성 해시를 확인하지 못했습니다."), "Could not verify the content file's integrity hash.");
 		}
 	}
 
@@ -731,7 +731,7 @@ internal static partial class Launcher
 		string folderName = GetContentFolderName(options.ServerType);
 		if (folderName == null)
 		{
-			throw new InvalidOperationException("이 서버 종류는 콘텐츠 자동 설치를 지원하지 않습니다.");
+			throw Localized(new InvalidOperationException("이 서버 종류는 콘텐츠 자동 설치를 지원하지 않습니다."), "This server type does not support automatic content installation.");
 		}
 		string folder = Path.Combine(options.ServerDirectory, folderName);
 		Directory.CreateDirectory(folder);
@@ -742,7 +742,7 @@ internal static partial class Launcher
 			DownloadModrinthBinary(file.Url, temporary, file.Size);
 			if (!VerifyModrinthHash(temporary, file))
 			{
-				throw new InvalidDataException("다운로드한 콘텐츠의 무결성 검증에 실패했습니다.");
+				throw Localized(new InvalidDataException("다운로드한 콘텐츠의 무결성 검증에 실패했습니다."), "Integrity verification of the downloaded content failed.");
 			}
 			if (File.Exists(destination))
 			{
@@ -766,7 +766,7 @@ internal static partial class Launcher
 		Uri uri;
 		if (!Uri.TryCreate(url, UriKind.Absolute, out uri) || uri.Scheme != Uri.UriSchemeHttps || !uri.Host.Equals("api.modrinth.com", StringComparison.OrdinalIgnoreCase))
 		{
-			throw new InvalidDataException("Modrinth API 주소가 안전하지 않습니다.");
+			throw Localized(new InvalidDataException("Modrinth API 주소가 안전하지 않습니다."), "The Modrinth API address is not safe.");
 		}
 		HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
 		request.Method = "GET";
@@ -780,7 +780,7 @@ internal static partial class Launcher
 		{
 			if (response.StatusCode != HttpStatusCode.OK || response.ResponseUri == null || response.ResponseUri.Scheme != Uri.UriSchemeHttps || !response.ResponseUri.Host.Equals("api.modrinth.com", StringComparison.OrdinalIgnoreCase) || response.ContentLength > 8388608L)
 			{
-				throw new WebException("Modrinth API가 정상 응답하지 않았습니다.");
+				throw Localized(new WebException("Modrinth API가 정상 응답하지 않았습니다."), "The Modrinth API did not respond normally.");
 			}
 			using (StreamReader reader = new StreamReader(response.GetResponseStream(), Encoding.UTF8))
 			{
@@ -802,7 +802,7 @@ internal static partial class Launcher
 		{
 			if (response.StatusCode != HttpStatusCode.OK || response.ResponseUri == null || response.ResponseUri.Scheme != Uri.UriSchemeHttps || !response.ResponseUri.Host.Equals("cdn.modrinth.com", StringComparison.OrdinalIgnoreCase) || response.ContentLength > expectedSize)
 			{
-				throw new WebException("Modrinth CDN이 정상 응답하지 않았습니다.");
+				throw Localized(new WebException("Modrinth CDN이 정상 응답하지 않았습니다."), "The Modrinth CDN did not respond normally.");
 			}
 			using (Stream input = response.GetResponseStream())
 			using (FileStream output = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None))
@@ -816,13 +816,13 @@ internal static partial class Launcher
 					total = checked(total + read);
 					if (total > expectedSize)
 					{
-						throw new InvalidDataException("콘텐츠 다운로드 크기가 공식 정보보다 큽니다.");
+						throw Localized(new InvalidDataException("콘텐츠 다운로드 크기가 공식 정보보다 큽니다."), "The content download is larger than the official metadata states.");
 					}
 				}
 				output.Flush(true);
 				if (total != expectedSize)
 				{
-					throw new InvalidDataException("콘텐츠 다운로드 크기가 공식 정보와 다릅니다.");
+					throw Localized(new InvalidDataException("콘텐츠 다운로드 크기가 공식 정보와 다릅니다."), "The content download size differs from the official metadata.");
 				}
 			}
 		}
@@ -837,11 +837,11 @@ internal static partial class Launcher
 		Uri uri;
 		if (!Uri.TryCreate(url, UriKind.Absolute, out uri) || uri.Scheme != Uri.UriSchemeHttps)
 		{
-			throw new InvalidDataException("Modrinth 이미지 주소를 검증하지 못했습니다.");
+			throw Localized(new InvalidDataException("Modrinth 이미지 주소를 검증하지 못했습니다."), "Could not verify the Modrinth image address.");
 		}
 		if (!uri.Host.Equals("cdn.modrinth.com", StringComparison.OrdinalIgnoreCase) && !uri.Host.Equals("wsrv.nl", StringComparison.OrdinalIgnoreCase))
 		{
-			throw new InvalidDataException("Modrinth 이미지 주소(호스트)를 검증하지 못했습니다.");
+			throw Localized(new InvalidDataException("Modrinth 이미지 주소(호스트)를 검증하지 못했습니다."), "Could not verify the Modrinth image address host.");
 		}
 		HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
 		request.Method = "GET";
@@ -855,11 +855,11 @@ internal static partial class Launcher
 		{
 			if (response.StatusCode != HttpStatusCode.OK || response.ResponseUri == null || response.ResponseUri.Scheme != Uri.UriSchemeHttps || response.ContentLength > 8388608L)
 			{
-				throw new WebException("Modrinth 이미지 응답을 검증하지 못했습니다.");
+				throw Localized(new WebException("Modrinth 이미지 응답을 검증하지 못했습니다."), "Could not verify the Modrinth image response.");
 			}
 			if (!response.ResponseUri.Host.Equals("cdn.modrinth.com", StringComparison.OrdinalIgnoreCase) && !response.ResponseUri.Host.Equals("wsrv.nl", StringComparison.OrdinalIgnoreCase))
 			{
-				throw new WebException("Modrinth 이미지 응답 주소를 검증하지 못했습니다.");
+				throw Localized(new WebException("Modrinth 이미지 응답 주소를 검증하지 못했습니다."), "Could not verify the Modrinth image response address.");
 			}
 			using (Stream input = response.GetResponseStream())
 			using (MemoryStream buffer = new MemoryStream())
@@ -872,7 +872,7 @@ internal static partial class Launcher
 					total = checked(total + read);
 					if (total > 8388608)
 					{
-						throw new InvalidDataException("Modrinth 아이콘 크기가 허용 범위를 초과했습니다.");
+						throw Localized(new InvalidDataException("Modrinth 아이콘 크기가 허용 범위를 초과했습니다."), "The Modrinth icon size exceeds the allowed range.");
 					}
 					buffer.Write(block, 0, read);
 				}
@@ -880,7 +880,7 @@ internal static partial class Launcher
 				using (Image decoded = Image.FromStream(buffer, true, true))
 				{
 					long pixels = checked((long)decoded.Width * (long)decoded.Height);
-					if (decoded.Width < 1 || decoded.Height < 1 || decoded.Width > 4096 || decoded.Height > 4096 || pixels > 16777216L) throw new InvalidDataException("Modrinth 아이콘 해상도가 허용 범위를 초과했습니다.");
+					if (decoded.Width < 1 || decoded.Height < 1 || decoded.Width > 4096 || decoded.Height > 4096 || pixels > 16777216L) throw Localized(new InvalidDataException("Modrinth 아이콘 해상도가 허용 범위를 초과했습니다."), "The Modrinth icon resolution exceeds the allowed range.");
 					return new Bitmap(decoded);
 				}
 			}

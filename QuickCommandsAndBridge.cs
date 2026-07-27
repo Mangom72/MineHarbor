@@ -1406,29 +1406,29 @@ internal static partial class Launcher
 		string json = DownloadTextWithUserAgent(GetLauncherUpdateMetadataUrl(), "MineHarbor/0.4", GetGitHubReleaseDownloadHosts(), LauncherUpdateMaximumMetadataCharacters);
 		Dictionary<string, object> root = new JavaScriptSerializer().DeserializeObject(json) as Dictionary<string, object>;
 		Dictionary<string, object> bridge = root != null && root.ContainsKey("bridge") ? root["bridge"] as Dictionary<string, object> : null;
-		if (bridge == null) throw new InvalidDataException("업데이트 정보에 명령 브리지 자산이 없습니다.");
+		if (bridge == null) throw Localized(new InvalidDataException("업데이트 정보에 명령 브리지 자산이 없습니다."), "The update metadata contains no command bridge asset.");
 		BridgeReleaseInfo info = new BridgeReleaseInfo(); info.Version = Convert.ToString(bridge["version"], CultureInfo.InvariantCulture); info.Protocol = Convert.ToInt32(bridge["protocol"], CultureInfo.InvariantCulture); info.MinimumMinecraft = Convert.ToString(bridge["minimum_minecraft"], CultureInfo.InvariantCulture); info.MaximumMinecraft = Convert.ToString(bridge["maximum_minecraft"], CultureInfo.InvariantCulture); info.Url = Convert.ToString(bridge["download_url"], CultureInfo.InvariantCulture); info.Sha256 = Convert.ToString(bridge["sha256"], CultureInfo.InvariantCulture); info.Size = Convert.ToInt64(bridge["size"], CultureInfo.InvariantCulture);
 		string releaseVersion = root != null && root.ContainsKey("version") ? Convert.ToString(root["version"], CultureInfo.InvariantCulture) : string.Empty;
 		Version parsedBridgeVersion;
-		if (info.Protocol != CommandBridgeProtocolVersion || info.Size < 1024 || info.Size > 536870912L || !IsValidSha256(info.Sha256) || !TryParseProductVersion(info.Version, out parsedBridgeVersion) || !string.Equals(releaseVersion, info.Version, StringComparison.Ordinal) || !IsAllowedBridgeDownloadUrl(info.Url, info.Version)) throw new InvalidDataException("명령 브리지 메타데이터를 검증하지 못했습니다.");
+		if (info.Protocol != CommandBridgeProtocolVersion || info.Size < 1024 || info.Size > 536870912L || !IsValidSha256(info.Sha256) || !TryParseProductVersion(info.Version, out parsedBridgeVersion) || !string.Equals(releaseVersion, info.Version, StringComparison.Ordinal) || !IsAllowedBridgeDownloadUrl(info.Url, info.Version)) throw Localized(new InvalidDataException("명령 브리지 메타데이터를 검증하지 못했습니다."), "Could not verify the command bridge metadata.");
 		return info;
 	}
 
 	private static bool InstallOrUpdateCommandBridge(string serverDirectory, string serverType, string minecraftVersion)
 	{
-		if (!IsCommandBridgeSupported(serverType, minecraftVersion)) throw new InvalidOperationException("이 서버 종류 또는 버전은 Paper/Purpur 명령 브리지를 지원하지 않습니다.");
+		if (!IsCommandBridgeSupported(serverType, minecraftVersion)) throw Localized(new InvalidOperationException("이 서버 종류 또는 버전은 Paper/Purpur 명령 브리지를 지원하지 않습니다."), "This server type or version does not support the Paper/Purpur command bridge.");
 		BridgeReleaseInfo release = GetBridgeReleaseInfo();
-		if (!IsMinecraftVersionInBridgeRange(minecraftVersion, release.MinimumMinecraft, release.MaximumMinecraft)) throw new InvalidOperationException("선택한 Minecraft 버전은 이 명령 브리지 자산과 호환되지 않습니다.");
+		if (!IsMinecraftVersionInBridgeRange(minecraftVersion, release.MinimumMinecraft, release.MaximumMinecraft)) throw Localized(new InvalidOperationException("선택한 Minecraft 버전은 이 명령 브리지 자산과 호환되지 않습니다."), "The selected Minecraft version is not compatible with this command bridge asset.");
 		string destination = GetBridgeJarPath(serverDirectory); string managedPath = GetBridgeManagedPath(serverDirectory); BridgeManagedInfo current = ReadBridgeManagedInfo(serverDirectory);
-		if (File.Exists(destination) && current == null) throw new InvalidOperationException("같은 이름의 사용자 JAR이 있어 덮어쓰지 않았습니다.");
-		if (File.Exists(destination) && current != null && !string.Equals(GetFileSha256(destination), current.Sha256, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("관리 중인 브리지 JAR이 설치 후 변경되어 자동으로 덮어쓰지 않았습니다.");
+		if (File.Exists(destination) && current == null) throw Localized(new InvalidOperationException("같은 이름의 사용자 JAR이 있어 덮어쓰지 않았습니다."), "A user JAR with the same name exists, so it was not overwritten.");
+		if (File.Exists(destination) && current != null && !string.Equals(GetFileSha256(destination), current.Sha256, StringComparison.OrdinalIgnoreCase)) throw Localized(new InvalidOperationException("관리 중인 브리지 JAR이 설치 후 변경되어 자동으로 덮어쓰지 않았습니다."), "The managed bridge JAR changed after installation, so it was not overwritten automatically.");
 		Directory.CreateDirectory(Path.GetDirectoryName(destination)); string temporary = destination + ".다운로드중"; string backup = destination + ".이전"; DeleteFileIfPresent(temporary); DeleteFileIfPresent(backup);
 		try
 		{
 			if (!string.IsNullOrEmpty(BridgeArtifactOverridePath) && File.Exists(BridgeArtifactOverridePath)) File.Copy(BridgeArtifactOverridePath, temporary, true); else DownloadFileWithUserAgent(release.Url, temporary, "MineHarbor/0.4", GetGitHubReleaseDownloadHosts());
-			if (!ValidateCommandBridgeArtifact(temporary, release.Size, release.Sha256)) throw new InvalidDataException("명령 브리지 JAR 크기 또는 SHA-256 검증에 실패했습니다.");
+			if (!ValidateCommandBridgeArtifact(temporary, release.Size, release.Sha256)) throw Localized(new InvalidDataException("명령 브리지 JAR 크기 또는 SHA-256 검증에 실패했습니다."), "Command bridge JAR size or SHA-256 verification failed.");
 			if (File.Exists(destination)) File.Copy(destination, backup, true);
-			if (BridgeInstallFailureAfterBackup) throw new IOException("브리지 업데이트 복구 테스트 오류");
+			if (BridgeInstallFailureAfterBackup) throw Localized(new IOException("브리지 업데이트 복구 테스트 오류"), "Bridge update rollback test error");
 			ReplaceFile(temporary, destination);
 			BridgeManagedInfo managed = new BridgeManagedInfo(); managed.JarName = Path.GetFileName(destination); managed.Version = release.Version; managed.Protocol = release.Protocol; managed.Sha256 = release.Sha256; managed.InstalledUtc = DateTime.UtcNow.ToString("o", CultureInfo.InvariantCulture); WriteJsonAtomic(managedPath, managed); DeleteFileIfPresent(backup); return true;
 		}
@@ -1462,8 +1462,8 @@ internal static partial class Launcher
 	{
 		BridgeManagedInfo managed = ReadBridgeManagedInfo(serverDirectory); if (managed == null) return false;
 		string jar = Path.Combine(Path.Combine(serverDirectory, "plugins"), managed.JarName ?? string.Empty);
-		if (!string.Equals(Path.GetFullPath(jar), Path.GetFullPath(GetBridgeJarPath(serverDirectory)), StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("관리 대상 브리지 경로가 올바르지 않습니다.");
-		if (File.Exists(jar) && !string.Equals(GetFileSha256(jar), managed.Sha256, StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("브리지 JAR이 설치 후 변경되어 자동 삭제하지 않았습니다.");
+		if (!string.Equals(Path.GetFullPath(jar), Path.GetFullPath(GetBridgeJarPath(serverDirectory)), StringComparison.OrdinalIgnoreCase)) throw Localized(new InvalidDataException("관리 대상 브리지 경로가 올바르지 않습니다."), "The managed bridge path is invalid.");
+		if (File.Exists(jar) && !string.Equals(GetFileSha256(jar), managed.Sha256, StringComparison.OrdinalIgnoreCase)) throw Localized(new InvalidOperationException("브리지 JAR이 설치 후 변경되어 자동 삭제하지 않았습니다."), "The bridge JAR changed after installation, so it was not deleted automatically.");
 		DeleteFileIfPresent(jar); DeleteFileIfPresent(GetBridgeManagedPath(serverDirectory));
 		if (removeData) { string data = Path.Combine(Path.Combine(serverDirectory, "plugins"), "MinecraftServerLauncherCommandBridge"); if (Directory.Exists(data)) Directory.Delete(data, true); }
 		return true;
@@ -1530,8 +1530,8 @@ internal static partial class Launcher
 
 	internal static void DeleteBridgeSessionFile(string serverDirectory) { try { DeleteFileIfPresent(Path.Combine(serverDirectory, CommandBridgeSessionFileName)); } catch (Exception ex) { Console.WriteLine("[Bridge] 세션 파일 삭제 실패: " + ex.Message); } }
 	private static void WriteJsonAtomic(string path, object value) { Directory.CreateDirectory(Path.GetDirectoryName(path)); string temporary = path + ".준비중"; File.WriteAllText(temporary, new JavaScriptSerializer().Serialize(value), new UTF8Encoding(false)); ReplaceFile(temporary, path); }
-	private static string ReadLimitedLine(StreamReader reader, int maximum) { StringBuilder result = new StringBuilder(); while (true) { int value = reader.Read(); if (value < 0) return result.Length == 0 ? null : result.ToString(); char character = (char)value; if (character == '\n') return result.ToString(); if (character != '\r') result.Append(character); if (result.Length > maximum) throw new InvalidDataException("브리지 요청 크기 제한을 초과했습니다."); } }
-	private static Dictionary<string, object> DeserializeBridgeObject(string json) { if (string.IsNullOrEmpty(json) || json.Length > CommandBridgeMaximumLineLength) throw new InvalidDataException("브리지 JSON 크기가 올바르지 않습니다."); Dictionary<string, object> value = new JavaScriptSerializer().DeserializeObject(json) as Dictionary<string, object>; if (value == null || string.IsNullOrEmpty(BridgeString(value, "type")) || string.IsNullOrEmpty(BridgeString(value, "id"))) throw new InvalidDataException("브리지 JSON 형식이 올바르지 않습니다."); return value; }
+	private static string ReadLimitedLine(StreamReader reader, int maximum) { StringBuilder result = new StringBuilder(); while (true) { int value = reader.Read(); if (value < 0) return result.Length == 0 ? null : result.ToString(); char character = (char)value; if (character == '\n') return result.ToString(); if (character != '\r') result.Append(character); if (result.Length > maximum) throw Localized(new InvalidDataException("브리지 요청 크기 제한을 초과했습니다."), "The bridge request exceeds the size limit."); } }
+	private static Dictionary<string, object> DeserializeBridgeObject(string json) { if (string.IsNullOrEmpty(json) || json.Length > CommandBridgeMaximumLineLength) throw Localized(new InvalidDataException("브리지 JSON 크기가 올바르지 않습니다."), "The bridge JSON size is invalid."); Dictionary<string, object> value = new JavaScriptSerializer().DeserializeObject(json) as Dictionary<string, object>; if (value == null || string.IsNullOrEmpty(BridgeString(value, "type")) || string.IsNullOrEmpty(BridgeString(value, "id"))) throw Localized(new InvalidDataException("브리지 JSON 형식이 올바르지 않습니다."), "The bridge JSON format is invalid."); return value; }
 	private static string BridgeString(Dictionary<string, object> value, string key) { return value != null && value.ContainsKey(key) ? Convert.ToString(value[key], CultureInfo.InvariantCulture) ?? string.Empty : string.Empty; }
 	private static int BridgeInt(Dictionary<string, object> value, string key) { int result; return int.TryParse(BridgeString(value, key), NumberStyles.Integer, CultureInfo.InvariantCulture, out result) ? result : 0; }
 	private static bool TryBridgeMetric(Dictionary<string, object> value, string key, out double result) { return double.TryParse(BridgeString(value, key), NumberStyles.Float, CultureInfo.InvariantCulture, out result) && !double.IsNaN(result) && !double.IsInfinity(result) && result >= 0.0; }

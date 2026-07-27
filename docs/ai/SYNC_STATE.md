@@ -1,5 +1,13 @@
 ﻿# AI Agent Synchronization State
 
+## Claude Exception Localization 2/4 - 2026-07-27
+
+- **Current Version**: 1.19.0 (build 26.2.45.87)
+- **Branch**: `claude/remote-control-u4tvpt`
+- **Status**: 예외 메시지 이중화 2차분 95곳 적용
+- 변환: `BackupAndProfileTools`(30), `ContentAndDiagnostics`(21), `DuplicationSettings`(16), `QuickCommandsAndBridge`(13), `UpnpExternalAccess`(6), `ServerManagementFeatures`(5), `ModernLauncherGui`(2), `UpnpCore`(1), `ManagedServerDashboard`(1).
+- 문자열이 이어붙는 형태(`"...: " + key`)는 영어 쪽도 같은 값을 이어붙이도록 개별 변환했습니다.
+- **남은 작업**: `ContentManagementServices`(60), `RuntimeCompatibility`(45) → 3차분. `decompiled/Launcher.decompiled.cs`(67) → 4차분(줄바꿈이 CRLF/CR/LF로 섞여 있어 바이트 단위 편집 필요).
 ## Claude Exception Message Localization - 2026-07-27
 
 - **Current Version**: 1.18.0 (build 26.2.45.86)

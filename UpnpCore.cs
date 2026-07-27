@@ -424,7 +424,7 @@ internal static partial class Launcher
                     int internalPort;
                     if (!int.TryParse(ReadSoapValue(responseBody, "NewInternalPort"), NumberStyles.None, CultureInfo.InvariantCulture, out internalPort))
                     {
-                        throw new InvalidDataException("공유기의 포트 매핑 응답에서 내부 포트를 확인하지 못했습니다.");
+                        throw Localized(new InvalidDataException("공유기의 포트 매핑 응답에서 내부 포트를 확인하지 못했습니다."), "Could not read the internal port from the router's port-mapping response.");
                     }
                     SoapMappingInfo mapping = new SoapMappingInfo();
                     mapping.InternalPort = internalPort;

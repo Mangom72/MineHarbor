@@ -78,7 +78,7 @@ internal static partial class Launcher
 		{
 			if (pistonDuplication || gravityBlockDuplication || tripwireDuplication)
 			{
-				throw new NotSupportedException("선택한 서버 종류에는 MineHarbor가 안전하게 적용할 수 있는 Paper 계열 복사 설정이 없습니다.");
+				throw Localized(new NotSupportedException("선택한 서버 종류에는 MineHarbor가 안전하게 적용할 수 있는 Paper 계열 복사 설정이 없습니다."), "The selected server type has no Paper-family duplication settings that MineHarbor can apply safely.");
 			}
 			return null;
 		}
@@ -103,7 +103,7 @@ internal static partial class Launcher
 			|| gravityBlockDuplication && !gravitySupported
 			|| tripwireDuplication && !tripwireSupported)
 		{
-			throw new NotSupportedException("선택한 서버 버전에서 지원되지 않는 Paper 복사 설정을 적용할 수 없습니다.");
+			throw Localized(new NotSupportedException("선택한 서버 버전에서 지원되지 않는 Paper 복사 설정을 적용할 수 없습니다."), "The Paper duplication settings are not supported on the selected server version.");
 		}
 
 		if (!File.Exists(configurationPath) && !pistonDuplication && !gravityBlockDuplication && !tripwireDuplication)
@@ -117,7 +117,7 @@ internal static partial class Launcher
 			FileInfo existing = new FileInfo(configurationPath);
 			if (existing.Length > MaximumDuplicationConfigurationBytes)
 			{
-				throw new InvalidDataException("Paper 설정 파일이 안전한 크기 제한을 초과했습니다.");
+				throw Localized(new InvalidDataException("Paper 설정 파일이 안전한 크기 제한을 초과했습니다."), "The Paper settings file exceeds the safe size limit.");
 			}
 			Dictionary<string, bool> current = ReadUnsupportedPaperSettings(configurationPath, modern);
 			if (ManagedDuplicationValuesMatch(current, pistonSupported, gravitySupported, tripwireSupported, pistonDuplication, gravityBlockDuplication, tripwireDuplication))
@@ -261,11 +261,11 @@ internal static partial class Launcher
 			string key;
 			string valueText;
 			if (!TryParseYamlEntry(lines[index], out key, out valueText) || !IsManagedDuplicationKey(key)) continue;
-			if (result.ContainsKey(key)) throw new InvalidDataException("Paper 설정에 중복된 복사 설정이 있습니다: " + key);
+			if (result.ContainsKey(key)) throw Localized(new InvalidDataException("Paper 설정에 중복된 복사 설정이 있습니다: " + key), "The Paper settings contain a duplicate duplication setting: " + key);
 			bool value;
 			if (!bool.TryParse(RemoveYamlComment(valueText), out value))
 			{
-				throw new InvalidDataException("Paper 복사 설정 값이 true 또는 false가 아닙니다: " + key);
+				throw Localized(new InvalidDataException("Paper 복사 설정 값이 true 또는 false가 아닙니다: " + key), "A Paper duplication setting value is not true or false: " + key);
 			}
 			result.Add(key, value);
 		}
@@ -314,7 +314,7 @@ internal static partial class Launcher
 				string key;
 				string valueText;
 				if (!TryParseYamlEntry(lines[index], out key, out valueText) || !desired.ContainsKey(key)) continue;
-				if (!found.Add(key)) throw new InvalidDataException("Paper 설정에 중복된 복사 설정이 있습니다: " + key);
+				if (!found.Add(key)) throw Localized(new InvalidDataException("Paper 설정에 중복된 복사 설정이 있습니다: " + key), "The Paper settings contain a duplicate duplication setting: " + key);
 				string comment = GetYamlInlineComment(valueText);
 				lines[index] = new string(' ', location.ChildIndent) + key + ": " + desired[key].ToString().ToLowerInvariant() + comment;
 			}
@@ -334,7 +334,7 @@ internal static partial class Launcher
 			File.WriteAllLines(temporary, lines.ToArray(), new UTF8Encoding(false));
 			if (new FileInfo(temporary).Length > MaximumDuplicationConfigurationBytes)
 			{
-				throw new InvalidDataException("수정된 Paper 설정 파일이 안전한 크기 제한을 초과했습니다.");
+				throw Localized(new InvalidDataException("수정된 Paper 설정 파일이 안전한 크기 제한을 초과했습니다."), "The modified Paper settings file exceeds the safe size limit.");
 			}
 			ReplaceFile(temporary, path);
 		}
@@ -349,11 +349,11 @@ internal static partial class Launcher
 		FileInfo file = new FileInfo(path);
 		if ((file.Attributes & FileAttributes.ReparsePoint) != 0)
 		{
-			throw new InvalidDataException("연결된 Paper 설정 파일은 수정할 수 없습니다.");
+			throw Localized(new InvalidDataException("연결된 Paper 설정 파일은 수정할 수 없습니다."), "A linked Paper settings file cannot be modified.");
 		}
 		if (file.Length > MaximumDuplicationConfigurationBytes)
 		{
-			throw new InvalidDataException("Paper 설정 파일이 안전한 크기 제한을 초과했습니다.");
+			throw Localized(new InvalidDataException("Paper 설정 파일이 안전한 크기 제한을 초과했습니다."), "The Paper settings file exceeds the safe size limit.");
 		}
 		return File.ReadAllLines(path, Encoding.UTF8);
 	}
@@ -383,8 +383,8 @@ internal static partial class Launcher
 				string parentKey;
 				string parentValue;
 				if (GetYamlIndent(lines[index]) != 0 || !TryParseYamlEntry(lines[index], out parentKey, out parentValue) || parentKey != "settings") continue;
-				if (location.ParentStart >= 0) throw new InvalidDataException("구형 Paper 설정에 settings 구역이 중복되어 있습니다.");
-				if (RemoveYamlComment(parentValue).Length != 0) throw new InvalidDataException("구형 Paper settings 구역이 지원하지 않는 인라인 형식입니다.");
+				if (location.ParentStart >= 0) throw Localized(new InvalidDataException("구형 Paper 설정에 settings 구역이 중복되어 있습니다."), "The legacy Paper settings contain a duplicate settings section.");
+				if (RemoveYamlComment(parentValue).Length != 0) throw Localized(new InvalidDataException("구형 Paper settings 구역이 지원하지 않는 인라인 형식입니다."), "The legacy Paper settings section uses an unsupported inline format.");
 				location.ParentStart = index;
 			}
 			if (location.ParentStart < 0)
@@ -407,10 +407,10 @@ internal static partial class Launcher
 			string key;
 			string valueText;
 			if (indent != location.SectionIndent || !TryParseYamlEntry(lines[index], out key, out valueText) || key != "unsupported-settings") continue;
-			if (location.SectionStart >= 0) throw new InvalidDataException("Paper 설정에 unsupported-settings 구역이 중복되어 있습니다.");
+			if (location.SectionStart >= 0) throw Localized(new InvalidDataException("Paper 설정에 unsupported-settings 구역이 중복되어 있습니다."), "The Paper settings contain a duplicate unsupported-settings section.");
 			if (RemoveYamlComment(valueText).Length != 0)
 			{
-				throw new InvalidDataException("Paper unsupported-settings 구역이 지원하지 않는 인라인 형식입니다.");
+				throw Localized(new InvalidDataException("Paper unsupported-settings 구역이 지원하지 않는 인라인 형식입니다."), "The Paper unsupported-settings section uses an unsupported inline format.");
 			}
 			location.SectionStart = index;
 		}
@@ -463,7 +463,7 @@ internal static partial class Launcher
 		while (indent < line.Length && line[indent] == ' ') indent++;
 		if (indent < line.Length && line[indent] == '\t')
 		{
-			throw new InvalidDataException("탭 들여쓰기가 있는 Paper 설정은 안전하게 수정할 수 없습니다.");
+			throw Localized(new InvalidDataException("탭 들여쓰기가 있는 Paper 설정은 안전하게 수정할 수 없습니다."), "Paper settings indented with tabs cannot be modified safely.");
 		}
 		return indent;
 	}
@@ -507,7 +507,7 @@ internal static partial class Launcher
 		string prefix = root + Path.DirectorySeparatorChar;
 		if (!candidate.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
 		{
-			throw new InvalidDataException("Paper 설정 경로가 서버 폴더 밖을 가리킵니다.");
+			throw Localized(new InvalidDataException("Paper 설정 경로가 서버 폴더 밖을 가리킵니다."), "The Paper settings path points outside the server folder.");
 		}
 
 		DirectoryInfo current = new DirectoryInfo(Path.GetDirectoryName(candidate));
@@ -515,7 +515,7 @@ internal static partial class Launcher
 		{
 			if (current.Exists && (current.Attributes & FileAttributes.ReparsePoint) != 0)
 			{
-				throw new InvalidDataException("연결된 폴더 안의 Paper 설정은 수정할 수 없습니다.");
+				throw Localized(new InvalidDataException("연결된 폴더 안의 Paper 설정은 수정할 수 없습니다."), "Paper settings inside a linked folder cannot be modified.");
 			}
 			if (string.Equals(current.FullName.TrimEnd(Path.DirectorySeparatorChar), root, StringComparison.OrdinalIgnoreCase)) break;
 			current = current.Parent;

@@ -250,7 +250,7 @@ internal static partial class Launcher
 			try
 			{
 				ManagedProfileRecord profile = profiles.Find(delegate(ManagedProfileRecord item) { return string.Equals(Path.GetFullPath(item.Directory), claim.ServerDirectory, StringComparison.OrdinalIgnoreCase); });
-				if (profile == null) throw new InvalidOperationException("예약 작업의 서버 프로필을 찾지 못했습니다.");
+				if (profile == null) throw Localized(new InvalidOperationException("예약 작업의 서버 프로필을 찾지 못했습니다."), "The server profile for the scheduled job was not found.");
 				ServerAutomationConfiguration configuration = ReadServerAutomationConfiguration(profile.Directory);
 				ManagedServerSession session;
 				sessions.TryGetValue(profile.Name, out session);
@@ -283,7 +283,7 @@ internal static partial class Launcher
 				else
 				{
 					ValidateScheduledCommand(claim.Job.Command);
-					if (session == null || !IsManagedSessionRunning(session)) throw new InvalidOperationException("예약 명령을 실행할 서버가 꺼져 있습니다.");
+					if (session == null || !IsManagedSessionRunning(session)) throw Localized(new InvalidOperationException("예약 명령을 실행할 서버가 꺼져 있습니다."), "The server for the scheduled command is stopped.");
 					SendManagedCommand(session, claim.Job.Command);
 					result = ManagedText("명령 전송 완료", "Command sent");
 				}
@@ -305,7 +305,7 @@ internal static partial class Launcher
 
 		private static void SendManagedCommand(ManagedServerSession session, string command)
 		{
-			if (session == null || !IsManagedSessionRunning(session)) throw new InvalidOperationException("서버가 실행 중이 아닙니다.");
+			if (session == null || !IsManagedSessionRunning(session)) throw Localized(new InvalidOperationException("서버가 실행 중이 아닙니다."), "The server is not running.");
 			lock (session.SyncRoot)
 			{
 				session.Process.StandardInput.WriteLine(command);
@@ -433,7 +433,7 @@ internal static partial class Launcher
 				else if (string.Equals(claim.Job.Action, "command", StringComparison.OrdinalIgnoreCase))
 				{
 					ValidateScheduledCommand(claim.Job.Command);
-					if (!serverRunning || !SendServerCommand(claim.Job.Command)) throw new InvalidOperationException("예약 명령을 실행할 서버가 꺼져 있습니다.");
+					if (!serverRunning || !SendServerCommand(claim.Job.Command)) throw Localized(new InvalidOperationException("예약 명령을 실행할 서버가 꺼져 있습니다."), "The server for the scheduled command is stopped.");
 					result = ManagedText("명령 전송 완료", "Command sent");
 				}
 				else
@@ -452,7 +452,7 @@ internal static partial class Launcher
 							await Task.Delay(TimeSpan.FromSeconds(claim.Job.WarningSeconds), mainAutomationCancellation.Token);
 						}
 						mainScheduledRestart = restart;
-						if (!SendServerCommand("stop")) throw new InvalidOperationException("서버에 종료 명령을 보내지 못했습니다.");
+						if (!SendServerCommand("stop")) throw Localized(new InvalidOperationException("서버에 종료 명령을 보내지 못했습니다."), "Could not send the stop command to the server.");
 						result = restart ? ManagedText("재시작 요청 완료", "Restart requested") : ManagedText("종료 요청 완료", "Stop requested");
 					}
 				}
