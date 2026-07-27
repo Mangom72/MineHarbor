@@ -4,6 +4,17 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.21.0] - 2026-07-27
+
+### Korean
+
+- **오류 문구 영어 지원 완료 (4/4)**: 런처 자동 업데이트, 서버 파일 다운로드(Paper·Purpur·Forge·NeoForge·Fabric·Vanilla), 서버 백업의 오류 문구 67개를 마지막으로 한국어·영어로 제공합니다.
+- **이제 제품 전체의 오류 문구 387개가 두 언어를 지원합니다.** 영어로 사용하면 오류 대화상자도 영어로 표시됩니다.
+
+### English
+
+- **All error messages available in English (4 of 4)**: the final 67 messages — launcher auto-update, server file downloads (Paper, Purpur, Forge, NeoForge, Fabric, Vanilla), and server backup — are now available in both Korean and English.
+- **All 387 error messages across the product now support both languages.** Running the launcher in English now shows English error dialogs.
 ## [1.20.0] - 2026-07-27
 
 ### Korean

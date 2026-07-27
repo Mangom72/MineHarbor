@@ -669,7 +669,7 @@ internal static partial class Launcher
 	private static LauncherReleaseAsset ParseLauncherUpdateMetadata(string input)
 	{
 		Dictionary<string, object> root = new JavaScriptSerializer().DeserializeObject(input) as Dictionary<string, object>;
-		if (root == null) throw new InvalidDataException("업데이트 메타데이터가 JSON 객체가 아닙니다.");
+		if (root == null) throw Localized(new InvalidDataException("업데이트 메타데이터가 JSON 객체가 아닙니다."), "The update metadata is not a JSON object.");
 		string productVersion = root.ContainsKey("version") ? Convert.ToString(root["version"]) : string.Empty;
 		string build = root.ContainsKey("build") ? Convert.ToString(root["build"]) : string.Empty;
 		string url = root.ContainsKey("primary_download_url") ? Convert.ToString(root["primary_download_url"]) : root.ContainsKey("download_url") ? Convert.ToString(root["download_url"]) : string.Empty;
@@ -681,8 +681,8 @@ internal static partial class Launcher
 		Version product;
 		Version minimumVersion;
 		Version buildVersion;
-		if (!TryParseProductVersion(productVersion, out product) || !TryParseProductVersion(minimum, out minimumVersion) || !Version.TryParse(build, out buildVersion)) throw new InvalidDataException("업데이트 버전 정보가 올바르지 않습니다.");
-		if (!IsValidSha256(sha) || size <= 0 || size > 1073741824 || !IsAllowedLauncherDownloadUrl(url, productVersion)) throw new InvalidDataException("업데이트 다운로드 정보가 안전하지 않습니다.");
+		if (!TryParseProductVersion(productVersion, out product) || !TryParseProductVersion(minimum, out minimumVersion) || !Version.TryParse(build, out buildVersion)) throw Localized(new InvalidDataException("업데이트 버전 정보가 올바르지 않습니다."), "The update version details are invalid.");
+		if (!IsValidSha256(sha) || size <= 0 || size > 1073741824 || !IsAllowedLauncherDownloadUrl(url, productVersion)) throw Localized(new InvalidDataException("업데이트 다운로드 정보가 안전하지 않습니다."), "The update download details are not safe.");
 		LauncherReleaseAsset asset = new LauncherReleaseAsset();
 		asset.Url = url;
 		asset.Sha256 = sha;
@@ -712,7 +712,7 @@ internal static partial class Launcher
 		{
 			if (httpWebResponse.StatusCode != HttpStatusCode.OK)
 			{
-				throw new WebException("GitHub 릴리스 API가 HTTP " + (int)httpWebResponse.StatusCode + "을 반환했습니다.");
+				throw Localized(new WebException("GitHub 릴리스 API가 HTTP " + (int)httpWebResponse.StatusCode + "을 반환했습니다."), "The GitHub release API returned HTTP " + (int)httpWebResponse.StatusCode + ".");
 			}
 			using (Stream stream = httpWebResponse.GetResponseStream())
 			{
@@ -731,12 +731,12 @@ internal static partial class Launcher
 		Version result;
 		if (!Version.TryParse(releaseTag, out result))
 		{
-			throw new InvalidDataException("GitHub 최신 릴리스의 버전 정보를 인식하지 못했습니다.");
+			throw Localized(new InvalidDataException("GitHub 최신 릴리스의 버전 정보를 인식하지 못했습니다."), "Could not recognize the version of the latest GitHub release.");
 		}
 		object[] array = ((dictionary != null && dictionary.ContainsKey("assets")) ? (dictionary["assets"] as object[]) : null);
 		if (array == null)
 		{
-			throw new InvalidDataException("GitHub 최신 릴리스에서 파일 목록을 찾지 못했습니다.");
+			throw Localized(new InvalidDataException("GitHub 최신 릴리스에서 파일 목록을 찾지 못했습니다."), "No asset list was found in the latest GitHub release.");
 		}
 		object[] array2 = array;
 		object[] array3 = array2;
@@ -751,12 +751,12 @@ internal static partial class Launcher
 				long num = (dictionary2.ContainsKey("size") ? Convert.ToInt64(dictionary2["size"]) : 0);
 				if (!string.Equals(a, "uploaded", StringComparison.OrdinalIgnoreCase) || !text.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
 				{
-					throw new InvalidDataException("GitHub 릴리스 파일의 상태 또는 SHA-256 정보를 검증하지 못했습니다.");
+					throw Localized(new InvalidDataException("GitHub 릴리스 파일의 상태 또는 SHA-256 정보를 검증하지 못했습니다."), "Could not verify the state or SHA-256 of the GitHub release asset.");
 				}
 				string text2 = text.Substring(7);
 				if (!IsValidSha256(text2) || num <= 0 || num > 1073741824 || !IsAllowedLauncherDownloadUrl(url, releaseTag))
 				{
-					throw new InvalidDataException("GitHub 릴리스 파일의 다운로드 정보를 검증하지 못했습니다.");
+					throw Localized(new InvalidDataException("GitHub 릴리스 파일의 다운로드 정보를 검증하지 못했습니다."), "Could not verify the download details of the GitHub release asset.");
 				}
 				LauncherReleaseAsset launcherReleaseAsset = new LauncherReleaseAsset();
 				launcherReleaseAsset.Url = url;
@@ -770,7 +770,7 @@ internal static partial class Launcher
 				return launcherReleaseAsset;
 			}
 		}
-		throw new InvalidDataException("GitHub 최신 릴리스에 " + LauncherReleaseAssetName + " 파일이 없습니다.");
+		throw Localized(new InvalidDataException("GitHub 최신 릴리스에 " + LauncherReleaseAssetName + " 파일이 없습니다."), "The latest GitHub release does not contain " + LauncherReleaseAssetName + ".");
 	}
 
 	private static bool IsAllowedLauncherDownloadUrl(string url, string version)
@@ -846,7 +846,7 @@ internal static partial class Launcher
 		long num = checked(updateSize + 104857600);
 		if (driveInfo.AvailableFreeSpace < num)
 		{
-			throw new IOException("런처 업데이트에 필요한 여유 공간이 부족합니다. 최소 " + Math.Ceiling((double)num / 1073741824.0).ToString("0.0") + "GB를 확보하세요.");
+			throw Localized(new IOException("런처 업데이트에 필요한 여유 공간이 부족합니다. 최소 " + Math.Ceiling((double)num / 1073741824.0).ToString("0.0") + "GB를 확보하세요."), "Not enough free space for the launcher update. Free at least " + Math.Ceiling((double)num / 1073741824.0).ToString("0.0") + " GB.");
 		}
 	}
 
@@ -856,7 +856,7 @@ internal static partial class Launcher
 		string[] allowedHosts = GetGitHubReleaseDownloadHosts();
 		for (int redirect = 0; redirect <= 5; redirect++)
 		{
-			if (!IsAllowedLauncherTransferUrl(current, allowedHosts)) throw new InvalidDataException("런처 다운로드 호스트를 검증하지 못했습니다.");
+			if (!IsAllowedLauncherTransferUrl(current, allowedHosts)) throw Localized(new InvalidDataException("런처 다운로드 호스트를 검증하지 못했습니다."), "Could not verify the launcher download host.");
 			HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(current);
 			httpWebRequest.Method = "GET";
 			httpWebRequest.UserAgent = LauncherUpdateUserAgent;
@@ -871,12 +871,12 @@ internal static partial class Launcher
 				{
 					string location = httpWebResponse.Headers[HttpResponseHeader.Location];
 					Uri next;
-					if (string.IsNullOrWhiteSpace(location) || !Uri.TryCreate(current, location, out next) || !IsAllowedLauncherTransferUrl(next, allowedHosts)) throw new InvalidDataException("허용되지 않은 런처 다운로드 리디렉션입니다.");
+					if (string.IsNullOrWhiteSpace(location) || !Uri.TryCreate(current, location, out next) || !IsAllowedLauncherTransferUrl(next, allowedHosts)) throw Localized(new InvalidDataException("허용되지 않은 런처 다운로드 리디렉션입니다."), "This launcher download redirect is not allowed.");
 					current = next;
 					continue;
 				}
-				if (httpWebResponse.StatusCode != HttpStatusCode.OK) throw new WebException("런처 다운로드 서버가 HTTP " + (int)httpWebResponse.StatusCode + "을 반환했습니다.");
-				if (httpWebResponse.ContentLength >= 0L && httpWebResponse.ContentLength != asset.Size) throw new InvalidDataException("런처 다운로드 크기가 GitHub 릴리스 정보와 다릅니다.");
+				if (httpWebResponse.StatusCode != HttpStatusCode.OK) throw Localized(new WebException("런처 다운로드 서버가 HTTP " + (int)httpWebResponse.StatusCode + "을 반환했습니다."), "The launcher download server returned HTTP " + (int)httpWebResponse.StatusCode + ".");
+				if (httpWebResponse.ContentLength >= 0L && httpWebResponse.ContentLength != asset.Size) throw Localized(new InvalidDataException("런처 다운로드 크기가 GitHub 릴리스 정보와 다릅니다."), "The launcher download size differs from the GitHub release metadata.");
 				using (Stream stream = httpWebResponse.GetResponseStream())
 				using (FileStream fileStream = new FileStream(destinationPath, FileMode.CreateNew, FileAccess.Write, FileShare.None))
 				{
@@ -895,16 +895,16 @@ internal static partial class Launcher
 							Console.Write("\r런처 업데이트 다운로드: " + num4 + "%   ");
 							ReportLauncherLoading(LauncherUiText("새 런처 다운로드 ", "Launcher download ") + num4 + "%", 15 + num4 * 75 / 100);
 						}
-						if (num > asset.Size) throw new InvalidDataException("런처 다운로드 크기가 GitHub 릴리스 정보와 다릅니다.");
+						if (num > asset.Size) throw Localized(new InvalidDataException("런처 다운로드 크기가 GitHub 릴리스 정보와 다릅니다."), "The launcher download size differs from the GitHub release metadata.");
 					}
-					if (num != asset.Size) throw new InvalidDataException("런처 다운로드가 완료되기 전에 연결이 종료되었습니다.");
+					if (num != asset.Size) throw Localized(new InvalidDataException("런처 다운로드가 완료되기 전에 연결이 종료되었습니다."), "The connection ended before the launcher download finished.");
 					fileStream.Flush(true);
 					Console.WriteLine();
 				}
 				return;
 			}
 		}
-		throw new InvalidDataException("런처 다운로드 리디렉션 횟수가 안전 제한을 초과했습니다.");
+		throw Localized(new InvalidDataException("런처 다운로드 리디렉션 횟수가 안전 제한을 초과했습니다."), "The number of launcher download redirects exceeds the safety limit.");
 	}
 
 	private static int ApplyDownloadedLauncherUpdate(string targetPath, string expectedHash, string updateDirectory, string parentProcessId)
@@ -921,16 +921,16 @@ internal static partial class Launcher
 			targetFullPath = Path.GetFullPath(targetPath);
 			if (!IsSafeLauncherUpdateDirectory(fullPath) || !string.Equals(Path.GetDirectoryName(fullPath2), fullPath, StringComparison.OrdinalIgnoreCase) || !IsValidSha256(expectedHash) || !string.Equals(Path.GetExtension(targetFullPath), ".exe", StringComparison.OrdinalIgnoreCase) || !File.Exists(targetFullPath))
 			{
-				throw new InvalidDataException("런처 업데이트 적용 인수가 안전하지 않습니다.");
+				throw Localized(new InvalidDataException("런처 업데이트 적용 인수가 안전하지 않습니다."), "The launcher update arguments are not safe.");
 			}
 			if (!HashMatches(fullPath2, expectedHash))
 			{
-				throw new InvalidDataException("업데이트 실행 파일의 SHA-256 무결성 검증에 실패했습니다.");
+				throw Localized(new InvalidDataException("업데이트 실행 파일의 SHA-256 무결성 검증에 실패했습니다."), "SHA-256 integrity verification of the update executable failed.");
 			}
 			int result;
 			if (!int.TryParse(parentProcessId, out result) || result <= 0)
 			{
-				throw new InvalidDataException("기존 런처 프로세스 정보를 확인하지 못했습니다.");
+				throw Localized(new InvalidDataException("기존 런처 프로세스 정보를 확인하지 못했습니다."), "Could not verify the existing launcher process details.");
 			}
 			try
 			{
@@ -971,7 +971,7 @@ internal static partial class Launcher
 				{
 					File.Copy(backupPath, targetFullPath, true);
 				}
-				throw new IOException("기존 런처 파일을 새 버전으로 교체하지 못했습니다.", innerException);
+				throw Localized(new IOException("기존 런처 파일을 새 버전으로 교체하지 못했습니다.", innerException), "Could not replace the existing launcher file with the new version.");
 			}
 			ProcessStartInfo processStartInfo = new ProcessStartInfo();
 			processStartInfo.FileName = targetFullPath;
@@ -989,7 +989,7 @@ internal static partial class Launcher
 			}
 			if (!File.Exists(confirmation))
 			{
-				throw new IOException("새 버전 실행 확인을 받지 못했습니다.");
+				throw Localized(new IOException("새 버전 실행 확인을 받지 못했습니다."), "The new version did not confirm that it started.");
 			}
 			return 0;
 		}
@@ -1030,9 +1030,9 @@ internal static partial class Launcher
 
 	private static void ReplaceLauncherFileOnce(string sourcePath, string targetPath, string expectedHash)
 	{
-		if (!File.Exists(sourcePath) || !IsValidSha256(expectedHash)) throw new InvalidDataException("교체할 런처 파일 정보가 올바르지 않습니다.");
+		if (!File.Exists(sourcePath) || !IsValidSha256(expectedHash)) throw Localized(new InvalidDataException("교체할 런처 파일 정보가 올바르지 않습니다."), "The launcher file details to replace are invalid.");
 		File.Copy(sourcePath, targetPath, true);
-		if (!HashMatches(targetPath, expectedHash)) throw new InvalidDataException("교체된 런처의 SHA-256 검증에 실패했습니다.");
+		if (!HashMatches(targetPath, expectedHash)) throw Localized(new InvalidDataException("교체된 런처의 SHA-256 검증에 실패했습니다."), "SHA-256 verification of the replaced launcher failed.");
 	}
 
 	private static void ConfirmLauncherUpdateStarted(string updateDirectory)
@@ -1416,7 +1416,7 @@ internal static partial class Launcher
 		{
 			return text4;
 		}
-		throw new FileNotFoundException("기존 Java 25 캐시가 없습니다.");
+		throw Localized(new FileNotFoundException("기존 Java 25 캐시가 없습니다."), "There is no existing Java 25 cache.");
 	}
 
 	private static void ApplyServerPreset(ServerSettings settings, string preset)
@@ -1459,7 +1459,7 @@ internal static partial class Launcher
 			settings.LevelType = "minecraft:flat";
 			break;
 		default:
-			throw new InvalidDataException("선택한 서버 프리셋을 인식할 수 없습니다.");
+			throw Localized(new InvalidDataException("선택한 서버 프리셋을 인식할 수 없습니다."), "The selected server preset is not recognized.");
 		}
 	}
 
@@ -2339,11 +2339,11 @@ internal static partial class Launcher
 				existing.JarPath = jarPath;
 				return existing;
 			}
-			throw new FileNotFoundException("직접 지정한 서버 JAR 파일을 찾을 수 없습니다.", sourcePath);
+			throw Localized(new FileNotFoundException("직접 지정한 서버 JAR 파일을 찾을 수 없습니다.", sourcePath), "The manually specified server JAR file was not found.");
 		}
 		if (!string.Equals(Path.GetExtension(sourcePath), ".jar", StringComparison.OrdinalIgnoreCase))
 		{
-			throw new InvalidDataException("직접 지정한 서버 파일은 .jar 확장자여야 합니다.");
+			throw Localized(new InvalidDataException("직접 지정한 서버 파일은 .jar 확장자여야 합니다."), "A manually specified server file must have a .jar extension.");
 		}
 		string sourceFull = Path.GetFullPath(sourcePath);
 		string destinationFull = Path.GetFullPath(jarPath);
@@ -2356,7 +2356,7 @@ internal static partial class Launcher
 			if (!IsLikelyPaperJar(temporaryPath))
 			{
 				DeleteFileIfPresent(temporaryPath);
-				throw new InvalidDataException("지정한 파일이 실행 가능한 JAR 형식이 아닙니다.");
+				throw Localized(new InvalidDataException("지정한 파일이 실행 가능한 JAR 형식이 아닙니다."), "The specified file is not a runnable JAR.");
 			}
 			ReplaceFile(temporaryPath, jarPath);
 		}
@@ -2415,23 +2415,23 @@ internal static partial class Launcher
 		FileInfo fileInfo = new FileInfo(path);
 		if (!fileInfo.Exists || fileInfo.Length < 1048576)
 		{
-			throw new InvalidDataException("다운로드한 서버 파일 크기가 비정상적으로 작습니다.");
+			throw Localized(new InvalidDataException("다운로드한 서버 파일 크기가 비정상적으로 작습니다."), "The downloaded server file is unexpectedly small.");
 		}
 		if (download.Size > 0 && fileInfo.Length != download.Size)
 		{
-			throw new InvalidDataException("다운로드 크기가 공식 정보와 다릅니다.");
+			throw Localized(new InvalidDataException("다운로드 크기가 공식 정보와 다릅니다."), "The download size differs from the official metadata.");
 		}
 		if (!string.IsNullOrWhiteSpace(download.Sha256) && !HashMatches(path, download.Sha256))
 		{
-			throw new InvalidDataException("다운로드한 서버 JAR의 SHA-256 검증에 실패했습니다.");
+			throw Localized(new InvalidDataException("다운로드한 서버 JAR의 SHA-256 검증에 실패했습니다."), "SHA-256 verification of the downloaded server JAR failed.");
 		}
 		if (!string.IsNullOrWhiteSpace(download.Sha1) && !string.Equals(GetFileSha1(path), download.Sha1, StringComparison.OrdinalIgnoreCase))
 		{
-			throw new InvalidDataException("다운로드한 서버 JAR의 SHA-1 검증에 실패했습니다.");
+			throw Localized(new InvalidDataException("다운로드한 서버 JAR의 SHA-1 검증에 실패했습니다."), "SHA-1 verification of the downloaded server JAR failed.");
 		}
 		if (!IsLikelyPaperJar(path))
 		{
-			throw new InvalidDataException("다운로드한 파일이 실행 가능한 JAR 형식이 아닙니다.");
+			throw Localized(new InvalidDataException("다운로드한 파일이 실행 가능한 JAR 형식이 아닙니다."), "The downloaded file is not a runnable JAR.");
 		}
 	}
 
@@ -2455,7 +2455,7 @@ internal static partial class Launcher
 			paperInfo.BuildLabel = "build-" + paper.Build + "-" + paper.Channel;
 			return paperInfo;
 		default:
-			throw new InvalidDataException("지원하지 않는 서버 종류입니다: " + serverType);
+			throw Localized(new InvalidDataException("지원하지 않는 서버 종류입니다: " + serverType), "Unsupported server type: " + serverType);
 		}
 	}
 
@@ -2479,7 +2479,7 @@ internal static partial class Launcher
 		}
 		if (!IsAllowedDownloadHost(versionUrl, new string[2] { "piston-meta.mojang.com", "launchermeta.mojang.com" }))
 		{
-			throw new InvalidDataException("Mojang 버전 메타데이터 주소를 검증하지 못했습니다.");
+			throw Localized(new InvalidDataException("Mojang 버전 메타데이터 주소를 검증하지 못했습니다."), "Could not verify the Mojang version metadata address.");
 		}
 		string versionJson = DownloadTextWithUserAgent(versionUrl, GenericServerUserAgent);
 		Dictionary<string, object> versionRoot = new JavaScriptSerializer().DeserializeObject(versionJson) as Dictionary<string, object>;
@@ -2487,7 +2487,7 @@ internal static partial class Launcher
 		Dictionary<string, object> server = downloads != null && downloads.ContainsKey("server") ? downloads["server"] as Dictionary<string, object> : null;
 		if (server == null || !server.ContainsKey("url"))
 		{
-			throw new InvalidDataException("Mojang 서버 다운로드 정보를 찾지 못했습니다.");
+			throw Localized(new InvalidDataException("Mojang 서버 다운로드 정보를 찾지 못했습니다."), "Mojang server download information was not found.");
 		}
 		ServerDownloadInfo info = new ServerDownloadInfo();
 		info.Name = "minecraft-server-" + minecraftVersion + ".jar";
@@ -2497,7 +2497,7 @@ internal static partial class Launcher
 		info.BuildLabel = "vanilla-" + minecraftVersion;
 		if (!IsAllowedDownloadHost(info.Url, new string[2] { "piston-data.mojang.com", "launcher.mojang.com" }))
 		{
-			throw new InvalidDataException("Mojang 서버 다운로드 주소를 검증하지 못했습니다.");
+			throw Localized(new InvalidDataException("Mojang 서버 다운로드 주소를 검증하지 못했습니다."), "Could not verify the Mojang server download address.");
 		}
 		return info;
 	}
@@ -2514,7 +2514,7 @@ internal static partial class Launcher
 		}
 		if (string.IsNullOrWhiteSpace(latest))
 		{
-			throw new InvalidDataException("Purpur 최신 빌드 정보를 찾지 못했습니다.");
+			throw Localized(new InvalidDataException("Purpur 최신 빌드 정보를 찾지 못했습니다."), "The latest Purpur build information was not found.");
 		}
 		ServerDownloadInfo info = new ServerDownloadInfo();
 		info.Name = "purpur-" + minecraftVersion + "-" + latest + ".jar";
@@ -2543,7 +2543,7 @@ internal static partial class Launcher
 		}
 		if (string.IsNullOrWhiteSpace(loaderVersion))
 		{
-			throw new InvalidDataException("Fabric Loader 정보를 찾지 못했습니다.");
+			throw Localized(new InvalidDataException("Fabric Loader 정보를 찾지 못했습니다."), "Fabric Loader information was not found.");
 		}
 		string installerInput = DownloadTextWithUserAgent("https://meta.fabricmc.net/v2/versions/installer", GenericServerUserAgent);
 		object[] installers = new JavaScriptSerializer().DeserializeObject(installerInput) as object[];
@@ -2570,7 +2570,7 @@ internal static partial class Launcher
 		}
 		if (string.IsNullOrWhiteSpace(installerVersion))
 		{
-			throw new InvalidDataException("Fabric Installer 정보를 찾지 못했습니다.");
+			throw Localized(new InvalidDataException("Fabric Installer 정보를 찾지 못했습니다."), "Fabric Installer information was not found.");
 		}
 		ServerDownloadInfo info = new ServerDownloadInfo();
 		info.Name = "fabric-server-" + minecraftVersion + "-" + loaderVersion + ".jar";
@@ -2599,7 +2599,7 @@ internal static partial class Launcher
 		string installerUrl = "https://maven.minecraftforge.net/net/minecraftforge/forge/" + Uri.EscapeDataString(options.MinecraftVersion + "-" + forgeVersion) + "/forge-" + Uri.EscapeDataString(options.MinecraftVersion + "-" + forgeVersion) + "-installer.jar";
 		if (!IsAllowedDownloadHost(installerUrl, new string[1] { "maven.minecraftforge.net" }))
 		{
-			throw new InvalidDataException("Forge 다운로드 주소를 검증하지 못했습니다.");
+			throw Localized(new InvalidDataException("Forge 다운로드 주소를 검증하지 못했습니다."), "Could not verify the Forge download address.");
 		}
 		string installerPath = Path.Combine(serverDirectory, "forge-installer-" + ToSafeDirectoryName(options.MinecraftVersion + "-" + forgeVersion) + ".jar");
 		string temporaryPath = installerPath + ".다운로드중";
@@ -2615,7 +2615,7 @@ internal static partial class Launcher
 			string expectedSha256 = checksumParts.Length > 0 ? checksumParts[0] : string.Empty;
 			if (!IsValidSha256(expectedSha256) || !HashMatches(temporaryPath, expectedSha256))
 			{
-				throw new InvalidDataException("Forge Installer의 SHA-256 검증에 실패했습니다.");
+				throw Localized(new InvalidDataException("Forge Installer의 SHA-256 검증에 실패했습니다."), "SHA-256 verification of the Forge installer failed.");
 			}
 			ReplaceFile(temporaryPath, installerPath);
 		}
@@ -2638,7 +2638,7 @@ internal static partial class Launcher
 			runtime4.JarPath = forgeJar;
 			return runtime4;
 		}
-		throw new InvalidDataException("Forge 설치는 끝났지만 실행 파일(run.bat 또는 forge server jar)을 찾지 못했습니다. 프로필 폴더의 Forge 설치 로그를 확인하세요.");
+		throw Localized(new InvalidDataException("Forge 설치는 끝났지만 실행 파일(run.bat 또는 forge server jar)을 찾지 못했습니다. 프로필 폴더의 Forge 설치 로그를 확인하세요."), "Forge installation finished but no launcher file (run.bat or a forge server jar) was found. Check the Forge installation log in the profile folder.");
 	}
 
 	private static ServerRuntime PrepareNeoForgeRuntime(string serverDirectory, LauncherOptions options, string javaPath, bool forceInstall)
@@ -2655,7 +2655,7 @@ internal static partial class Launcher
 		string installerUrl = "https://maven.neoforged.net/releases/net/neoforged/neoforge/" + Uri.EscapeDataString(neoForgeVersion) + "/" + fileName;
 		if (!IsAllowedDownloadHost(installerUrl, new string[1] { "maven.neoforged.net" }))
 		{
-			throw new InvalidDataException("NeoForge 다운로드 주소를 검증하지 못했습니다.");
+			throw Localized(new InvalidDataException("NeoForge 다운로드 주소를 검증하지 못했습니다."), "Could not verify the NeoForge download address.");
 		}
 		string installerPath = Path.Combine(serverDirectory, fileName);
 		string temporaryPath = installerPath + ".다운로드중";
@@ -2670,7 +2670,7 @@ internal static partial class Launcher
 			string expectedSha256 = checksumParts.Length > 0 ? checksumParts[0] : string.Empty;
 			if (!IsValidSha256(expectedSha256) || !HashMatches(temporaryPath, expectedSha256))
 			{
-				throw new InvalidDataException("NeoForge Installer의 SHA-256 검증에 실패했습니다.");
+				throw Localized(new InvalidDataException("NeoForge Installer의 SHA-256 검증에 실패했습니다."), "SHA-256 verification of the NeoForge installer failed.");
 			}
 			ReplaceFile(temporaryPath, installerPath);
 		}
@@ -2682,7 +2682,7 @@ internal static partial class Launcher
 		RunForgeInstaller(javaPath, installerPath, serverDirectory);
 		if (!File.Exists(runBat))
 		{
-			throw new InvalidDataException("NeoForge 설치는 끝났지만 run.bat 파일을 찾지 못했습니다. 프로필 폴더의 설치 로그를 확인하세요.");
+			throw Localized(new InvalidDataException("NeoForge 설치는 끝났지만 run.bat 파일을 찾지 못했습니다. 프로필 폴더의 설치 로그를 확인하세요."), "NeoForge installation finished but run.bat was not found. Check the installation log in the profile folder.");
 		}
 		ServerRuntime runtime = new ServerRuntime();
 		runtime.BatchPath = runBat;
@@ -2712,7 +2712,7 @@ internal static partial class Launcher
 		string selected = latestStable ?? latestAny;
 		if (string.IsNullOrWhiteSpace(selected))
 		{
-			throw new InvalidDataException("선택한 Minecraft 버전에 맞는 NeoForge 빌드를 찾지 못했습니다.");
+			throw Localized(new InvalidDataException("선택한 Minecraft 버전에 맞는 NeoForge 빌드를 찾지 못했습니다."), "No NeoForge build was found for the selected Minecraft version.");
 		}
 		if (latestStable == null)
 		{
@@ -2728,7 +2728,7 @@ internal static partial class Launcher
 		Dictionary<string, object> promotions = root != null && root.ContainsKey("promos") ? root["promos"] as Dictionary<string, object> : null;
 		if (promotions == null)
 		{
-			throw new InvalidDataException("Forge 빌드 정보를 찾지 못했습니다.");
+			throw Localized(new InvalidDataException("Forge 빌드 정보를 찾지 못했습니다."), "Forge build information was not found.");
 		}
 		string recommendedKey = minecraftVersion + "-recommended";
 		string latestKey = minecraftVersion + "-latest";
@@ -2740,7 +2740,7 @@ internal static partial class Launcher
 		{
 			return Convert.ToString(promotions[latestKey]);
 		}
-		throw new InvalidDataException("선택한 Minecraft 버전의 Forge 빌드를 찾지 못했습니다.");
+		throw Localized(new InvalidDataException("선택한 Minecraft 버전의 Forge 빌드를 찾지 못했습니다."), "No Forge build was found for the selected Minecraft version.");
 	}
 
 	private static void RunForgeInstaller(string javaPath, string installerPath, string serverDirectory)
@@ -2780,11 +2780,11 @@ internal static partial class Launcher
 				catch
 				{
 				}
-				throw new TimeoutException("Forge 설치가 10분 안에 끝나지 않았습니다.");
+				throw Localized(new TimeoutException("Forge 설치가 10분 안에 끝나지 않았습니다."), "The Forge installation did not finish within 10 minutes.");
 			}
 			if (process.ExitCode != 0)
 			{
-				throw new InvalidDataException("Forge Installer가 오류 코드 " + process.ExitCode + "로 종료되었습니다.");
+				throw Localized(new InvalidDataException("Forge Installer가 오류 코드 " + process.ExitCode + "로 종료되었습니다."), "The Forge installer exited with error code " + process.ExitCode + ".");
 			}
 		}
 	}
@@ -2841,7 +2841,7 @@ internal static partial class Launcher
 		Uri current = new Uri(url);
 		for (int redirect = 0; redirect <= 5; redirect++)
 		{
-			if (!IsAllowedDownloadHost(current.AbsoluteUri, allowedHosts)) throw new InvalidDataException("다운로드 호스트를 검증하지 못했습니다.");
+			if (!IsAllowedDownloadHost(current.AbsoluteUri, allowedHosts)) throw Localized(new InvalidDataException("다운로드 호스트를 검증하지 못했습니다."), "Could not verify the download host.");
 			HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(current);
 			httpWebRequest.Method = "GET";
 			httpWebRequest.UserAgent = userAgent;
@@ -2855,12 +2855,12 @@ internal static partial class Launcher
 				{
 					string location = httpWebResponse.Headers[HttpResponseHeader.Location];
 					Uri next;
-					if (string.IsNullOrWhiteSpace(location) || !Uri.TryCreate(current, location, out next) || !IsAllowedDownloadHost(next.AbsoluteUri, allowedHosts)) throw new InvalidDataException("허용되지 않은 다운로드 리디렉션입니다.");
+					if (string.IsNullOrWhiteSpace(location) || !Uri.TryCreate(current, location, out next) || !IsAllowedDownloadHost(next.AbsoluteUri, allowedHosts)) throw Localized(new InvalidDataException("허용되지 않은 다운로드 리디렉션입니다."), "This download redirect is not allowed.");
 					current = next;
 					continue;
 				}
 				if (httpWebResponse.StatusCode != HttpStatusCode.OK) throw new WebException("HTTP " + (int)httpWebResponse.StatusCode);
-				if (httpWebResponse.ContentLength > 536870912L) throw new InvalidDataException("다운로드 파일이 안전 크기 제한을 초과했습니다.");
+				if (httpWebResponse.ContentLength > 536870912L) throw Localized(new InvalidDataException("다운로드 파일이 안전 크기 제한을 초과했습니다."), "The downloaded file exceeds the safe size limit.");
 				using (Stream stream = httpWebResponse.GetResponseStream())
 				using (FileStream fileStream = new FileStream(destinationPath, FileMode.Create, FileAccess.Write, FileShare.None))
 				{
@@ -2870,7 +2870,7 @@ internal static partial class Launcher
 					while ((read = stream.Read(buffer, 0, buffer.Length)) > 0)
 					{
 						total = checked(total + read);
-						if (total > 536870912L) throw new InvalidDataException("다운로드 파일이 안전 크기 제한을 초과했습니다.");
+						if (total > 536870912L) throw Localized(new InvalidDataException("다운로드 파일이 안전 크기 제한을 초과했습니다."), "The downloaded file exceeds the safe size limit.");
 						fileStream.Write(buffer, 0, read);
 					}
 					fileStream.Flush(true);
@@ -2878,7 +2878,7 @@ internal static partial class Launcher
 				return;
 			}
 		}
-		throw new InvalidDataException("다운로드 리디렉션 횟수가 안전 제한을 초과했습니다.");
+		throw Localized(new InvalidDataException("다운로드 리디렉션 횟수가 안전 제한을 초과했습니다."), "The number of download redirects exceeds the safety limit.");
 	}
 
 	private static void BackupManagedServerJar(string serverDirectory, string jarPath, string serverType, string minecraftVersion)
@@ -2948,7 +2948,7 @@ internal static partial class Launcher
 		object[] array = new JavaScriptSerializer().DeserializeObject(input) as object[];
 		if (array == null || array.Length == 0)
 		{
-			throw new InvalidDataException("PaperMC API에서 " + minecraftVersion + " 빌드 정보를 찾지 못했습니다.");
+			throw Localized(new InvalidDataException("PaperMC API에서 " + minecraftVersion + " 빌드 정보를 찾지 못했습니다."), "No build information for " + minecraftVersion + " was found in the PaperMC API.");
 		}
 		PaperBuildInfo paperBuildInfo = null;
 		PaperBuildInfo fallbackBuildInfo = null;
@@ -2997,7 +2997,7 @@ internal static partial class Launcher
 		}
 		if (paperBuildInfo == null || !IsAllowedPaperDownloadUrl(paperBuildInfo.Url) || paperBuildInfo.Sha256.Length != 64)
 		{
-			throw new InvalidDataException("PaperMC API의 다운로드 정보를 검증하지 못했습니다.");
+			throw Localized(new InvalidDataException("PaperMC API의 다운로드 정보를 검증하지 못했습니다."), "Could not verify the download details from the PaperMC API.");
 		}
 		return paperBuildInfo;
 	}
@@ -3067,7 +3067,7 @@ internal static partial class Launcher
 		DriveInfo driveInfo = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(backupDirectory)));
 		if (driveInfo.AvailableFreeSpace < requiredSpace)
 		{
-			throw new IOException("서버 백업에 필요한 여유 공간이 부족합니다. 최소 " + FormatByteSize(requiredSpace) + "가 필요합니다.");
+			throw Localized(new IOException("서버 백업에 필요한 여유 공간이 부족합니다. 최소 " + FormatByteSize(requiredSpace) + "가 필요합니다."), "Not enough free space for the server backup. At least " + FormatByteSize(requiredSpace) + " is required.");
 		}
 		string backupPath = Path.Combine(backupDirectory, "server-" + DateTime.Now.ToString("yyyyMMdd-HHmmss-fff") + ".zip");
 		string temporaryPath = backupPath + ".준비중";
@@ -3149,7 +3149,7 @@ internal static partial class Launcher
 		string fullPath = Path.GetFullPath(filePath);
 		if (!fullPath.StartsWith(serverRoot, StringComparison.OrdinalIgnoreCase))
 		{
-			throw new InvalidDataException("백업 대상이 서버 폴더 밖을 가리킵니다.");
+			throw Localized(new InvalidDataException("백업 대상이 서버 폴더 밖을 가리킵니다."), "The backup target points outside the server folder.");
 		}
 		string entryName = fullPath.Substring(serverRoot.Length).Replace(Path.DirectorySeparatorChar, '/');
 		ZipArchiveEntry entry = archive.CreateEntry(entryName, CompressionLevel.Fastest);
@@ -3243,7 +3243,7 @@ internal static partial class Launcher
 		Uri current = new Uri(url);
 		for (int redirect = 0; redirect <= 5; redirect++)
 		{
-			if (!IsAllowedDownloadHost(current.AbsoluteUri, allowedHosts)) throw new InvalidDataException("응답 호스트를 검증하지 못했습니다.");
+			if (!IsAllowedDownloadHost(current.AbsoluteUri, allowedHosts)) throw Localized(new InvalidDataException("응답 호스트를 검증하지 못했습니다."), "Could not verify the response host.");
 			HttpWebRequest httpWebRequest = (HttpWebRequest)WebRequest.Create(current);
 			httpWebRequest.Method = "GET";
 			httpWebRequest.UserAgent = userAgent;
@@ -3258,12 +3258,12 @@ internal static partial class Launcher
 				{
 					string location = httpWebResponse.Headers[HttpResponseHeader.Location];
 					Uri next;
-					if (string.IsNullOrWhiteSpace(location) || !Uri.TryCreate(current, location, out next) || !IsAllowedDownloadHost(next.AbsoluteUri, allowedHosts)) throw new InvalidDataException("허용되지 않은 응답 리디렉션입니다.");
+					if (string.IsNullOrWhiteSpace(location) || !Uri.TryCreate(current, location, out next) || !IsAllowedDownloadHost(next.AbsoluteUri, allowedHosts)) throw Localized(new InvalidDataException("허용되지 않은 응답 리디렉션입니다."), "This response redirect is not allowed.");
 					current = next;
 					continue;
 				}
 				if (httpWebResponse.StatusCode != HttpStatusCode.OK) throw new WebException("HTTP " + (int)httpWebResponse.StatusCode);
-				if (httpWebResponse.ContentLength > checked((long)maximumCharacters * 4L)) throw new InvalidDataException("응답이 안전 크기 제한을 초과했습니다.");
+				if (httpWebResponse.ContentLength > checked((long)maximumCharacters * 4L)) throw Localized(new InvalidDataException("응답이 안전 크기 제한을 초과했습니다."), "The response exceeds the safe size limit.");
 				using (Stream stream = httpWebResponse.GetResponseStream())
 				using (StreamReader streamReader = new StreamReader(stream, Encoding.UTF8))
 				{
@@ -3271,7 +3271,7 @@ internal static partial class Launcher
 				}
 			}
 		}
-		throw new InvalidDataException("응답 리디렉션 횟수가 안전 제한을 초과했습니다.");
+		throw Localized(new InvalidDataException("응답 리디렉션 횟수가 안전 제한을 초과했습니다."), "The number of response redirects exceeds the safety limit.");
 	}
 
 	private static bool HashMatches(string path, string expectedHash)
@@ -3910,7 +3910,7 @@ internal static partial class Launcher
 		httpWebRequest.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
 		using (HttpWebResponse httpWebResponse = (HttpWebResponse)httpWebRequest.GetResponse())
 		{
-			if (httpWebResponse.ContentLength > 65536L) throw new InvalidDataException("외부 검사 응답이 안전 크기 제한을 초과했습니다.");
+			if (httpWebResponse.ContentLength > 65536L) throw Localized(new InvalidDataException("외부 검사 응답이 안전 크기 제한을 초과했습니다."), "The external check response exceeds the safe size limit.");
 			using (Stream stream = httpWebResponse.GetResponseStream())
 			{
 				using (StreamReader streamReader = new StreamReader(stream, Encoding.UTF8))
@@ -3932,7 +3932,7 @@ internal static partial class Launcher
 		int read;
 		while ((read = reader.Read(buffer, 0, buffer.Length)) > 0)
 		{
-			if (builder.Length + read > maximumCharacters) throw new InvalidDataException("응답이 안전 크기 제한을 초과했습니다.");
+			if (builder.Length + read > maximumCharacters) throw Localized(new InvalidDataException("응답이 안전 크기 제한을 초과했습니다."), "The response exceeds the safe size limit.");
 			builder.Append(buffer, 0, read);
 		}
 		return builder.ToString();

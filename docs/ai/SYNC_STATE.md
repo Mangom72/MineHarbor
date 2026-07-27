@@ -1,5 +1,13 @@
 ﻿# AI Agent Synchronization State
 
+## Claude Exception Localization 4/4 (완료) - 2026-07-27
+
+- **Current Version**: 1.21.0 (build 26.2.45.89)
+- **Branch**: `claude/remote-control-u4tvpt`
+- **Status**: 예외 메시지 이중화 4차분 67곳 적용으로 **전체 387곳 완료**
+- 변환: `decompiled/Launcher.decompiled.cs`(67). 이 파일은 CRLF·CR·LF가 섞여 있어 텍스트로 읽고 쓰면 줄바꿈이 전체 정규화되므로, 바이트 단위로 정규식 치환했습니다. 변환 전후 CRLF·CR·LF 개수가 동일한지 확인했습니다.
+- `grep -rc 'throw new [A-Za-z]*Exception("[^"]*[가-힣]'` 결과가 제품 코드에서 0입니다.
+- **앞으로 새 예외를 추가할 때**: `throw new XException("한국어")` 대신 `throw Localized(new XException("한국어"), "English")`를 사용하세요. 표시할 때는 `exception.Message`가 아니라 `DescribeException(exception)`을 쓰면 현재 언어에 맞는 문구가 나옵니다.
 ## Claude Exception Localization 3/4 - 2026-07-27
 
 - **Current Version**: 1.20.0 (build 26.2.45.88)
