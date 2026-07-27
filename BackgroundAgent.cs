@@ -645,12 +645,28 @@ internal static partial class Launcher
 			}, token);
 		}
 
+		// Discord 알림은 부가 기능이므로 실패가 서버 운영에 영향을 주지 않도록 조용히 흘려보냅니다.
+		private void NotifyDiscordServerEvent(string profileName, string icon, string description)
+		{
+			try { discordRemote.NotifyServerEvent(icon + " `" + profileName + "` " + description); }
+			catch (Exception exception) { Console.Error.WriteLine("[BackgroundAgent] Discord 알림 실패 (" + exception.GetType().Name + ")"); }
+		}
+
 		private void ObserveImmediateBackupAsync(string profileName)
 		{
-			Task.Run(async delegate
+			Task<string> backup = StartImmediateBackupAsync(profileName);
+			// 결과를 기다리지 않는 호출 경로에서는 실패를 운영 기록에만 남기고 예외를 여기서 소비합니다.
+			if (backup != null) backup.ContinueWith(delegate(Task<string> completed) { GC.KeepAlive(completed.Exception); }, TaskContinuationOptions.OnlyOnFaulted);
+		}
+
+		// 만들어진 백업 경로를 돌려주어 호출한 쪽이 결과를 회신할 수 있게 합니다. 실패는 운영 기록에 남기고
+		// 예외로 다시 던져, 기다리지 않는 호출자에게는 이전과 같이 아무 영향이 없습니다.
+		private Task<string> StartImmediateBackupAsync(string profileName)
+		{
+			ManagedProfileRecord profile = FindProfile(profileName);
+			if (profile == null) return null;
+			return Task.Run(async delegate
 			{
-				ManagedProfileRecord profile = FindProfile(profileName);
-				if (profile == null) return;
 				BackgroundAgentSession session = null;
 				try
 				{
@@ -663,12 +679,14 @@ internal static partial class Launcher
 						await Task.Delay(1000, cancellation.Token).ConfigureAwait(false);
 					}
 					else if (IsLocalTcpPortListening(profile.Port)) throw new InvalidOperationException("에이전트가 소유하지 않은 실행 중 서버는 안전하게 백업할 수 없습니다.");
-					await CreateAgentBackupAsync(profile.Directory, configuration, "manual-agent", cancellation.Token).ConfigureAwait(false);
+					string path = await CreateAgentBackupAsync(profile.Directory, configuration, "manual-agent", cancellation.Token).ConfigureAwait(false);
 					TryRecordOperationEvent(profile.Directory, "backup", "info", "백그라운드 에이전트 백업을 완료했습니다.", "Background agent backup completed.", "background-agent", false);
+					return path;
 				}
 				catch (Exception exception)
 				{
 					TryRecordOperationEvent(profile.Directory, "backup", "error", "백그라운드 에이전트 백업에 실패했습니다: " + exception.Message, "Background agent backup failed: " + exception.Message, "background-agent", false);
+					throw;
 				}
 				finally
 				{
@@ -872,6 +890,7 @@ internal static partial class Launcher
 				process.BeginOutputReadLine();
 				process.BeginErrorReadLine();
 				TryRecordOperationEvent(profile.Directory, "server", "info", "백그라운드 에이전트가 서버를 시작했습니다.", "The background agent started the server.", "background-agent", false);
+				NotifyDiscordServerEvent(profile.Name, "▶️", ManagedText("시작했습니다.", "started."));
 				return Success("서버 시작을 요청했습니다.", "Server start requested.");
 			}
 			catch (Exception exception)
@@ -957,6 +976,15 @@ internal static partial class Launcher
 				restart ? "백그라운드 에이전트가 서버 재시작을 준비합니다." : "백그라운드 에이전트가 관리하던 서버가 종료되었습니다.",
 				restart ? "The background agent is preparing a server restart." : "A server managed by the background agent stopped.",
 				"background-agent", false);
+			bool crashed = !session.StopRequested && exitCode != 0;
+			NotifyDiscordServerEvent(
+				session.Profile.Name,
+				crashed ? (restart ? "⚠️" : "🛑") : "⏹️",
+				restart
+					? ManagedText("예기치 않게 종료되어 재시작을 준비합니다.", "stopped unexpectedly and a restart is being prepared.")
+					: crashed
+						? ManagedText("예기치 않게 종료되었습니다.", "stopped unexpectedly.")
+						: ManagedText("종료되었습니다.", "stopped."));
 			if (!restart && session.StopRequested)
 			{
 				Task.Run(async delegate

@@ -23,6 +23,9 @@ internal static partial class Launcher
 	private const int DiscordRemoteMaximumHttpBytes = 1048576;
 	private const int DiscordRemoteRequestsPerMinute = 10;
 	private const int DiscordRemoteMaximumStatusProfiles = 15;
+	private const int DiscordRemoteNotificationsPerMinute = 5;
+	private const int DiscordRemoteBackupWaitSeconds = 90;
+	private const int DiscordRemoteMaximumNotificationCharacters = 500;
 	private const int DiscordRemoteConfirmationSeconds = 60;
 	private static readonly object DiscordRemoteSettingsProcessLock = new object();
 	private static readonly byte[] DiscordRemoteCredentialEntropy = Encoding.UTF8.GetBytes("MineHarbor.DiscordRemoteCredential.v1");
@@ -41,6 +44,8 @@ internal static partial class Launcher
 		public List<string> AllowedUserIds = new List<string>();
 		public List<string> AllowedRoleIds = new List<string>();
 		public List<string> AllowedProfiles = new List<string>();
+		// 서버 시작·종료·충돌을 허용 채널에 알립니다. 사용자가 명시적으로 켜야 동작합니다.
+		public bool NotifyServerEvents;
 	}
 
 	private sealed class DiscordRemoteAction
@@ -49,6 +54,8 @@ internal static partial class Launcher
 		public string Profile;
 		public string ActorId;
 		public bool Korean;
+		// 서버를 지정하지 않은 전체 조회에서는 프로필마다 반복되는 추가 조회를 생략합니다.
+		public bool AllProfiles;
 	}
 
 	private sealed class DiscordRemoteActionResult
@@ -282,6 +289,8 @@ internal static partial class Launcher
 		private readonly Func<DiscordRemoteAction, DiscordRemoteActionResult> actionHandler;
 		private CancellationTokenSource runCancellation;
 		private Task runTask;
+		private DiscordGatewayClient activeClient;
+		private readonly Queue<DateTime> notificationTimes = new Queue<DateTime>();
 		private string fingerprint = string.Empty;
 		private string stateKo = "비활성화됨";
 		private string stateEn = "Disabled";
@@ -336,7 +345,11 @@ internal static partial class Launcher
 					else
 					{
 						using (DiscordGatewayClient client = new DiscordGatewayClient(settings, token, actionHandler, SetState))
-							await client.RunAsync(nextCancellation.Token).ConfigureAwait(false);
+						{
+							lock (stateLock) activeClient = client;
+							try { await client.RunAsync(nextCancellation.Token).ConfigureAwait(false); }
+							finally { lock (stateLock) { if (ReferenceEquals(activeClient, client)) activeClient = null; } }
+						}
 					}
 				}
 				catch (OperationCanceledException) { }
@@ -358,6 +371,36 @@ internal static partial class Launcher
 				return Convert.ToBase64String(hash.ComputeHash(Encoding.UTF8.GetBytes(serialized)));
 		}
 
+		// 서버 상태 변화를 허용 채널에 알립니다. 연결이 없거나 설정이 꺼져 있으면 조용히 무시하고,
+		// 짧은 시간에 알림이 몰려도 채널을 도배하지 않도록 분당 발신 수를 제한합니다.
+		public void NotifyServerEvent(string content)
+		{
+			if (disposed || string.IsNullOrWhiteSpace(content)) return;
+			DiscordGatewayClient client;
+			CancellationTokenSource cancellationSource;
+			lock (stateLock)
+			{
+				client = activeClient;
+				cancellationSource = runCancellation;
+				if (client == null || cancellationSource == null) return;
+				DateTime now = DateTime.UtcNow;
+				while (notificationTimes.Count > 0 && now - notificationTimes.Peek() >= TimeSpan.FromMinutes(1)) notificationTimes.Dequeue();
+				if (notificationTimes.Count >= DiscordRemoteNotificationsPerMinute) return;
+				notificationTimes.Enqueue(now);
+			}
+			CancellationToken cancellationToken;
+			try { cancellationToken = cancellationSource.Token; }
+			catch (ObjectDisposedException) { return; }
+			ObserveDiscordNotificationAsync(client, content, cancellationToken);
+		}
+
+		private static async void ObserveDiscordNotificationAsync(DiscordGatewayClient client, string content, CancellationToken cancellationToken)
+		{
+			try { await client.PostChannelNotificationAsync(content, cancellationToken).ConfigureAwait(false); }
+			catch (OperationCanceledException) { }
+			catch (Exception exception) { Console.Error.WriteLine("[DiscordRemote] 채널 알림 실패 (" + exception.GetType().Name + ")"); }
+		}
+
 		private void StopCurrentRun()
 		{
 			CancellationTokenSource previous;
@@ -366,6 +409,7 @@ internal static partial class Launcher
 				previous = runCancellation;
 				runCancellation = null;
 				runTask = null;
+				activeClient = null;
 				connected = false;
 			}
 			if (previous != null)
@@ -570,7 +614,7 @@ internal static partial class Launcher
 			for (int index = 0; index < reported; index++)
 			{
 				string profile = settings.AllowedProfiles[index];
-				DiscordRemoteActionResult result = RunAction("status", profile, userId, korean);
+				DiscordRemoteActionResult result = RunAction("status", profile, userId, korean, true);
 				lines.Add(result == null || string.IsNullOrWhiteSpace(result.Message)
 					? "`" + profile + "` · " + Text(korean, "상태를 확인할 수 없음", "Status unavailable")
 					: result.Message);
@@ -639,6 +683,11 @@ internal static partial class Launcher
 
 		private DiscordRemoteActionResult RunAction(string command, string profile, string userId, bool korean)
 		{
+			return RunAction(command, profile, userId, korean, false);
+		}
+
+		private DiscordRemoteActionResult RunAction(string command, string profile, string userId, bool korean, bool allProfiles)
+		{
 			try
 			{
 				if (DiscordRemoteActionOverride != null)
@@ -652,7 +701,8 @@ internal static partial class Launcher
 					Command = command,
 					Profile = profile,
 					ActorId = userId,
-					Korean = korean
+					Korean = korean,
+					AllProfiles = allProfiles
 				});
 			}
 			catch (Exception exception)
@@ -1024,6 +1074,28 @@ internal static partial class Launcher
 			return SendDiscordHttpWithoutResultAsync(HttpMethod.Post, uri, payload, false, allowRetry, cancellationToken);
 		}
 
+		// 알림은 설정에 저장된 허용 채널로만 보내고 멘션을 차단합니다. 실패해도 게이트웨이 연결에는 영향을 주지 않습니다.
+		public async Task PostChannelNotificationAsync(string content, CancellationToken cancellationToken)
+		{
+			if (!settings.NotifyServerEvents || string.IsNullOrWhiteSpace(content)) return;
+			if (!IsDiscordSnowflake(settings.ChannelId)) return;
+			Uri uri = CreateDiscordApiUri("/api/v10/channels/" + settings.ChannelId + "/messages");
+			Dictionary<string, object> payload = new Dictionary<string, object>
+			{
+				{ "content", TrimDiscordNotification(content) },
+				{ "allowed_mentions", new Dictionary<string, object> { { "parse", new object[0] } } }
+			};
+			await SendDiscordHttpWithoutResultAsync(HttpMethod.Post, uri, payload, true, true, cancellationToken).ConfigureAwait(false);
+		}
+
+		private static string TrimDiscordNotification(string content)
+		{
+			string value = (content ?? string.Empty).Replace('\0', ' ').Trim();
+			if (value.Length > DiscordRemoteMaximumNotificationCharacters)
+				value = value.Substring(0, DiscordRemoteMaximumNotificationCharacters - 3) + "...";
+			return value.Length == 0 ? "-" : value;
+		}
+
 		private Task EditOriginalInteractionAsync(string interactionToken, object payload, CancellationToken cancellationToken)
 		{
 			Uri uri = CreateDiscordApiUri("/api/v10/webhooks/" + settings.ApplicationId + "/" + Uri.EscapeDataString(interactionToken) + "/messages/@original");
@@ -1321,7 +1393,8 @@ internal static partial class Launcher
 			if (profile == null)
 				return DiscordActionFailure(action, "서버 프로필을 찾지 못했습니다.", "Server profile not found.");
 			string command = (action.Command ?? string.Empty).Trim().ToLowerInvariant();
-			if (command == "status") return CreateDiscordStatus(profile, action.Korean);
+			// 전체 조회는 프로필마다 반복되므로 브리지 조회를 생략하고, 서버를 지정한 조회에서만 확인합니다.
+			if (command == "status") return CreateDiscordStatus(profile, action.Korean, !string.IsNullOrEmpty(action.Profile) && !action.AllProfiles);
 			if (command == "players") return CreateDiscordPlayers(profile, action.Korean);
 			if (command == "errors") return CreateDiscordErrors(profile, action.Korean);
 			BackgroundAgentResponse response;
@@ -1337,17 +1410,56 @@ internal static partial class Launcher
 				if (GetRunningSession(profile.Name) == null && IsLocalTcpPortListening(profile.Port))
 					response = Failure("에이전트가 소유하지 않은 실행 중 서버는 원격 백업하지 않습니다.", "A running server not owned by the agent cannot be backed up remotely.");
 				else
-				{
-					ObserveImmediateBackupAsync(profile.Name);
-					response = Success("백업을 시작했습니다.", "Backup started.");
-				}
+					response = CreateDiscordBackupResponse(profile, action.Korean);
 			}
 			else return DiscordActionFailure(action, "지원하지 않는 원격 명령입니다.", "Unsupported remote command.");
 			RecordDiscordRemoteOperation(profile, action, response);
 			return new DiscordRemoteActionResult { Success = response != null && response.Success, Message = response == null ? DiscordActionText(action.Korean, "응답이 없습니다.", "No response.") : response.Message };
 		}
 
-		private DiscordRemoteActionResult CreateDiscordStatus(ManagedProfileRecord profile, bool korean)
+		// 백업은 월드 크기에 따라 오래 걸릴 수 있으므로 제한 시간까지만 기다립니다. 그 안에 끝나면 만들어진
+		// 파일 이름과 크기를 알려 주고, 넘어가면 백업은 계속 진행하면서 진행 중이라고만 회신합니다.
+		private BackgroundAgentResponse CreateDiscordBackupResponse(ManagedProfileRecord profile, bool korean)
+		{
+			Task<string> backup = StartImmediateBackupAsync(profile.Name);
+			if (backup == null) return Failure("백업을 시작하지 못했습니다.", "Could not start the backup.");
+			bool completed;
+			try { completed = backup.Wait(TimeSpan.FromSeconds(DiscordRemoteBackupWaitSeconds)); }
+			catch (Exception exception)
+			{
+				return Failure("백업에 실패했습니다: " + DescribeBackupFailure(exception), "Backup failed: " + DescribeBackupFailure(exception));
+			}
+			if (!completed)
+				return Success(
+					"백업이 진행 중입니다. 완료되면 운영 기록에 남습니다.",
+					"The backup is still running. It will be recorded in the operations history when it finishes.");
+			string path = backup.Result;
+			if (string.IsNullOrWhiteSpace(path)) return Failure("백업 결과를 확인하지 못했습니다.", "Could not confirm the backup result.");
+			string name = Path.GetFileName(path);
+			string size = DescribeBackupSize(path);
+			return Success("백업을 완료했습니다: " + name + size, "Backup completed: " + name + size);
+		}
+
+		private static string DescribeBackupFailure(Exception exception)
+		{
+			AggregateException aggregate = exception as AggregateException;
+			Exception root = aggregate != null && aggregate.InnerExceptions.Count > 0 ? aggregate.InnerExceptions[0] : exception;
+			return root.GetType().Name;
+		}
+
+		private static string DescribeBackupSize(string path)
+		{
+			try
+			{
+				FileInfo info = new FileInfo(path);
+				if (!info.Exists) return string.Empty;
+				double megabytes = info.Length / 1048576.0;
+				return " (" + megabytes.ToString("0.0", CultureInfo.InvariantCulture) + " MB)";
+			}
+			catch { return string.Empty; }
+		}
+
+		private DiscordRemoteActionResult CreateDiscordStatus(ManagedProfileRecord profile, bool korean, bool includePlayers)
 		{
 			BackgroundAgentSession session = GetRunningSession(profile.Name);
 			bool external = session == null && IsLocalTcpPortListening(profile.Port);
@@ -1361,7 +1473,26 @@ internal static partial class Launcher
 				uptime = DiscordActionText(korean, " · 가동 ", " · uptime ")
 					+ string.Format(CultureInfo.InvariantCulture, "{0}d {1:00}:{2:00}:{3:00}", Math.Max(0, elapsed.Days), Math.Max(0, elapsed.Hours), Math.Max(0, elapsed.Minutes), Math.Max(0, elapsed.Seconds));
 			}
-			return new DiscordRemoteActionResult { Success = true, Message = "`" + profile.Name + "` · " + state + uptime };
+			return new DiscordRemoteActionResult
+			{
+				Success = true,
+				Message = "`" + profile.Name + "` · " + state + uptime + (includePlayers ? DescribeOnlinePlayers(session, korean) : string.Empty)
+			};
+		}
+
+		// 명령 브리지가 연결된 경우에만 접속자 수를 덧붙이고, 확인되지 않으면 상태 문구를 그대로 둡니다.
+		private string DescribeOnlinePlayers(BackgroundAgentSession session, bool korean)
+		{
+			if (session == null || string.IsNullOrWhiteSpace(session.ControlPipeName) || string.IsNullOrWhiteSpace(session.ControlToken))
+				return string.Empty;
+			ManagedChildControlResponse child = SendManagedChildControlRequest(
+				session.ControlPipeName,
+				NewManagedChildControlRequest(session.ControlToken, "status", null),
+				1200);
+			if (child == null || !child.Success || !child.PlayersAvailable) return string.Empty;
+			int count = child.Players == null ? 0 : child.Players.Count;
+			return DiscordActionText(korean, " · 접속 ", " · players ") + count.ToString(CultureInfo.InvariantCulture)
+				+ DiscordActionText(korean, "명", string.Empty);
 		}
 
 		private DiscordRemoteActionResult CreateDiscordPlayers(ManagedProfileRecord profile, bool korean)

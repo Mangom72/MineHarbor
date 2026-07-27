@@ -4,6 +4,19 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.17.0] - 2026-07-26
+
+### Korean
+
+- **Discord 채널 알림 (선택)**: 서버 시작·종료·예기치 않은 종료를 허용 채널에 알립니다. 기본값은 꺼짐이며 설정 창에서 직접 켜야 합니다. 허용 채널로만 보내고 멘션은 차단하며, 분당 5건으로 제한해 채널을 도배하지 않습니다.
+- **백업 결과 회신**: `/mineharbor backup`이 `백업을 시작했습니다`로 끝나지 않고 완료된 백업 파일 이름과 크기를 알려 줍니다. 월드가 커서 90초를 넘기면 백업은 계속 진행하면서 진행 중임을 회신하고 결과는 운영 기록에 남습니다.
+- **상태에 접속자 수 표시**: 서버를 지정한 `/mineharbor status`에 명령 브리지가 연결된 경우 현재 접속자 수를 함께 표시합니다. 서버를 지정하지 않은 전체 조회는 프로필마다 조회가 반복되지 않도록 기존과 동일하게 동작합니다.
+
+### English
+
+- **Discord channel announcements (optional)**: server start, stop, and unexpected shutdown are announced in the approved channel. This is off by default and must be enabled in the settings window. Messages go only to the approved channel, mentions are suppressed, and the rate is capped at five per minute.
+- **Backup results reported**: `/mineharbor backup` no longer stops at "Backup started" — it reports the resulting file name and size. If a large world takes more than 90 seconds the backup keeps running, the reply says so, and the result is recorded in the operations history.
+- **Player count in status**: `/mineharbor status` for a specific server now includes the current player count when the command bridge is connected. The all-server view is unchanged so per-profile lookups are not repeated.
 ## [1.16.0] - 2026-07-26
 
 ### Korean

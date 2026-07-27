@@ -2242,6 +2242,9 @@ internal static class LauncherTests
 		Equal(true, GetField(autocomplete, "IsAutocomplete"), "Discord 서버 자동완성 응답");
 		Equal(1, ((IList)GetField(autocomplete, "Choices")).Count, "허용된 Discord 서버만 자동완성");
 
+		// 채널 알림은 사용자가 명시적으로 켜야 하므로 기본값은 꺼짐이어야 합니다.
+		Equal(false, GetField(loaded, "NotifyServerEvents"), "Discord 채널 알림 기본 꺼짐");
+
 		// 도움말은 프로필 이름을 추측하지 않도록 실제 사용 가능한 서버를 함께 보여 줍니다.
 		object helpReply = InvokeInstance(processor, "Process", new object[]
 		{
@@ -2407,6 +2410,19 @@ internal static class LauncherTests
 				&& removeTokenNotice.IndexOf("token", StringComparison.OrdinalIgnoreCase) < 0)
 				throw new InvalidOperationException("Discord 토큰 제거 결과 안내가 표시되지 않았습니다.");
 			removeToken.Checked = false;
+
+			// 채널 알림 선택은 원격 제어를 끄면 함께 비활성화되고, 저장 대상에 반영돼야 합니다.
+			CheckBox notifyEvents = (CheckBox)GetPrivateField(formType, form, "notifyEventsBox");
+			if (string.IsNullOrWhiteSpace(notifyEvents.AccessibleName) || string.IsNullOrWhiteSpace(notifyEvents.AccessibleDescription))
+				throw new InvalidOperationException("Discord 채널 알림 접근성 정보가 없습니다.");
+			enabled.Checked = true;
+			Equal(true, notifyEvents.Enabled, "원격 제어를 켜면 채널 알림 선택 가능");
+			notifyEvents.Checked = true;
+			object built = formType.GetMethod("BuildSettings", BindingFlags.Instance | BindingFlags.NonPublic).Invoke(form, new object[0]);
+			Equal(true, GetField(built, "NotifyServerEvents"), "채널 알림 선택이 저장 대상에 반영");
+			notifyEvents.Checked = false;
+			enabled.Checked = false;
+			Equal(false, notifyEvents.Enabled, "원격 제어를 끄면 채널 알림 선택 비활성화");
 
 			// 창을 닫으면 평문 봇 토큰이 입력 컨트롤에 남지 않아야 합니다.
 			token.Text = "test.token." + new string('y', 40);

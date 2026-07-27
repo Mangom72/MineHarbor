@@ -331,6 +331,7 @@ internal static partial class Launcher
 		private readonly ModernCheckBox enabledBox;
 		private readonly ModernTextBox tokenBox;
 		private readonly ModernCheckBox removeTokenBox;
+		private readonly ModernCheckBox notifyEventsBox;
 		private readonly ModernTextBox applicationIdBox;
 		private readonly ModernTextBox guildIdBox;
 		private readonly ModernTextBox channelIdBox;
@@ -465,6 +466,17 @@ internal static partial class Launcher
 				? "저장할 때 암호화된 토큰을 삭제하며 원격 제어도 꺼야 합니다."
 				: "Deletes the encrypted token on save; remote control must also be disabled.");
 
+			notifyEventsBox = new ModernCheckBox
+			{
+				AutoSize = true,
+				Text = korean ? "서버 시작·종료·충돌을 채널에 알림" : "Announce server start, stop, and crash in the channel",
+				Checked = settings.NotifyServerEvents,
+				Margin = new Padding(0, 6, 0, 0)
+			};
+			ConfigureAccessibleField(notifyEventsBox, notifyEventsBox.Text, korean
+				? "허용 채널에만 상태 변화를 알리며 멘션은 보내지 않습니다. 분당 알림 수는 제한됩니다."
+				: "Posts state changes only to the approved channel without mentions. The number of messages per minute is limited.");
+
 			AddDiscordField(connection, 0, korean ? "봇 토큰" : "Bot token", tokenBox, korean
 				? "토큰은 현재 Windows 사용자 범위 DPAPI로 암호화해 저장합니다."
 				: "The token is stored with current-user Windows DPAPI encryption.");
@@ -480,11 +492,12 @@ internal static partial class Launcher
 				Padding = new Padding(16),
 				Margin = new Padding(10, 0, 0, 0)
 			};
-			TableLayoutPanel authorization = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 6 };
+			TableLayoutPanel authorization = new TableLayoutPanel { Dock = DockStyle.Fill, ColumnCount = 1, RowCount = 7 };
 			authorization.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			authorization.RowStyles.Add(new RowStyle(SizeType.Percent, 100F));
 			authorization.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			authorization.RowStyles.Add(new RowStyle(SizeType.Absolute, 104F));
+			authorization.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			authorization.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			authorization.RowStyles.Add(new RowStyle(SizeType.AutoSize));
 			authorizationGroup.Controls.Add(authorization);
@@ -566,6 +579,7 @@ internal static partial class Launcher
 					: "Only approved profiles and allowlisted members can use /mineharbor. Arbitrary console, shell, and file operations remain blocked.",
 				Margin = new Padding(0)
 			}, 0, 5);
+			authorization.Controls.Add(notifyEventsBox, 0, 6);
 
 			validationLabel = new Label
 			{
@@ -719,6 +733,7 @@ internal static partial class Launcher
 			allowedUsersBox.Enabled = enabled;
 			allowedRolesBox.Enabled = enabled;
 			profilesBox.Enabled = enabled;
+			notifyEventsBox.Enabled = enabled;
 			UpdateValidationState();
 		}
 
@@ -873,7 +888,8 @@ internal static partial class Launcher
 				ChannelId = channelIdBox.Text.Trim(),
 				AllowedUserIds = ParseDiscordIdText(allowedUsersBox.Text),
 				AllowedRoleIds = ParseDiscordIdText(allowedRolesBox.Text),
-				AllowedProfiles = selectedProfiles
+				AllowedProfiles = selectedProfiles,
+				NotifyServerEvents = notifyEventsBox.Checked
 			};
 		}
 

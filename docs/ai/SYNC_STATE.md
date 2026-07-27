@@ -1,5 +1,16 @@
 ﻿# AI Agent Synchronization State
 
+## Claude Discord Feature Rollout - 2026-07-26
+
+- **Current Version**: 1.17.0 (build 26.2.45.85)
+- **Branch**: `claude/remote-control-u4tvpt` (v1.16.0 병합 후 main에서 다시 시작)
+- **Status**: 이전 점검에서 보류했던 중·고위험 Discord 기능 3건을 적용해 v1.17.0 릴리스 진행
+- 채널 알림은 `DiscordRemoteSettings.NotifyServerEvents`로 옵트인합니다. 스키마 버전은 그대로 두고 기본값 false 필드만 추가해, 기존 설정 파일은 그대로 읽히고 알림은 꺼진 상태로 시작합니다.
+- 알림 발신은 `DiscordGatewayClient.PostChannelNotificationAsync`가 담당하며 설정에 저장된 채널로만 보냅니다. `allowed_mentions.parse`를 비워 멘션을 차단하고 500자로 자릅니다. 컨트롤러가 분당 5건으로 제한하며, 발신 실패는 게이트웨이 연결에 영향을 주지 않고 로그만 남깁니다.
+- 백업 결과 회신을 위해 `ObserveImmediateBackupAsync`를 `StartImmediateBackupAsync`(Task<string> 반환)로 분리했습니다. 기다리지 않는 기존 호출 경로는 `ContinueWith`로 예외를 소비해 동작이 바뀌지 않습니다. Discord 경로만 90초까지 기다리고, 초과하면 백업은 계속 진행하면서 진행 중임을 회신합니다.
+- 접속자 수는 `DiscordRemoteAction.AllProfiles` 플래그로 단일 조회에서만 명명 파이프를 호출합니다. 전체 조회에서 프로필마다 파이프 호출이 누적되던 위험을 피했습니다.
+- **주의**: 채널 알림을 쓰려면 봇에 해당 채널의 메시지 보내기 권한이 필요합니다. 권한이 없으면 알림만 실패하고 `/mineharbor` 명령은 정상 동작합니다.
+- **다음 작업**: 예외 메시지 한/영 이중화가 아직 남아 있습니다. 영어 UI에서 한국어 오류가 그대로 표시되는 문제로, 코드 전반의 `throw new ...("한국어")` 수백 개를 손봐야 합니다.
 ## Claude Full Re-inspection - 2026-07-26
 
 - **Current Version**: 1.16.0 (build 26.2.45.84)
