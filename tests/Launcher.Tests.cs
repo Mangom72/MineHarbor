@@ -68,6 +68,7 @@ internal static class LauncherTests
 			TestDiscordRemoteManagement(temporary);
 			TestOperationsHistory(temporary);
 			TestDiagnosticRedaction(temporary);
+			TestLocalizedExceptionMessages();
 			TestQuickCommandsAndBridge(temporary);
 			Console.WriteLine("PASSED=" + passed);
 			return 0;
@@ -2592,6 +2593,42 @@ internal static class LauncherTests
 			ListView list = (ListView)GetPrivateField(formType, form, "historyList");
 			if (string.IsNullOrWhiteSpace(list.AccessibleName) || string.IsNullOrWhiteSpace(list.AccessibleDescription)) throw new InvalidOperationException("운영 기록 목록 접근성 정보가 없습니다.");
 		}
+		Pass();
+	}
+
+	private static void TestLocalizedExceptionMessages()
+	{
+		Type localizationType = launcher.GetNestedType("Localization", BindingFlags.NonPublic);
+		FieldInfo languageField = localizationType.GetField("CurrentLanguage", BindingFlags.Static | BindingFlags.Public);
+		object original = languageField.GetValue(null);
+		try
+		{
+			// 예외 타입은 그대로 두고 Data에만 영어 문구를 붙여, 기존 catch 절이 영향을 받지 않아야 합니다.
+			Exception thrown = null;
+			try { Invoke("ValidateScheduledCommand", new object[] { string.Empty }); }
+			catch (TargetInvocationException reflection) { thrown = reflection.InnerException; }
+			if (thrown == null) throw new InvalidOperationException("예약 명령 검증이 예외를 던지지 않았습니다.");
+			if (!(thrown is InvalidDataException))
+				throw new InvalidOperationException("예외 타입이 InvalidDataException에서 바뀌었습니다: " + thrown.GetType().Name);
+
+			languageField.SetValue(null, "ko");
+			string korean = Convert.ToString(Invoke("DescribeException", new object[] { thrown }));
+			Equal(thrown.Message, korean, "한국어 UI에서는 기존 메시지 유지");
+
+			languageField.SetValue(null, "en");
+			string english = Convert.ToString(Invoke("DescribeException", new object[] { thrown }));
+			if (english.IndexOf("scheduled command", StringComparison.OrdinalIgnoreCase) < 0)
+				throw new InvalidOperationException("영어 UI에서 영어 예외 문구가 사용되지 않았습니다: " + english);
+			foreach (char character in english)
+				if (character >= 0xAC00 && character <= 0xD7A3)
+					throw new InvalidOperationException("영어 예외 문구에 한글이 남아 있습니다: " + english);
+
+			// 영어 문구가 없는 예외는 지금까지와 동일하게 원래 메시지를 사용해야 합니다.
+			Exception plain = new InvalidOperationException("설명이 없는 예외");
+			Equal("설명이 없는 예외", Convert.ToString(Invoke("DescribeException", new object[] { plain })), "영어 문구 없는 예외는 원래 메시지 사용");
+			Equal(string.Empty, Convert.ToString(Invoke("DescribeException", new object[] { null })), "null 예외는 빈 문자열");
+		}
+		finally { languageField.SetValue(null, original); }
 		Pass();
 	}
 

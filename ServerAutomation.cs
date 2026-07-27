@@ -77,7 +77,7 @@ internal static partial class Launcher
 		FileInfo info = new FileInfo(path);
 		if (info.Length <= 0 || info.Length > AutomationFileMaximumBytes)
 		{
-			throw new InvalidDataException("자동화 설정 파일 크기가 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("자동화 설정 파일 크기가 올바르지 않습니다."), "The automation settings file size is invalid.");
 		}
 		ServerAutomationConfiguration configuration;
 		try
@@ -86,7 +86,7 @@ internal static partial class Launcher
 		}
 		catch (Exception exception)
 		{
-			throw new InvalidDataException("자동화 설정 파일이 손상되었습니다. 원본 파일은 변경하지 않았습니다.", exception);
+			throw Localized(new InvalidDataException("자동화 설정 파일이 손상되었습니다. 원본 파일은 변경하지 않았습니다.", exception), "The automation settings file is damaged. The original file was left unchanged.");
 		}
 		MigrateServerAutomationConfiguration(configuration);
 		ValidateServerAutomationConfiguration(configuration);
@@ -95,9 +95,9 @@ internal static partial class Launcher
 
 	private static void MigrateServerAutomationConfiguration(ServerAutomationConfiguration configuration)
 	{
-		if (configuration == null) throw new InvalidDataException("자동화 설정 파일이 비어 있습니다.");
+		if (configuration == null) throw Localized(new InvalidDataException("자동화 설정 파일이 비어 있습니다."), "The automation settings file is empty.");
 		if (configuration.SchemaVersion > AutomationSchemaVersion || configuration.SchemaVersion < 1)
-			throw new InvalidDataException("지원하지 않는 자동화 설정 버전입니다.");
+			throw Localized(new InvalidDataException("지원하지 않는 자동화 설정 버전입니다."), "Unsupported automation settings version.");
 		if (configuration.Jobs == null) configuration.Jobs = new List<ServerAutomationJob>();
 		if (configuration.SchemaVersion == 1)
 		{
@@ -142,7 +142,7 @@ internal static partial class Launcher
 				{
 					try { entered = mutex.WaitOne(TimeSpan.FromSeconds(5)); }
 					catch (AbandonedMutexException) { entered = true; }
-					if (!entered) throw new IOException("다른 MineHarbor 프로세스가 예약 설정을 갱신하고 있습니다.");
+					if (!entered) throw Localized(new IOException("다른 MineHarbor 프로세스가 예약 설정을 갱신하고 있습니다."), "Another MineHarbor process is updating the schedule settings.");
 					return action();
 				}
 				finally { if (entered) mutex.ReleaseMutex(); }
@@ -153,26 +153,26 @@ internal static partial class Launcher
 	private static void ValidateServerAutomationConfiguration(ServerAutomationConfiguration configuration)
 	{
 		if (configuration == null || configuration.SchemaVersion != AutomationSchemaVersion)
-			throw new InvalidDataException("지원하지 않는 자동화 설정 버전입니다.");
+			throw Localized(new InvalidDataException("지원하지 않는 자동화 설정 버전입니다."), "Unsupported automation settings version.");
 		configuration.RetentionCount = Math.Max(1, Math.Min(200, configuration.RetentionCount));
 		configuration.RetentionDays = Math.Max(1, Math.Min(3650, configuration.RetentionDays));
 		configuration.RetentionMaximumBytes = Math.Max(104857600L, Math.Min(10995116277760L, configuration.RetentionMaximumBytes));
 		if (configuration.Jobs == null) configuration.Jobs = new List<ServerAutomationJob>();
-		if (configuration.Jobs.Count > 200) throw new InvalidDataException("예약 작업은 서버당 200개를 넘을 수 없습니다.");
+		if (configuration.Jobs.Count > 200) throw Localized(new InvalidDataException("예약 작업은 서버당 200개를 넘을 수 없습니다."), "A server cannot have more than 200 scheduled jobs.");
 		HashSet<string> identifiers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		for (int i = 0; i < configuration.Jobs.Count; i++)
 		{
 			ServerAutomationJob job = configuration.Jobs[i];
 			if (job == null || string.IsNullOrWhiteSpace(job.Id) || job.Id.Length > 80 || !identifiers.Add(job.Id))
-				throw new InvalidDataException("예약 작업 식별자가 없거나 중복되었습니다.");
+				throw Localized(new InvalidDataException("예약 작업 식별자가 없거나 중복되었습니다."), "A scheduled job identifier is missing or duplicated.");
 			if (string.IsNullOrWhiteSpace(job.Name) || job.Name.Length > 120)
-				throw new InvalidDataException("예약 작업 이름은 1~120자로 입력해야 합니다.");
-			if (!IsSupportedAutomationAction(job.Action)) throw new InvalidDataException("지원하지 않는 예약 작업 종류입니다.");
+				throw Localized(new InvalidDataException("예약 작업 이름은 1~120자로 입력해야 합니다."), "A scheduled job name must be 1 to 120 characters.");
+			if (!IsSupportedAutomationAction(job.Action)) throw Localized(new InvalidDataException("지원하지 않는 예약 작업 종류입니다."), "Unsupported scheduled job type.");
 			if (string.Equals(job.Action, "command", StringComparison.OrdinalIgnoreCase)) ValidateScheduledCommand(job.Command);
-			if (job.WarningSeconds < 0 || job.WarningSeconds > 3600) throw new InvalidDataException("공지 시간은 0~3600초여야 합니다.");
+			if (job.WarningSeconds < 0 || job.WarningSeconds > 3600) throw Localized(new InvalidDataException("공지 시간은 0~3600초여야 합니다."), "The warning time must be between 0 and 3600 seconds.");
 			if (string.Equals(job.ScheduleKind, "interval", StringComparison.OrdinalIgnoreCase))
 			{
-				if (job.IntervalMinutes < 1 || job.IntervalMinutes > 525600) throw new InvalidDataException("반복 간격은 1분~365일이어야 합니다.");
+				if (job.IntervalMinutes < 1 || job.IntervalMinutes > 525600) throw Localized(new InvalidDataException("반복 간격은 1분~365일이어야 합니다."), "The repeat interval must be between 1 minute and 365 days.");
 			}
 			else if (string.Equals(job.ScheduleKind, "daily", StringComparison.OrdinalIgnoreCase))
 			{
@@ -187,18 +187,18 @@ internal static partial class Launcher
 			{
 				DateTime ignored;
 				if (!DateTime.TryParseExact(job.OnceLocalDateTime, "yyyy-MM-dd HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out ignored))
-					throw new InvalidDataException("일회성 실행 시각은 yyyy-MM-dd HH:mm 형식이어야 합니다.");
+					throw Localized(new InvalidDataException("일회성 실행 시각은 yyyy-MM-dd HH:mm 형식이어야 합니다."), "A one-time run time must use the yyyy-MM-dd HH:mm format.");
 			}
-			else throw new InvalidDataException("지원하지 않는 예약 방식입니다.");
+			else throw Localized(new InvalidDataException("지원하지 않는 예약 방식입니다."), "Unsupported schedule kind.");
 			if (!string.Equals(job.MissedRunPolicy, "run-once", StringComparison.OrdinalIgnoreCase)
 				&& !string.Equals(job.MissedRunPolicy, "skip", StringComparison.OrdinalIgnoreCase)
 				&& !string.Equals(job.MissedRunPolicy, "notify-only", StringComparison.OrdinalIgnoreCase))
-				throw new InvalidDataException("놓친 작업 처리 방식이 올바르지 않습니다.");
+				throw Localized(new InvalidDataException("놓친 작업 처리 방식이 올바르지 않습니다."), "The missed-run policy is invalid.");
 			if (job.MaximumDelayMinutes < 1 || job.MaximumDelayMinutes > 525600)
-				throw new InvalidDataException("최대 지연 시간은 1분~365일이어야 합니다.");
+				throw Localized(new InvalidDataException("최대 지연 시간은 1분~365일이어야 합니다."), "The maximum delay must be between 1 minute and 365 days.");
 			DateTime parsed;
 			if (!string.IsNullOrEmpty(job.NextRunUtc) && !DateTime.TryParse(job.NextRunUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out parsed))
-				throw new InvalidDataException("다음 실행 시각이 올바르지 않습니다.");
+				throw Localized(new InvalidDataException("다음 실행 시각이 올바르지 않습니다."), "The next run time is invalid.");
 		}
 	}
 
@@ -206,7 +206,7 @@ internal static partial class Launcher
 	{
 		DateTime ignored;
 		if (!DateTime.TryParseExact(value, "HH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out ignored))
-			throw new InvalidDataException("실행 시각은 HH:mm 형식이어야 합니다.");
+			throw Localized(new InvalidDataException("실행 시각은 HH:mm 형식이어야 합니다."), "A run time must use the HH:mm format.");
 	}
 
 	private static HashSet<DayOfWeek> ParseAutomationWeekdays(string value)
@@ -225,9 +225,9 @@ internal static partial class Launcher
 				found = true;
 				break;
 			}
-			if (!found) throw new InvalidDataException("실행 요일 값이 올바르지 않습니다.");
+			if (!found) throw Localized(new InvalidDataException("실행 요일 값이 올바르지 않습니다."), "A run weekday value is invalid.");
 		}
-		if (days.Count == 0) throw new InvalidDataException("매주 실행할 요일을 하나 이상 선택해야 합니다.");
+		if (days.Count == 0) throw Localized(new InvalidDataException("매주 실행할 요일을 하나 이상 선택해야 합니다."), "Select at least one weekday for a weekly schedule.");
 		return days;
 	}
 
@@ -243,7 +243,7 @@ internal static partial class Launcher
 	private static void ValidateScheduledCommand(string command)
 	{
 		if (string.IsNullOrWhiteSpace(command) || command.Length > 2048 || command.IndexOf('\r') >= 0 || command.IndexOf('\n') >= 0 || command.IndexOf('\0') >= 0)
-			throw new InvalidDataException("예약 명령은 줄바꿈 없이 1~2048자로 입력해야 합니다.");
+			throw Localized(new InvalidDataException("예약 명령은 줄바꿈 없이 1~2048자로 입력해야 합니다."), "A scheduled command must be 1 to 2048 characters with no line breaks.");
 	}
 
 	private static DateTime CalculateNextAutomationRunUtc(ServerAutomationJob job, DateTime afterUtc)
@@ -267,7 +267,7 @@ internal static partial class Launcher
 				DateTime weekly = new DateTime(date.Year, date.Month, date.Day, time.Hour, time.Minute, 0, DateTimeKind.Local);
 				if (weekly > localAfter) return weekly.ToUniversalTime();
 			}
-			throw new InvalidDataException("다음 주간 실행 시각을 계산하지 못했습니다.");
+			throw Localized(new InvalidDataException("다음 주간 실행 시각을 계산하지 못했습니다."), "Could not calculate the next weekly run time.");
 		}
 		DateTime candidate = new DateTime(localAfter.Year, localAfter.Month, localAfter.Day, time.Hour, time.Minute, 0, DateTimeKind.Local);
 		if (candidate <= localAfter) candidate = candidate.AddDays(1);
@@ -601,7 +601,7 @@ internal static partial class Launcher
 			catch (Exception exception) { ShowAutomationError(exception); }
 		}
 
-		private void ShowAutomationError(Exception exception) { ShowMineHarborDialog(this, ManagedText("자동화 설정을 처리하지 못했습니다: ", "Could not process automation settings: ") + exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+		private void ShowAutomationError(Exception exception) { ShowMineHarborDialog(this, ManagedText("자동화 설정을 처리하지 못했습니다: ", "Could not process automation settings: ") + DescribeException(exception), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); }
 	}
 
 	private sealed class AutomationJobForm : Form
@@ -782,7 +782,7 @@ internal static partial class Launcher
 					throw new InvalidDataException(ManagedText("이미 지난 일회성 시각은 저장할 수 없습니다. 지금 실행을 사용하거나 미래 시각을 선택해 주세요.", "A past one-time date cannot be saved. Use Run now or choose a future date."));
 				Job = value; DialogResult = DialogResult.OK; Close();
 			}
-			catch (Exception exception) { ShowMineHarborDialog(this, exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+			catch (Exception exception) { ShowMineHarborDialog(this, DescribeException(exception), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); }
 		}
 
 		private ServerAutomationJob BuildJobFromFields()
@@ -832,7 +832,7 @@ internal static partial class Launcher
 			}
 			catch (Exception exception)
 			{
-				previewLabel.Text = ManagedText("미리보기: ", "Preview: ") + exception.Message;
+				previewLabel.Text = ManagedText("미리보기: ", "Preview: ") + DescribeException(exception);
 			}
 			previewLabel.AccessibleDescription = previewLabel.Text;
 		}

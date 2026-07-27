@@ -946,7 +946,7 @@ internal static partial class Launcher
 					catch { }
 				}
 				ShowMineHarborDialog(this,
-					(korean ? "Discord 원격 제어 설정을 저장하지 못했습니다: " : "Could not save Discord remote-control settings: ") + exception.Message,
+					(korean ? "Discord 원격 제어 설정을 저장하지 못했습니다: " : "Could not save Discord remote-control settings: ") + DescribeException(exception),
 					Text,
 					MessageBoxButtons.OK,
 					MessageBoxIcon.Error);

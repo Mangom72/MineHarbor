@@ -213,12 +213,12 @@ internal static partial class Launcher
 					List<AutomationJobClaim> claims = ClaimDueAutomationJobs(profiles[i].Directory, DateTime.UtcNow);
 					for (int claimIndex = 0; claimIndex < claims.Count; claimIndex++) ObserveManagedAutomationJobAsync(claims[claimIndex]);
 				}
-				catch (InvalidDataException exception) { summaryLabel.Text = profiles[i].Name + " · " + ManagedText("자동화 설정 오류: ", "Automation configuration error: ") + exception.Message; }
+				catch (InvalidDataException exception) { summaryLabel.Text = profiles[i].Name + " · " + ManagedText("자동화 설정 오류: ", "Automation configuration error: ") + DescribeException(exception); }
 			}
 			await Task.Yield();
 		}
 		catch (OperationCanceledException) { }
-		catch (Exception exception) { if (!IsDisposed) summaryLabel.Text = ManagedText("예약 작업 검사 실패: ", "Schedule check failed: ") + exception.Message; }
+		catch (Exception exception) { if (!IsDisposed) summaryLabel.Text = ManagedText("예약 작업 검사 실패: ", "Schedule check failed: ") + DescribeException(exception); }
 		finally { automationPollRunning = false; }
 	}
 
@@ -566,7 +566,7 @@ internal static partial class Launcher
 				refreshedLabel.Text = ManagedText("최근 갱신: ", "Last refreshed: ") + DateTime.Now.ToString("T", CultureInfo.CurrentCulture);
 			}
 			catch (OperationCanceledException) { }
-			catch (Exception exception) { if (!IsDisposed) refreshedLabel.Text = ManagedText("상태 수집 실패: ", "Status collection failed: ") + exception.Message; }
+			catch (Exception exception) { if (!IsDisposed) refreshedLabel.Text = ManagedText("상태 수집 실패: ", "Status collection failed: ") + DescribeException(exception); }
 			finally { refreshing = false; }
 		}
 	}

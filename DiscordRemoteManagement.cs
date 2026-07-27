@@ -107,7 +107,7 @@ internal static partial class Launcher
 				if (!File.Exists(path)) return new DiscordRemoteSettings();
 				FileInfo info = new FileInfo(path);
 				if (info.Length <= 0 || info.Length > DiscordRemoteSettingsMaximumBytes)
-					throw new InvalidDataException("Discord 원격 제어 설정 파일 크기가 올바르지 않습니다.");
+					throw Localized(new InvalidDataException("Discord 원격 제어 설정 파일 크기가 올바르지 않습니다."), "The Discord remote-control settings file size is invalid.");
 				DiscordRemoteSettings settings;
 				try
 				{
@@ -116,7 +116,7 @@ internal static partial class Launcher
 				}
 				catch (Exception exception)
 				{
-					throw new InvalidDataException("Discord 원격 제어 설정 파일이 손상되었습니다. 원본 파일은 변경하지 않았습니다.", exception);
+					throw Localized(new InvalidDataException("Discord 원격 제어 설정 파일이 손상되었습니다. 원본 파일은 변경하지 않았습니다.", exception), "The Discord remote-control settings file is damaged. The original file was left unchanged.");
 				}
 				ValidateDiscordRemoteSettings(settings, settings != null && settings.Enabled);
 				return settings;
@@ -133,7 +133,7 @@ internal static partial class Launcher
 			{
 				string json = new JavaScriptSerializer { MaxJsonLength = DiscordRemoteSettingsMaximumBytes }.Serialize(settings);
 				if (Encoding.UTF8.GetByteCount(json) > DiscordRemoteSettingsMaximumBytes)
-					throw new InvalidDataException("Discord 원격 제어 설정이 허용 크기를 초과했습니다.");
+					throw Localized(new InvalidDataException("Discord 원격 제어 설정이 허용 크기를 초과했습니다."), "The Discord remote-control settings exceed the allowed size.");
 				string path = GetDiscordRemoteSettingsPath();
 				Directory.CreateDirectory(Path.GetDirectoryName(path));
 				string temporary = path + ".준비중";
@@ -158,7 +158,7 @@ internal static partial class Launcher
 				{
 					try { entered = mutex.WaitOne(TimeSpan.FromSeconds(5)); }
 					catch (AbandonedMutexException) { entered = true; }
-					if (!entered) throw new IOException("다른 MineHarbor 프로세스가 Discord 원격 제어 설정을 갱신하고 있습니다.");
+					if (!entered) throw Localized(new IOException("다른 MineHarbor 프로세스가 Discord 원격 제어 설정을 갱신하고 있습니다."), "Another MineHarbor process is updating the Discord remote-control settings.");
 					return action();
 				}
 				finally { if (entered) mutex.ReleaseMutex(); }
@@ -169,7 +169,7 @@ internal static partial class Launcher
 	private static void ValidateDiscordRemoteSettings(DiscordRemoteSettings settings, bool requireCredential)
 	{
 		if (settings == null || settings.SchemaVersion != DiscordRemoteSettingsSchemaVersion)
-			throw new InvalidDataException("지원하지 않는 Discord 원격 제어 설정 버전입니다.");
+			throw Localized(new InvalidDataException("지원하지 않는 Discord 원격 제어 설정 버전입니다."), "Unsupported Discord remote-control settings version.");
 		if (settings.ProtectedBotToken == null) settings.ProtectedBotToken = string.Empty;
 		if (settings.ApplicationId == null) settings.ApplicationId = string.Empty;
 		if (settings.GuildId == null) settings.GuildId = string.Empty;
@@ -178,18 +178,18 @@ internal static partial class Launcher
 		settings.AllowedRoleIds = NormalizeDiscordIdList(settings.AllowedRoleIds, "허용 역할");
 		settings.AllowedProfiles = NormalizeDiscordProfileList(settings.AllowedProfiles);
 		if (settings.ProtectedBotToken.Length > 4096)
-			throw new InvalidDataException("암호화된 Discord 봇 토큰 크기가 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("암호화된 Discord 봇 토큰 크기가 올바르지 않습니다."), "The encrypted Discord bot token size is invalid.");
 		if (!settings.Enabled && !requireCredential) return;
 		if (string.IsNullOrWhiteSpace(settings.ProtectedBotToken))
-			throw new InvalidDataException("Discord 봇 토큰을 입력해 주세요.");
+			throw Localized(new InvalidDataException("Discord 봇 토큰을 입력해 주세요."), "Enter a Discord bot token.");
 		if (!IsDiscordSnowflake(settings.ApplicationId)
 			|| !IsDiscordSnowflake(settings.GuildId)
 			|| !IsDiscordSnowflake(settings.ChannelId))
-			throw new InvalidDataException("Discord 애플리케이션·서버·채널 ID를 확인해 주세요.");
+			throw Localized(new InvalidDataException("Discord 애플리케이션·서버·채널 ID를 확인해 주세요."), "Check the Discord application, server, and channel IDs.");
 		if (settings.AllowedUserIds.Count == 0 && settings.AllowedRoleIds.Count == 0)
-			throw new InvalidDataException("허용할 Discord 사용자 또는 역할을 하나 이상 지정해 주세요.");
+			throw Localized(new InvalidDataException("허용할 Discord 사용자 또는 역할을 하나 이상 지정해 주세요."), "Specify at least one allowed Discord user or role.");
 		if (settings.AllowedProfiles.Count == 0)
-			throw new InvalidDataException("Discord에서 관리할 서버 프로필을 하나 이상 선택해 주세요.");
+			throw Localized(new InvalidDataException("Discord에서 관리할 서버 프로필을 하나 이상 선택해 주세요."), "Select at least one server profile to manage from Discord.");
 	}
 
 	private static List<string> NormalizeDiscordIdList(IEnumerable<string> values, string fieldName)
@@ -217,9 +217,9 @@ internal static partial class Launcher
 		{
 			string value = (raw ?? string.Empty).Trim();
 			if (value.Length == 0) continue;
-			if (!IsValidProfileName(value)) throw new InvalidDataException("Discord 관리 서버 프로필 이름이 올바르지 않습니다.");
+			if (!IsValidProfileName(value)) throw Localized(new InvalidDataException("Discord 관리 서버 프로필 이름이 올바르지 않습니다."), "A Discord-managed server profile name is invalid.");
 			if (seen.Add(value)) result.Add(value);
-			if (result.Count > 100) throw new InvalidDataException("Discord 관리 서버 프로필 수가 허용 범위를 초과했습니다.");
+			if (result.Count > 100) throw Localized(new InvalidDataException("Discord 관리 서버 프로필 수가 허용 범위를 초과했습니다."), "The number of Discord-managed server profiles exceeds the allowed range.");
 		}
 		return result;
 	}
@@ -248,10 +248,10 @@ internal static partial class Launcher
 	private static string UnprotectDiscordBotToken(string protectedToken)
 	{
 		if (string.IsNullOrWhiteSpace(protectedToken) || protectedToken.Length > 4096)
-			throw new InvalidDataException("저장된 Discord 봇 토큰이 없습니다.");
+			throw Localized(new InvalidDataException("저장된 Discord 봇 토큰이 없습니다."), "There is no saved Discord bot token.");
 		byte[] protectedBytes;
 		try { protectedBytes = Convert.FromBase64String(protectedToken); }
-		catch (FormatException exception) { throw new InvalidDataException("암호화된 Discord 봇 토큰 형식이 올바르지 않습니다.", exception); }
+		catch (FormatException exception) { throw Localized(new InvalidDataException("암호화된 Discord 봇 토큰 형식이 올바르지 않습니다.", exception), "The encrypted Discord bot token format is invalid."); }
 		byte[] clear = null;
 		try
 		{
@@ -262,7 +262,7 @@ internal static partial class Launcher
 		}
 		catch (CryptographicException exception)
 		{
-			throw new InvalidDataException("현재 Windows 사용자로 Discord 봇 토큰을 복호화하지 못했습니다.", exception);
+			throw Localized(new InvalidDataException("현재 Windows 사용자로 Discord 봇 토큰을 복호화하지 못했습니다.", exception), "Could not decrypt the Discord bot token as the current Windows user.");
 		}
 		finally
 		{
@@ -274,12 +274,12 @@ internal static partial class Launcher
 	private static void ValidateDiscordBotToken(string token)
 	{
 		if (string.IsNullOrWhiteSpace(token) || token.Length < 24 || token.Length > 256)
-			throw new InvalidDataException("Discord 봇 토큰 길이가 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("Discord 봇 토큰 길이가 올바르지 않습니다."), "The Discord bot token length is invalid.");
 		for (int index = 0; index < token.Length; index++)
 		{
 			char character = token[index];
 			if (character < 33 || character > 126)
-				throw new InvalidDataException("Discord 봇 토큰에 허용되지 않는 문자가 있습니다.");
+				throw Localized(new InvalidDataException("Discord 봇 토큰에 허용되지 않는 문자가 있습니다."), "The Discord bot token contains characters that are not allowed.");
 		}
 	}
 
@@ -695,7 +695,7 @@ internal static partial class Launcher
 					string overridden = DiscordRemoteActionOverride(command, profile, userId, korean);
 					return new DiscordRemoteActionResult { Success = overridden != null, Message = overridden ?? Text(korean, "테스트 작업 실패", "Test action failed") };
 				}
-				if (actionHandler == null) throw new InvalidOperationException("Discord 원격 작업 처리기가 없습니다.");
+				if (actionHandler == null) throw Localized(new InvalidOperationException("Discord 원격 작업 처리기가 없습니다."), "There is no Discord remote action handler.");
 				return actionHandler(new DiscordRemoteAction
 				{
 					Command = command,
@@ -878,10 +878,10 @@ internal static partial class Launcher
 				socket.Options.KeepAliveInterval = TimeSpan.FromSeconds(20);
 				await socket.ConnectAsync(gateway, cancellationToken).ConfigureAwait(false);
 				Dictionary<string, object> hello = await ReceiveGatewayPayloadAsync(socket, cancellationToken).ConfigureAwait(false);
-				if (GetInt(hello, "op") != 10) throw new InvalidDataException("Discord Gateway Hello를 받지 못했습니다.");
+				if (GetInt(hello, "op") != 10) throw Localized(new InvalidDataException("Discord Gateway Hello를 받지 못했습니다."), "Did not receive the Discord Gateway Hello.");
 				int heartbeatMilliseconds = GetInt(GetDictionary(hello, "d"), "heartbeat_interval");
 				if (heartbeatMilliseconds < 1000 || heartbeatMilliseconds > 120000)
-					throw new InvalidDataException("Discord Gateway heartbeat 간격이 올바르지 않습니다.");
+					throw Localized(new InvalidDataException("Discord Gateway heartbeat 간격이 올바르지 않습니다."), "The Discord Gateway heartbeat interval is invalid.");
 				HeartbeatState heartbeat = new HeartbeatState();
 				Task heartbeatTask = RunHeartbeatAsync(socket, heartbeatMilliseconds, heartbeat, cancellationToken);
 				if (!string.IsNullOrWhiteSpace(sessionId) && sequence.HasValue)
@@ -909,7 +909,7 @@ internal static partial class Launcher
 							await SendHeartbeatAsync(socket, cancellationToken).ConfigureAwait(false);
 							continue;
 						}
-						if (opcode == 7) throw new IOException("Discord Gateway가 재연결을 요청했습니다.");
+						if (opcode == 7) throw Localized(new IOException("Discord Gateway가 재연결을 요청했습니다."), "The Discord Gateway requested a reconnect.");
 						if (opcode == 9)
 						{
 							bool resumable = payload.ContainsKey("d") && Convert.ToBoolean(payload["d"], CultureInfo.InvariantCulture);
@@ -919,7 +919,7 @@ internal static partial class Launcher
 								resumeGatewayUrl = null;
 								sequence = null;
 							}
-							throw new IOException("Discord Gateway 세션이 유효하지 않습니다.");
+							throw Localized(new IOException("Discord Gateway 세션이 유효하지 않습니다."), "The Discord Gateway session is not valid.");
 						}
 						if (opcode != 0) continue;
 						string eventName = GetString(payload, "t");
@@ -929,7 +929,7 @@ internal static partial class Launcher
 							sessionId = GetString(eventData, "session_id");
 							resumeGatewayUrl = GetString(eventData, "resume_gateway_url");
 							if (string.IsNullOrWhiteSpace(sessionId) || string.IsNullOrWhiteSpace(resumeGatewayUrl))
-								throw new InvalidDataException("Discord Gateway 세션 정보가 없습니다.");
+								throw Localized(new InvalidDataException("Discord Gateway 세션 정보가 없습니다."), "The Discord Gateway session information is missing.");
 							CreateGatewayUri(resumeGatewayUrl);
 							stateChanged(true, "연결됨 · /mineharbor 사용 가능", "Connected · /mineharbor is available");
 						}
@@ -970,7 +970,7 @@ internal static partial class Launcher
 				if (!state.Acknowledged)
 				{
 					try { socket.Abort(); } catch { }
-					throw new IOException("Discord Gateway heartbeat 응답이 없습니다.");
+					throw Localized(new IOException("Discord Gateway heartbeat 응답이 없습니다."), "No Discord Gateway heartbeat acknowledgement.");
 				}
 				state.Acknowledged = false;
 				await SendHeartbeatAsync(socket, cancellationToken).ConfigureAwait(false);
@@ -1135,7 +1135,7 @@ internal static partial class Launcher
 					{
 						string text = await ReadBoundedHttpContentAsync(response.Content, DiscordRemoteMaximumHttpBytes, cancellationToken).ConfigureAwait(false);
 						if (response.StatusCode == HttpStatusCode.Unauthorized || response.StatusCode == HttpStatusCode.Forbidden)
-							throw new DiscordCredentialException("봇 토큰, 설치 상태 또는 권한을 확인해 주세요.");
+							throw Localized(new DiscordCredentialException("봇 토큰, 설치 상태 또는 권한을 확인해 주세요."), "Check the bot token, installation, and permissions.");
 						if ((int)response.StatusCode == 429)
 						{
 							if (allowRetry && attempt == 0)
@@ -1144,19 +1144,19 @@ internal static partial class Launcher
 								await Task.Delay(TimeSpan.FromSeconds(Math.Max(0.25, Math.Min(60, retrySeconds))), cancellationToken).ConfigureAwait(false);
 								continue;
 							}
-							throw new HttpRequestException("Discord API 속도 제한으로 요청을 완료하지 못했습니다.");
+							throw Localized(new HttpRequestException("Discord API 속도 제한으로 요청을 완료하지 못했습니다."), "The request could not be completed because of Discord API rate limiting.");
 						}
 						if ((int)response.StatusCode >= 400 && (int)response.StatusCode < 500)
-							throw new DiscordCredentialException("애플리케이션·서버 ID, 봇 설치 상태와 권한을 확인해 주세요.");
+							throw Localized(new DiscordCredentialException("애플리케이션·서버 ID, 봇 설치 상태와 권한을 확인해 주세요."), "Check the application and server IDs, the bot installation, and its permissions.");
 						if (!response.IsSuccessStatusCode)
-							throw new HttpRequestException("Discord API 요청이 실패했습니다. HTTP " + ((int)response.StatusCode).ToString(CultureInfo.InvariantCulture));
+							throw Localized(new HttpRequestException("Discord API 요청이 실패했습니다. HTTP " + ((int)response.StatusCode).ToString(CultureInfo.InvariantCulture)), "The Discord API request failed. HTTP " + ((int)response.StatusCode).ToString(CultureInfo.InvariantCulture));
 						if (string.IsNullOrWhiteSpace(text)) return new Dictionary<string, object>();
 						try { return new JavaScriptSerializer { MaxJsonLength = DiscordRemoteMaximumHttpBytes }.Deserialize<Dictionary<string, object>>(text); }
-						catch (Exception exception) { throw new InvalidDataException("Discord API 응답 형식이 올바르지 않습니다.", exception); }
+						catch (Exception exception) { throw Localized(new InvalidDataException("Discord API 응답 형식이 올바르지 않습니다.", exception), "The Discord API response format is invalid."); }
 					}
 				}
 			}
-			throw new HttpRequestException("Discord API 속도 제한으로 요청을 완료하지 못했습니다.");
+			throw Localized(new HttpRequestException("Discord API 속도 제한으로 요청을 완료하지 못했습니다."), "The request could not be completed because of Discord API rate limiting.");
 		}
 
 		private static double ReadDiscordRetryAfter(HttpResponseMessage response, string text)
@@ -1180,7 +1180,7 @@ internal static partial class Launcher
 		{
 			if (content == null) return string.Empty;
 			if (content.Headers.ContentLength.HasValue && content.Headers.ContentLength.Value > maximumBytes)
-				throw new InvalidDataException("Discord API 응답이 허용 크기를 초과했습니다.");
+				throw Localized(new InvalidDataException("Discord API 응답이 허용 크기를 초과했습니다."), "The Discord API response exceeds the allowed size.");
 			using (Stream stream = await content.ReadAsStreamAsync().ConfigureAwait(false))
 			using (MemoryStream memory = new MemoryStream())
 			{
@@ -1189,7 +1189,7 @@ internal static partial class Launcher
 				{
 					int read = await stream.ReadAsync(buffer, 0, buffer.Length, cancellationToken).ConfigureAwait(false);
 					if (read <= 0) break;
-					if (memory.Length + read > maximumBytes) throw new InvalidDataException("Discord API 응답이 허용 크기를 초과했습니다.");
+					if (memory.Length + read > maximumBytes) throw Localized(new InvalidDataException("Discord API 응답이 허용 크기를 초과했습니다."), "The Discord API response exceeds the allowed size.");
 					memory.Write(buffer, 0, read);
 				}
 				return Encoding.UTF8.GetString(memory.ToArray());
@@ -1251,13 +1251,13 @@ internal static partial class Launcher
 		private static Uri CreateDiscordApiUri(string path)
 		{
 			if (string.IsNullOrEmpty(path) || !path.StartsWith("/api/v10/", StringComparison.Ordinal))
-				throw new InvalidDataException("Discord API 경로가 올바르지 않습니다.");
+				throw Localized(new InvalidDataException("Discord API 경로가 올바르지 않습니다."), "The Discord API path is invalid.");
 			Uri uri = new Uri("https://discord.com" + path, UriKind.Absolute);
 			if (!string.Equals(uri.Scheme, Uri.UriSchemeHttps, StringComparison.OrdinalIgnoreCase)
 				|| !string.Equals(uri.Host, "discord.com", StringComparison.OrdinalIgnoreCase)
 				|| !string.IsNullOrEmpty(uri.UserInfo)
 				|| !uri.IsDefaultPort)
-				throw new InvalidDataException("Discord API 주소가 허용 범위를 벗어났습니다.");
+				throw Localized(new InvalidDataException("Discord API 주소가 허용 범위를 벗어났습니다."), "The Discord API address is outside the allowed range.");
 			return uri;
 		}
 
@@ -1271,7 +1271,7 @@ internal static partial class Launcher
 					|| baseUri.Host.EndsWith(".discord.gg", StringComparison.OrdinalIgnoreCase))
 				|| !string.IsNullOrEmpty(baseUri.UserInfo)
 				|| !baseUri.IsDefaultPort)
-				throw new InvalidDataException("Discord Gateway 주소가 허용 범위를 벗어났습니다.");
+				throw Localized(new InvalidDataException("Discord Gateway 주소가 허용 범위를 벗어났습니다."), "The Discord Gateway address is outside the allowed range.");
 			UriBuilder builder = new UriBuilder(baseUri);
 			builder.Query = "v=10&encoding=json";
 			return builder.Uri;
@@ -1303,19 +1303,19 @@ internal static partial class Launcher
 					{
 						int closeCode = result.CloseStatus.HasValue ? (int)result.CloseStatus.Value : 0;
 						if (closeCode == 4004)
-							throw new DiscordCredentialException("봇 토큰이 거부되었습니다.");
+							throw Localized(new DiscordCredentialException("봇 토큰이 거부되었습니다."), "The bot token was rejected.");
 						if (closeCode == 4007 || closeCode == 4009)
 						{
 							sessionId = null;
 							resumeGatewayUrl = null;
 							sequence = null;
 						}
-						throw new IOException("Discord Gateway 연결이 닫혔습니다. 코드 " + closeCode.ToString(CultureInfo.InvariantCulture));
+						throw Localized(new IOException("Discord Gateway 연결이 닫혔습니다. 코드 " + closeCode.ToString(CultureInfo.InvariantCulture)), "The Discord Gateway connection closed. Code " + closeCode.ToString(CultureInfo.InvariantCulture));
 					}
 					if (result.MessageType != WebSocketMessageType.Text)
-						throw new InvalidDataException("Discord Gateway가 지원하지 않는 데이터 형식을 보냈습니다.");
+						throw Localized(new InvalidDataException("Discord Gateway가 지원하지 않는 데이터 형식을 보냈습니다."), "The Discord Gateway sent an unsupported data format.");
 					if (memory.Length + result.Count > DiscordRemoteMaximumGatewayBytes)
-						throw new InvalidDataException("Discord Gateway 메시지가 허용 크기를 초과했습니다.");
+						throw Localized(new InvalidDataException("Discord Gateway 메시지가 허용 크기를 초과했습니다."), "The Discord Gateway message exceeds the allowed size.");
 					memory.Write(buffer, 0, result.Count);
 					if (result.EndOfMessage) break;
 				}
@@ -1327,7 +1327,7 @@ internal static partial class Launcher
 				}
 				catch (Exception exception)
 				{
-					throw new InvalidDataException("Discord Gateway 메시지 형식이 올바르지 않습니다.", exception);
+					throw Localized(new InvalidDataException("Discord Gateway 메시지 형식이 올바르지 않습니다.", exception), "The Discord Gateway message format is invalid.");
 				}
 			}
 		}
@@ -1335,7 +1335,7 @@ internal static partial class Launcher
 		private async Task SendGatewayPayloadAsync(ClientWebSocket socket, object payload, CancellationToken cancellationToken)
 		{
 			byte[] bytes = Encoding.UTF8.GetBytes(new JavaScriptSerializer().Serialize(payload));
-			if (bytes.Length > 16384) throw new InvalidDataException("Discord Gateway 송신 메시지가 너무 큽니다.");
+			if (bytes.Length > 16384) throw Localized(new InvalidDataException("Discord Gateway 송신 메시지가 너무 큽니다."), "The outgoing Discord Gateway message is too large.");
 			await gatewaySendLock.WaitAsync(cancellationToken).ConfigureAwait(false);
 			try
 			{

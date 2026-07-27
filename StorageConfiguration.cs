@@ -162,7 +162,7 @@ internal static partial class Launcher
 			!string.Equals(mode, StorageModePortable, StringComparison.Ordinal) &&
 			!string.Equals(mode, StorageModeCustom, StringComparison.Ordinal))
 		{
-			throw new InvalidDataException("데이터 저장 위치 방식을 인식할 수 없습니다.");
+			throw Localized(new InvalidDataException("데이터 저장 위치 방식을 인식할 수 없습니다."), "The data storage location mode is not recognized.");
 		}
 		Directory.CreateDirectory(GetLauncherUserDataDirectory());
 		string path = GetStorageSettingsPath();
@@ -213,7 +213,7 @@ internal static partial class Launcher
 				File.WriteAllText(probe, "ok", new UTF8Encoding(false));
 				using (FileStream stream = new FileStream(probe, FileMode.Open, FileAccess.Read, FileShare.Read))
 				{
-					if (stream.Length != 2) throw new IOException("쓰기 확인 파일을 읽지 못했습니다.");
+					if (stream.Length != 2) throw Localized(new IOException("쓰기 확인 파일을 읽지 못했습니다."), "Could not read the write-verification file.");
 				}
 			}
 			finally

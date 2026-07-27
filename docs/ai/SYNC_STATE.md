@@ -1,5 +1,16 @@
 ﻿# AI Agent Synchronization State
 
+## Claude Exception Message Localization - 2026-07-27
+
+- **Current Version**: 1.18.0 (build 26.2.45.86)
+- **Branch**: `claude/remote-control-u4tvpt` (v1.17.0 병합 후 main에서 다시 시작)
+- **Status**: 영어 UI에 한국어 예외 메시지가 노출되던 문제의 기반 작업과 1차 적용을 마치고 v1.18.0 릴리스 진행
+- 예외 **타입은 바꾸지 않았습니다.** 코드에 `catch (InvalidDataException)`처럼 타입에 의존하는 곳이 20군데 있어, 전용 예외 타입을 도입하면 그 흐름이 모두 바뀝니다. 대신 `Localized(new XException("한국어"), "English")`로 `Exception.Data`에 영어 문구만 덧붙입니다.
+- `DescribeException(Exception)`이 현재 언어에 맞는 문구를 고릅니다. 영어 문구가 없으면 지금까지와 동일하게 `exception.Message`를 그대로 반환하므로, 변환하지 않은 예외도 안전합니다.
+- 표시 경로 30곳(`ShowMineHarborDialog`, `ShowLauncherMessage`, 상태 레이블, 콘텐츠 작업 표시줄)을 `DescribeException`으로 바꿨습니다.
+- throw 지점 121곳을 변환했습니다: `OperationsHistory`(16), `ManagedServerHandoff`(12), `StorageConfiguration`(2), `WindowsNotifications`(6), `ServerTrash`(6), `BackgroundAgent`(16), `ServerAutomation`(22), `DiscordRemoteManagement`(41).
+- **아직 남은 throw 지점 약 266곳**: `decompiled/Launcher.decompiled.cs`(67), `ContentManagementServices`(60), `RuntimeCompatibility`(45), `BackupAndProfileTools`(30), `ContentAndDiagnostics`(21), `DuplicationSettings`(16), `QuickCommandsAndBridge`(12), `UpnpExternalAccess`(6), `ServerManagementFeatures`(5), 그 외. 이들은 영어 문구가 없으므로 기존과 동일하게 한국어로 표시됩니다.
+- 다음 담당자는 같은 방식(`Localized(new ...)`)으로 남은 파일을 이어서 변환하면 됩니다. 회귀 테스트 `TestLocalizedExceptionMessages`가 타입 보존과 언어별 선택을 검증합니다.
 ## Claude Discord Feature Rollout - 2026-07-26
 
 - **Current Version**: 1.17.0 (build 26.2.45.85)
