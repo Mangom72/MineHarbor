@@ -4,6 +4,17 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.20.0] - 2026-07-27
+
+### Korean
+
+- **오류 문구 영어 지원 확대 (3/4)**: 콘텐츠 관리(Modrinth 설치·업데이트·제거·의존성)와 Java 런타임 준비의 오류 문구 105개를 한국어·영어로 제공합니다.
+- 예외 타입은 그대로 두고 영어 문구만 함께 담는 방식을 이어갑니다. 기존 예외 처리 동작에는 영향이 없습니다.
+
+### English
+
+- **More error messages available in English (3 of 4)**: 105 messages across content management (Modrinth install, update, removal, dependencies) and Java runtime preparation are now available in both Korean and English.
+- This continues carrying the English wording alongside the unchanged exception type, so existing exception handling behaves exactly as before.
 ## [1.19.0] - 2026-07-27
 
 ### Korean

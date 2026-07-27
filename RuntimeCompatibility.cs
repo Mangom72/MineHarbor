@@ -107,7 +107,7 @@ internal static partial class Launcher
 		}
 		if (!Environment.Is64BitOperatingSystem)
 		{
-			throw new PlatformNotSupportedException("이 런처가 준비하는 Minecraft Java 서버 런타임은 64비트 Windows가 필요합니다.");
+			throw Localized(new PlatformNotSupportedException("이 런처가 준비하는 Minecraft Java 서버 런타임은 64비트 Windows가 필요합니다."), "The Minecraft Java server runtime prepared by this launcher requires 64-bit Windows.");
 		}
 
 		JavaRuntimeRequirement requirement = ResolveCompatibleJavaRequirement(options, customJavaMajor);
@@ -120,7 +120,7 @@ internal static partial class Launcher
 				JavaExecutableProbe bundledProbe = ProbeJavaExecutable(bundledJavaPath, requirement.MajorVersion);
 				if (!bundledProbe.IsValid)
 				{
-					throw new InvalidDataException("기존 Java 25 캐시 검증 실패: " + bundledProbe.Error);
+					throw Localized(new InvalidDataException("기존 Java 25 캐시 검증 실패: " + bundledProbe.Error), "Existing Java 25 cache verification failed: " + bundledProbe.Error);
 				}
 				return CreateCompatibleJavaRuntime(requirement, bundledJavaPath, bundledProbe, "기존 Java 25 캐시", false, false);
 			}
@@ -143,7 +143,7 @@ internal static partial class Launcher
 				JavaExecutableProbe downloadedProbe = ProbeJavaExecutable(downloadedJavaPath, requirement.MajorVersion);
 				if (!downloadedProbe.IsValid)
 				{
-					throw new InvalidDataException("다운로드한 Java 검증 실패: " + downloadedProbe.Error);
+					throw Localized(new InvalidDataException("다운로드한 Java 검증 실패: " + downloadedProbe.Error), "Downloaded Java verification failed: " + downloadedProbe.Error);
 				}
 				return CreateCompatibleJavaRuntime(requirement, downloadedJavaPath, downloadedProbe, "Eclipse Temurin 캐시", false, false);
 			}
@@ -402,7 +402,7 @@ internal static partial class Launcher
 	{
 		if (string.IsNullOrWhiteSpace(minecraftVersion))
 		{
-			throw new InvalidDataException("Minecraft 버전이 비어 있습니다.");
+			throw Localized(new InvalidDataException("Minecraft 버전이 비어 있습니다."), "The Minecraft version is empty.");
 		}
 		lock (RuntimeCompatibilityMojangCacheLock)
 		{
@@ -419,7 +419,7 @@ internal static partial class Launcher
 		object[] versions = manifest != null && manifest.ContainsKey("versions") ? manifest["versions"] as object[] : null;
 		if (versions == null)
 		{
-			throw new InvalidDataException("Mojang 버전 목록 형식이 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("Mojang 버전 목록 형식이 올바르지 않습니다."), "The Mojang version manifest format is invalid.");
 		}
 		string versionMetadataUrl = null;
 		for (int i = 0; i < versions.Length; i = checked(i + 1))
@@ -433,7 +433,7 @@ internal static partial class Launcher
 		}
 		if (!IsTrustedRuntimeCompatibilityUri(versionMetadataUrl, RuntimeCompatibilityMojangMetadataHosts))
 		{
-			throw new InvalidDataException("선택한 Minecraft 버전의 신뢰할 수 있는 Mojang 메타데이터 URL을 찾지 못했습니다.");
+			throw Localized(new InvalidDataException("선택한 Minecraft 버전의 신뢰할 수 있는 Mojang 메타데이터 URL을 찾지 못했습니다."), "No trusted Mojang metadata URL was found for the selected Minecraft version.");
 		}
 
 		string versionJson = DownloadRuntimeCompatibilityText(versionMetadataUrl, RuntimeCompatibilityMojangMetadataHosts, 4194304);
@@ -441,12 +441,12 @@ internal static partial class Launcher
 		Dictionary<string, object> javaVersion = versionRoot != null && versionRoot.ContainsKey("javaVersion") ? versionRoot["javaVersion"] as Dictionary<string, object> : null;
 		if (javaVersion == null || !javaVersion.ContainsKey("majorVersion"))
 		{
-			throw new InvalidDataException("Mojang 메타데이터에 javaVersion.majorVersion이 없습니다.");
+			throw Localized(new InvalidDataException("Mojang 메타데이터에 javaVersion.majorVersion이 없습니다."), "The Mojang metadata has no javaVersion.majorVersion.");
 		}
 		int major = Convert.ToInt32(javaVersion["majorVersion"], CultureInfo.InvariantCulture);
 		if (major < 8 || major > 30)
 		{
-			throw new InvalidDataException("Mojang 메타데이터가 예상 범위를 벗어난 Java 버전을 반환했습니다: " + major);
+			throw Localized(new InvalidDataException("Mojang 메타데이터가 예상 범위를 벗어난 Java 버전을 반환했습니다: " + major), "The Mojang metadata returned a Java version outside the expected range: " + major);
 		}
 		lock (RuntimeCompatibilityMojangCacheLock)
 		{
@@ -467,13 +467,13 @@ internal static partial class Launcher
 	{
 		if (string.IsNullOrWhiteSpace(serversRoot))
 		{
-			throw new ArgumentException("서버 루트 폴더가 비어 있습니다.", "serversRoot");
+			throw Localized(new ArgumentException("서버 루트 폴더가 비어 있습니다.", "serversRoot"), "The server root folder is empty.");
 		}
 		string fullServersRoot = Path.GetFullPath(serversRoot);
 		string runtimesRoot = Path.GetFullPath(Path.Combine(fullServersRoot, "runtimes"));
 		if (!IsPathWithinRuntimeCompatibilityRoot(runtimesRoot, fullServersRoot))
 		{
-			throw new InvalidDataException("Java 런타임 캐시 경로가 서버 루트 밖을 가리킵니다.");
+			throw Localized(new InvalidDataException("Java 런타임 캐시 경로가 서버 루트 밖을 가리킵니다."), "The Java runtime cache path points outside the server root.");
 		}
 		Directory.CreateDirectory(runtimesRoot);
 		return runtimesRoot;
@@ -518,7 +518,7 @@ internal static partial class Launcher
 		string directory = Path.GetFullPath(Path.Combine(runtimesRoot, "java-" + majorVersion.ToString(CultureInfo.InvariantCulture)));
 		if (!IsPathWithinRuntimeCompatibilityRoot(directory, runtimesRoot))
 		{
-			throw new InvalidDataException("Java 런타임 경로가 캐시 루트 밖을 가리킵니다.");
+			throw Localized(new InvalidDataException("Java 런타임 경로가 캐시 루트 밖을 가리킵니다."), "The Java runtime path points outside the cache root.");
 		}
 		return directory;
 	}
@@ -541,11 +541,11 @@ internal static partial class Launcher
 			FileInfo zipInfo = new FileInfo(temporaryZipPath);
 			if (zipInfo.Length != package.Size)
 			{
-				throw new InvalidDataException("Java ZIP 크기가 API 정보와 일치하지 않습니다. 예상 " + package.Size + "바이트, 실제 " + zipInfo.Length + "바이트입니다.");
+				throw Localized(new InvalidDataException("Java ZIP 크기가 API 정보와 일치하지 않습니다. 예상 " + package.Size + "바이트, 실제 " + zipInfo.Length + "바이트입니다."), "The Java ZIP size does not match the API metadata. Expected " + package.Size + " bytes but found " + zipInfo.Length + " bytes.");
 			}
 			if (!string.Equals(GetRuntimeCompatibilityFileSha256(temporaryZipPath), package.Checksum, StringComparison.OrdinalIgnoreCase))
 			{
-				throw new InvalidDataException("Java ZIP의 SHA-256 검증에 실패했습니다.");
+				throw Localized(new InvalidDataException("Java ZIP의 SHA-256 검증에 실패했습니다."), "SHA-256 verification of the Java ZIP failed.");
 			}
 
 			DeleteRuntimeCompatibilityDirectoryIfPresent(stagingDirectory, runtimesRoot);
@@ -554,12 +554,12 @@ internal static partial class Launcher
 			string stagingJavaPath = FindRuntimeCompatibilityJavaExecutable(stagingDirectory);
 			if (string.IsNullOrEmpty(stagingJavaPath))
 			{
-				throw new FileNotFoundException("압축을 푼 Java 런타임에서 bin\\java.exe를 찾지 못했습니다.");
+				throw Localized(new FileNotFoundException("압축을 푼 Java 런타임에서 bin\\java.exe를 찾지 못했습니다."), "bin\\java.exe was not found in the extracted Java runtime.");
 			}
 			JavaExecutableProbe stagingProbe = ProbeJavaExecutable(stagingJavaPath, majorVersion);
 			if (!stagingProbe.IsValid)
 			{
-				throw new InvalidDataException("압축을 푼 Java 실행 파일 검증 실패: " + stagingProbe.Error);
+				throw Localized(new InvalidDataException("압축을 푼 Java 실행 파일 검증 실패: " + stagingProbe.Error), "Extracted Java executable verification failed: " + stagingProbe.Error);
 			}
 			WriteRuntimeCompatibilityMarker(stagingDirectory, majorVersion, package, stagingJavaPath);
 
@@ -575,12 +575,12 @@ internal static partial class Launcher
 			string installedJavaPath = ResolveMarkedRuntimeJavaPath(targetDirectory, installedMarker);
 			if (string.IsNullOrEmpty(installedJavaPath) || !File.Exists(installedJavaPath))
 			{
-				throw new FileNotFoundException("준비된 Java 캐시에서 java.exe를 찾지 못했습니다.");
+				throw Localized(new FileNotFoundException("준비된 Java 캐시에서 java.exe를 찾지 못했습니다."), "java.exe was not found in the prepared Java cache.");
 			}
 			JavaExecutableProbe installedProbe = ProbeJavaExecutable(installedJavaPath, majorVersion);
 			if (!installedProbe.IsValid)
 			{
-				throw new InvalidDataException("설치한 Java 캐시의 최종 검증 실패: " + installedProbe.Error);
+				throw Localized(new InvalidDataException("설치한 Java 캐시의 최종 검증 실패: " + installedProbe.Error), "Final verification of the installed Java cache failed: " + installedProbe.Error);
 			}
 			if (previousMoved)
 			{
@@ -657,7 +657,7 @@ internal static partial class Launcher
 		object[] releases = CreateRuntimeCompatibilityJsonSerializer().DeserializeObject(json) as object[];
 		if (releases == null)
 		{
-			throw new InvalidDataException("Adoptium 응답이 배열이 아닙니다.");
+			throw Localized(new InvalidDataException("Adoptium 응답이 배열이 아닙니다."), "The Adoptium response is not an array.");
 		}
 		for (int i = 0; i < releases.Length; i = checked(i + 1))
 		{
@@ -687,19 +687,19 @@ internal static partial class Launcher
 				package.ImageType = imageType;
 				if (!IsTrustedRuntimeCompatibilityUri(package.Link, RuntimeCompatibilityAdoptiumDownloadHosts))
 				{
-					throw new InvalidDataException("Adoptium이 허용되지 않은 다운로드 호스트를 반환했습니다.");
+					throw Localized(new InvalidDataException("Adoptium이 허용되지 않은 다운로드 호스트를 반환했습니다."), "Adoptium returned a download host that is not allowed.");
 				}
 				if (!IsSha256Text(package.Checksum))
 				{
-					throw new InvalidDataException("Adoptium SHA-256 값 형식이 올바르지 않습니다.");
+					throw Localized(new InvalidDataException("Adoptium SHA-256 값 형식이 올바르지 않습니다."), "The Adoptium SHA-256 value format is invalid.");
 				}
 				if (package.Size < 1048576L || package.Size > RuntimeCompatibilityMaximumPackageBytes)
 				{
-					throw new InvalidDataException("Adoptium ZIP 크기가 허용 범위를 벗어났습니다: " + package.Size);
+					throw Localized(new InvalidDataException("Adoptium ZIP 크기가 허용 범위를 벗어났습니다: " + package.Size), "The Adoptium ZIP size is outside the allowed range: " + package.Size);
 				}
 				if (!package.Name.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
 				{
-					throw new InvalidDataException("Adoptium 패키지가 ZIP 파일이 아닙니다: " + package.Name);
+					throw Localized(new InvalidDataException("Adoptium 패키지가 ZIP 파일이 아닙니다: " + package.Name), "The Adoptium package is not a ZIP file: " + package.Name);
 				}
 				return package;
 			}
@@ -720,7 +720,7 @@ internal static partial class Launcher
 		{
 			if (response.ContentLength > maximumBytes)
 			{
-				throw new InvalidDataException("메타데이터 응답이 허용 크기를 초과했습니다.");
+				throw Localized(new InvalidDataException("메타데이터 응답이 허용 크기를 초과했습니다."), "The metadata response exceeds the allowed size.");
 			}
 			byte[] chunk = new byte[32768];
 			int total = 0;
@@ -734,7 +734,7 @@ internal static partial class Launcher
 				total = checked(total + read);
 				if (total > maximumBytes)
 				{
-					throw new InvalidDataException("메타데이터 응답이 허용 크기를 초과했습니다.");
+					throw Localized(new InvalidDataException("메타데이터 응답이 허용 크기를 초과했습니다."), "The metadata response exceeds the allowed size.");
 				}
 				buffer.Write(chunk, 0, read);
 			}
@@ -750,7 +750,7 @@ internal static partial class Launcher
 		{
 			if (response.ContentLength >= 0L && response.ContentLength != expectedSize)
 			{
-				throw new InvalidDataException("다운로드 응답 크기가 Adoptium API 정보와 일치하지 않습니다.");
+				throw Localized(new InvalidDataException("다운로드 응답 크기가 Adoptium API 정보와 일치하지 않습니다."), "The download response size does not match the Adoptium API metadata.");
 			}
 			byte[] buffer = new byte[1048576];
 			long total = 0L;
@@ -764,13 +764,13 @@ internal static partial class Launcher
 				total = checked(total + read);
 				if (total > expectedSize || total > RuntimeCompatibilityMaximumPackageBytes)
 				{
-					throw new InvalidDataException("Java ZIP 다운로드가 예상 크기를 초과했습니다.");
+					throw Localized(new InvalidDataException("Java ZIP 다운로드가 예상 크기를 초과했습니다."), "The Java ZIP download exceeded the expected size.");
 				}
 				destination.Write(buffer, 0, read);
 			}
 			if (total != expectedSize)
 			{
-				throw new EndOfStreamException("Java ZIP 다운로드가 완료되기 전에 연결이 끝났습니다.");
+				throw Localized(new EndOfStreamException("Java ZIP 다운로드가 완료되기 전에 연결이 끝났습니다."), "The connection ended before the Java ZIP download finished.");
 			}
 			destination.Flush(true);
 		}
@@ -782,13 +782,13 @@ internal static partial class Launcher
 		Uri current;
 		if (!Uri.TryCreate(url, UriKind.Absolute, out current))
 		{
-			throw new InvalidDataException("다운로드 URL 형식이 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("다운로드 URL 형식이 올바르지 않습니다."), "The download URL format is invalid.");
 		}
 		for (int redirectCount = 0; redirectCount <= 8; redirectCount = checked(redirectCount + 1))
 		{
 			if (!IsTrustedRuntimeCompatibilityUri(current.AbsoluteUri, allowedHosts))
 			{
-				throw new InvalidDataException("허용되지 않은 HTTPS 다운로드 주소입니다: " + current.Host);
+				throw Localized(new InvalidDataException("허용되지 않은 HTTPS 다운로드 주소입니다: " + current.Host), "This HTTPS download address is not allowed: " + current.Host);
 			}
 			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(current);
 			request.Method = "GET";
@@ -807,12 +807,12 @@ internal static partial class Launcher
 				response.Close();
 				if (string.IsNullOrWhiteSpace(location))
 				{
-					throw new WebException("리디렉션 응답에 Location 헤더가 없습니다.");
+					throw Localized(new WebException("리디렉션 응답에 Location 헤더가 없습니다."), "The redirect response has no Location header.");
 				}
 				Uri redirected;
 				if (!Uri.TryCreate(current, location, out redirected) || !IsTrustedRuntimeCompatibilityUri(redirected.AbsoluteUri, allowedHosts))
 				{
-					throw new InvalidDataException("리디렉션 대상 호스트가 허용 목록에 없습니다.");
+					throw Localized(new InvalidDataException("리디렉션 대상 호스트가 허용 목록에 없습니다."), "The redirect target host is not on the allow list.");
 				}
 				current = redirected;
 				continue;
@@ -824,7 +824,7 @@ internal static partial class Launcher
 			}
 			return response;
 		}
-		throw new WebException("다운로드 리디렉션 횟수가 허용 범위를 초과했습니다.");
+		throw Localized(new WebException("다운로드 리디렉션 횟수가 허용 범위를 초과했습니다."), "The number of download redirects exceeds the allowed range.");
 	}
 
 	private static bool IsTrustedRuntimeCompatibilityUri(string url, string[] allowedHosts)
@@ -858,7 +858,7 @@ internal static partial class Launcher
 				entryCount = checked(entryCount + 1);
 				if (entryCount > RuntimeCompatibilityMaximumZipEntries)
 				{
-					throw new InvalidDataException("Java ZIP 항목 수가 허용 범위를 초과했습니다.");
+					throw Localized(new InvalidDataException("Java ZIP 항목 수가 허용 범위를 초과했습니다."), "The Java ZIP entry count exceeds the allowed range.");
 				}
 				string relativePath = (entry.FullName ?? string.Empty).Replace('/', Path.DirectorySeparatorChar);
 				if (string.IsNullOrWhiteSpace(relativePath) || Path.IsPathRooted(relativePath))
@@ -867,7 +867,7 @@ internal static partial class Launcher
 					{
 						continue;
 					}
-					throw new InvalidDataException("Java ZIP에 절대 경로 항목이 포함되어 있습니다.");
+					throw Localized(new InvalidDataException("Java ZIP에 절대 경로 항목이 포함되어 있습니다."), "The Java ZIP contains an absolute-path entry.");
 				}
 				string destinationPath;
 				try
@@ -876,11 +876,11 @@ internal static partial class Launcher
 				}
 				catch (Exception ex)
 				{
-					throw new InvalidDataException("Java ZIP 항목 경로가 올바르지 않습니다: " + SummarizeRuntimeCompatibilityError(ex));
+					throw Localized(new InvalidDataException("Java ZIP 항목 경로가 올바르지 않습니다: " + SummarizeRuntimeCompatibilityError(ex)), "A Java ZIP entry path is invalid: " + SummarizeRuntimeCompatibilityError(ex));
 				}
 				if (!destinationPath.StartsWith(rootPrefix, StringComparison.OrdinalIgnoreCase))
 				{
-					throw new InvalidDataException("Java ZIP 경로 탈출 항목을 차단했습니다: " + entry.FullName);
+					throw Localized(new InvalidDataException("Java ZIP 경로 탈출 항목을 차단했습니다: " + entry.FullName), "Blocked a path-escaping entry in the Java ZIP: " + entry.FullName);
 				}
 				bool isDirectory = string.IsNullOrEmpty(entry.Name) || relativePath.EndsWith(Path.DirectorySeparatorChar.ToString(), StringComparison.Ordinal);
 				if (isDirectory)
@@ -890,12 +890,12 @@ internal static partial class Launcher
 				}
 				if (entry.Length < 0L || entry.Length > RuntimeCompatibilityMaximumExtractedBytes)
 				{
-					throw new InvalidDataException("Java ZIP 항목 크기가 허용 범위를 벗어났습니다.");
+					throw Localized(new InvalidDataException("Java ZIP 항목 크기가 허용 범위를 벗어났습니다."), "A Java ZIP entry size is outside the allowed range.");
 				}
 				totalExtracted = checked(totalExtracted + entry.Length);
 				if (totalExtracted > RuntimeCompatibilityMaximumExtractedBytes)
 				{
-					throw new InvalidDataException("Java ZIP의 전체 압축 해제 크기가 허용 범위를 초과했습니다.");
+					throw Localized(new InvalidDataException("Java ZIP의 전체 압축 해제 크기가 허용 범위를 초과했습니다."), "The total expanded size of the Java ZIP exceeds the allowed range.");
 				}
 				string parent = Path.GetDirectoryName(destinationPath);
 				if (!string.IsNullOrEmpty(parent))
@@ -926,13 +926,13 @@ internal static partial class Launcher
 			total = checked(total + read);
 			if (total > expectedLength)
 			{
-				throw new InvalidDataException("Java ZIP 항목이 선언된 크기를 초과했습니다.");
+				throw Localized(new InvalidDataException("Java ZIP 항목이 선언된 크기를 초과했습니다."), "A Java ZIP entry exceeded its declared size.");
 			}
 			destination.Write(buffer, 0, read);
 		}
 		if (total != expectedLength)
 		{
-			throw new EndOfStreamException("Java ZIP 항목이 선언된 크기보다 짧습니다.");
+			throw Localized(new EndOfStreamException("Java ZIP 항목이 선언된 크기보다 짧습니다."), "A Java ZIP entry is shorter than its declared size.");
 		}
 	}
 
@@ -942,7 +942,7 @@ internal static partial class Launcher
 		string fullJava = Path.GetFullPath(javaPath);
 		if (!fullJava.StartsWith(fullStaging, StringComparison.OrdinalIgnoreCase))
 		{
-			throw new InvalidDataException("java.exe가 준비 폴더 밖을 가리킵니다.");
+			throw Localized(new InvalidDataException("java.exe가 준비 폴더 밖을 가리킵니다."), "java.exe points outside the staging folder.");
 		}
 		string relativeJava = fullJava.Substring(fullStaging.Length).Replace(Path.DirectorySeparatorChar, '/');
 		StringBuilder marker = new StringBuilder();
@@ -1337,16 +1337,16 @@ internal static partial class Launcher
 		string fullRoot = Path.GetFullPath(runtimesRoot).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 		if (string.Equals(fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar), fullRoot, StringComparison.OrdinalIgnoreCase) || !IsPathWithinRuntimeCompatibilityRoot(fullPath, fullRoot))
 		{
-			throw new InvalidDataException("런타임 작업 경로가 캐시 루트 밖을 가리킵니다.");
+			throw Localized(new InvalidDataException("런타임 작업 경로가 캐시 루트 밖을 가리킵니다."), "The runtime work path points outside the cache root.");
 		}
 		string name = Path.GetFileName(fullPath.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar));
 		if (string.IsNullOrEmpty(name) || (!name.StartsWith("java-", StringComparison.OrdinalIgnoreCase) && !name.StartsWith(".java-", StringComparison.OrdinalIgnoreCase)))
 		{
-			throw new InvalidDataException("런타임 작업 폴더 이름이 허용된 형식이 아닙니다.");
+			throw Localized(new InvalidDataException("런타임 작업 폴더 이름이 허용된 형식이 아닙니다."), "The runtime work folder name does not use an allowed format.");
 		}
 		if (Directory.Exists(fullPath) && (File.GetAttributes(fullPath) & FileAttributes.ReparsePoint) != 0)
 		{
-			throw new InvalidDataException("런타임 캐시 폴더가 재분석 지점을 가리켜 작업을 중단했습니다.");
+			throw Localized(new InvalidDataException("런타임 캐시 폴더가 재분석 지점을 가리켜 작업을 중단했습니다."), "The operation stopped because the runtime cache folder points to a reparse point.");
 		}
 	}
 
@@ -1391,7 +1391,7 @@ internal static partial class Launcher
 		}
 		if (!IsPathWithinRuntimeCompatibilityRoot(path, runtimesRoot) || !Path.GetFileName(path).StartsWith(".java-", StringComparison.OrdinalIgnoreCase))
 		{
-			throw new InvalidDataException("임시 런타임 파일 경로가 허용 범위를 벗어났습니다.");
+			throw Localized(new InvalidDataException("임시 런타임 파일 경로가 허용 범위를 벗어났습니다."), "The temporary runtime file path is outside the allowed range.");
 		}
 		File.SetAttributes(path, FileAttributes.Normal);
 		File.Delete(path);

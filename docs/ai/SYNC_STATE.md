@@ -1,5 +1,13 @@
 ﻿# AI Agent Synchronization State
 
+## Claude Exception Localization 3/4 - 2026-07-27
+
+- **Current Version**: 1.20.0 (build 26.2.45.88)
+- **Branch**: `claude/remote-control-u4tvpt`
+- **Status**: 예외 메시지 이중화 3차분 105곳 적용
+- 변환: `ContentManagementServices`(60), `RuntimeCompatibility`(45).
+- `ArgumentException(message, paramName)`처럼 두 번째 인자가 문자열인 형태도 `Localized`로 감쌌습니다. 매개변수 이름은 그대로 유지됩니다.
+- **남은 작업**: `decompiled/Launcher.decompiled.cs`(67) → 4차분. 이 파일은 CRLF·CR·LF가 섞여 있어 일반 편집 도구로 저장하면 줄바꿈이 전체 정규화되므로 반드시 바이트 단위로 편집해야 합니다.
 ## Claude Exception Localization 2/4 - 2026-07-27
 
 - **Current Version**: 1.19.0 (build 26.2.45.87)
