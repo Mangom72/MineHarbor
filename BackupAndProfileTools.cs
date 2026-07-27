@@ -736,13 +736,13 @@ internal static partial class Launcher
 		{
 			if (!IsValidProfileName(name))
 			{
-				throw new InvalidDataException("프로필 이름은 1~48자로 입력해 주세요.");
+				throw Localized(new InvalidDataException("프로필 이름은 1~48자로 입력해 주세요."), "A profile name must be 1 to 48 characters.");
 			}
 			string directory = GetProfileDirectory(serversRoot, name);
 			EnsureSafeProfilePath(serversRoot, directory);
 			if (Directory.Exists(directory))
 			{
-				throw new IOException("같은 이름의 프로필 폴더가 이미 있습니다.");
+				throw Localized(new IOException("같은 이름의 프로필 폴더가 이미 있습니다."), "A profile folder with the same name already exists.");
 			}
 			Directory.CreateDirectory(directory);
 			return directory;
@@ -793,12 +793,12 @@ internal static partial class Launcher
 		string fullServerDirectory = Path.GetFullPath(serverDirectory);
 		if (!Directory.Exists(fullServerDirectory))
 		{
-			throw new DirectoryNotFoundException("백업할 서버 폴더를 찾지 못했습니다.");
+			throw Localized(new DirectoryNotFoundException("백업할 서버 폴더를 찾지 못했습니다."), "The server folder to back up was not found.");
 		}
 		List<string> files = CollectProfileBackupFiles(fullServerDirectory);
 		if (files.Count == 0)
 		{
-			throw new InvalidOperationException("백업할 서버 파일이 없습니다.");
+			throw Localized(new InvalidOperationException("백업할 서버 파일이 없습니다."), "There are no server files to back up.");
 		}
 		long totalSize = 0L;
 		for (int i = 0; i < files.Count; i++)
@@ -811,7 +811,7 @@ internal static partial class Launcher
 		long required = checked(totalSize + 104857600L);
 		if (drive.AvailableFreeSpace < required)
 		{
-			throw new IOException("백업에 필요한 여유 공간이 부족합니다. 최소 " + FormatBackupSize(required) + "가 필요합니다.");
+			throw Localized(new IOException("백업에 필요한 여유 공간이 부족합니다. 최소 " + FormatBackupSize(required) + "가 필요합니다."), "Not enough free space for the backup. At least " + FormatBackupSize(required) + " is required.");
 		}
 		string safeReason = string.Equals(reason, "restore-safety", StringComparison.OrdinalIgnoreCase) ? "pre-restore" : string.Equals(reason, "manual", StringComparison.OrdinalIgnoreCase) ? "manual" : "automatic";
 		string finalPath = Path.Combine(backupDirectory, "server-" + DateTime.Now.ToString("yyyyMMdd-HHmmss-fff") + "-" + safeReason + ".zip");
@@ -850,7 +850,7 @@ internal static partial class Launcher
 	{
 		if (depth > 128)
 		{
-			throw new InvalidDataException("서버 폴더 단계가 지나치게 깊습니다.");
+			throw Localized(new InvalidDataException("서버 폴더 단계가 지나치게 깊습니다."), "The server folder is nested too deeply.");
 		}
 		DirectoryInfo directoryInfo = new DirectoryInfo(directory);
 		if ((directoryInfo.Attributes & FileAttributes.ReparsePoint) != 0)
@@ -902,7 +902,7 @@ internal static partial class Launcher
 		string relative = GetRelativeBackupPath(root, path).Replace('\\', '/');
 		if (string.IsNullOrEmpty(relative) || relative.StartsWith("../", StringComparison.Ordinal) || relative.IndexOf("/../", StringComparison.Ordinal) >= 0)
 		{
-			throw new InvalidDataException("백업 파일 경로가 서버 폴더 밖을 가리킵니다.");
+			throw Localized(new InvalidDataException("백업 파일 경로가 서버 폴더 밖을 가리킵니다."), "A backup file path points outside the server folder.");
 		}
 		ZipArchiveEntry entry = archive.CreateEntry("profile/" + relative, CompressionLevel.Fastest);
 		entry.LastWriteTime = File.GetLastWriteTime(path);
@@ -955,7 +955,7 @@ internal static partial class Launcher
 		{
 			if (archive.Entries.Count > maximumBackupEntryCount)
 			{
-				throw new InvalidDataException("백업 항목 수가 안전 제한을 초과했습니다.");
+				throw Localized(new InvalidDataException("백업 항목 수가 안전 제한을 초과했습니다."), "The number of backup entries exceeds the safety limit.");
 			}
 			items = ReadBackupManifest(archive);
 			Dictionary<string, ZipArchiveEntry> entries = new Dictionary<string, ZipArchiveEntry>(StringComparer.OrdinalIgnoreCase);
@@ -967,19 +967,19 @@ internal static partial class Launcher
 					string relative = entry.FullName.Substring(8).Replace('\\', '/');
 					ValidateBackupRelativePath(relative);
 					if (entry.FullName.EndsWith("/", StringComparison.Ordinal)) continue;
-					if (entries.ContainsKey(relative)) throw new InvalidDataException("백업에 중복 파일 경로가 있습니다: " + relative);
+					if (entries.ContainsKey(relative)) throw Localized(new InvalidDataException("백업에 중복 파일 경로가 있습니다: " + relative), "The backup contains a duplicate file path: " + relative);
 					expandedBytes = checked(expandedBytes + entry.Length);
-					if (expandedBytes > maximumBackupExpandedBytes) throw new InvalidDataException("백업의 총 해제 크기가 안전 제한을 초과했습니다.");
+					if (expandedBytes > maximumBackupExpandedBytes) throw Localized(new InvalidDataException("백업의 총 해제 크기가 안전 제한을 초과했습니다."), "The total expanded size of the backup exceeds the safety limit.");
 					entries.Add(relative, entry);
 				}
 			}
-			if (entries.Count != items.Count) throw new InvalidDataException("백업 파일 목록이 manifest와 정확히 일치하지 않습니다.");
+			if (entries.Count != items.Count) throw Localized(new InvalidDataException("백업 파일 목록이 manifest와 정확히 일치하지 않습니다."), "The backup file list does not exactly match the manifest.");
 			for (int i = 0; i < items.Count; i++)
 			{
 				ZipArchiveEntry entry;
 				if (!entries.TryGetValue(items[i].RelativePath, out entry) || entry.Length != items[i].Length)
 				{
-					throw new InvalidDataException("백업 파일 목록이나 크기가 manifest와 다릅니다: " + items[i].RelativePath);
+					throw Localized(new InvalidDataException("백업 파일 목록이나 크기가 manifest와 다릅니다: " + items[i].RelativePath), "The backup file list or size differs from the manifest: " + items[i].RelativePath);
 				}
 				using (SHA256 sha = SHA256.Create())
 				using (Stream input = entry.Open())
@@ -987,7 +987,7 @@ internal static partial class Launcher
 					string hash = ToLowerHex(sha.ComputeHash(input));
 					if (!string.Equals(hash, items[i].Sha256, StringComparison.OrdinalIgnoreCase))
 					{
-						throw new InvalidDataException("백업 파일의 SHA-256이 일치하지 않습니다: " + items[i].RelativePath);
+						throw Localized(new InvalidDataException("백업 파일의 SHA-256이 일치하지 않습니다: " + items[i].RelativePath), "A backup file's SHA-256 does not match: " + items[i].RelativePath);
 					}
 				}
 			}
@@ -1000,14 +1000,14 @@ internal static partial class Launcher
 				FileInfo file = new FileInfo(path);
 				if (!file.Exists || file.Length != items[i].Length)
 				{
-					throw new InvalidDataException("복원 staging 파일을 검증하지 못했습니다: " + items[i].RelativePath);
+					throw Localized(new InvalidDataException("복원 staging 파일을 검증하지 못했습니다: " + items[i].RelativePath), "Could not verify a restore staging file: " + items[i].RelativePath);
 				}
 				using (SHA256 sha = SHA256.Create())
 				using (FileStream stream = file.OpenRead())
 				{
 					if (!string.Equals(ToLowerHex(sha.ComputeHash(stream)), items[i].Sha256, StringComparison.OrdinalIgnoreCase))
 					{
-						throw new InvalidDataException("복원 staging 파일의 SHA-256이 일치하지 않습니다: " + items[i].RelativePath);
+						throw Localized(new InvalidDataException("복원 staging 파일의 SHA-256이 일치하지 않습니다: " + items[i].RelativePath), "A restore staging file's SHA-256 does not match: " + items[i].RelativePath);
 					}
 				}
 			}
@@ -1020,7 +1020,7 @@ internal static partial class Launcher
 		ZipArchiveEntry manifestEntry = archive.GetEntry("backup-manifest.tsv");
 		if (manifestEntry == null || manifestEntry.Length <= 0 || manifestEntry.Length > 16777216L)
 		{
-			throw new InvalidDataException("지원되는 백업 manifest를 찾지 못했습니다.");
+			throw Localized(new InvalidDataException("지원되는 백업 manifest를 찾지 못했습니다."), "No supported backup manifest was found.");
 		}
 		List<BackupManifestItem> result = new List<BackupManifestItem>();
 		using (StreamReader reader = new StreamReader(manifestEntry.Open(), Encoding.UTF8))
@@ -1036,7 +1036,7 @@ internal static partial class Launcher
 				long length;
 				if (parts.Length != 3 || parts[0].Length != 64 || !long.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out length) || length < 0)
 				{
-					throw new InvalidDataException("백업 manifest 항목 형식이 잘못되었습니다.");
+					throw Localized(new InvalidDataException("백업 manifest 항목 형식이 잘못되었습니다."), "A backup manifest entry has an invalid format.");
 				}
 				string relative;
 				try
@@ -1045,7 +1045,7 @@ internal static partial class Launcher
 				}
 				catch (FormatException)
 				{
-					throw new InvalidDataException("백업 manifest 파일 경로를 해석하지 못했습니다.");
+					throw Localized(new InvalidDataException("백업 manifest 파일 경로를 해석하지 못했습니다."), "Could not decode a file path in the backup manifest.");
 				}
 				ValidateBackupRelativePath(relative);
 				BackupManifestItem item = new BackupManifestItem();
@@ -1057,7 +1057,7 @@ internal static partial class Launcher
 		}
 		if (result.Count == 0)
 		{
-			throw new InvalidDataException("백업 manifest에 파일이 없습니다.");
+			throw Localized(new InvalidDataException("백업 manifest에 파일이 없습니다."), "The backup manifest contains no files.");
 		}
 		return result;
 	}
@@ -1068,7 +1068,7 @@ internal static partial class Launcher
 		string parent = Path.GetDirectoryName(fullServer);
 		if (string.IsNullOrEmpty(parent) || !Directory.Exists(fullServer))
 		{
-			throw new DirectoryNotFoundException("복원할 프로필 폴더를 찾지 못했습니다.");
+			throw Localized(new DirectoryNotFoundException("복원할 프로필 폴더를 찾지 못했습니다."), "The profile folder to restore was not found.");
 		}
 		VerifyComprehensiveBackup(backupPath, null);
 		CreateComprehensiveServerBackup(fullServer, retentionCount, "restore-safety");
@@ -1152,13 +1152,13 @@ internal static partial class Launcher
 				}
 				string key = candidate.FullName.Substring(8).Replace('\\', '/');
 				ValidateBackupRelativePath(key);
-				if (entries.ContainsKey(key)) throw new InvalidDataException("백업에 중복 파일 경로가 있습니다: " + key);
+				if (entries.ContainsKey(key)) throw Localized(new InvalidDataException("백업에 중복 파일 경로가 있습니다: " + key), "The backup contains a duplicate file path: " + key);
 				entries.Add(key, candidate);
 			}
 			for (int i = 0; i < items.Count; i++)
 			{
 				ZipArchiveEntry entry;
-				if (!entries.TryGetValue(items[i].RelativePath, out entry)) throw new InvalidDataException("manifest 파일을 백업에서 찾지 못했습니다: " + items[i].RelativePath);
+				if (!entries.TryGetValue(items[i].RelativePath, out entry)) throw Localized(new InvalidDataException("manifest 파일을 백업에서 찾지 못했습니다: " + items[i].RelativePath), "A manifest file was not found in the backup: " + items[i].RelativePath);
 				string relative = items[i].RelativePath.Replace('/', Path.DirectorySeparatorChar);
 				string destination = GetSafeBackupDestination(staging, relative);
 				Directory.CreateDirectory(Path.GetDirectoryName(destination));
@@ -1176,7 +1176,7 @@ internal static partial class Launcher
 	{
 		if (string.IsNullOrWhiteSpace(relative) || Path.IsPathRooted(relative) || relative.IndexOf('\0') >= 0)
 		{
-			throw new InvalidDataException("백업에 안전하지 않은 파일 경로가 있습니다.");
+			throw Localized(new InvalidDataException("백업에 안전하지 않은 파일 경로가 있습니다."), "The backup contains an unsafe file path.");
 		}
 		string normalized = relative.Replace('/', Path.DirectorySeparatorChar);
 		string[] parts = normalized.Split(Path.DirectorySeparatorChar);
@@ -1184,7 +1184,7 @@ internal static partial class Launcher
 		{
 			if (parts[i] == ".." || parts[i].Length == 0)
 			{
-				throw new InvalidDataException("백업 파일 경로가 서버 폴더 밖을 가리킵니다.");
+				throw Localized(new InvalidDataException("백업 파일 경로가 서버 폴더 밖을 가리킵니다."), "A backup file path points outside the server folder.");
 			}
 		}
 	}
@@ -1196,7 +1196,7 @@ internal static partial class Launcher
 		string candidate = Path.GetFullPath(Path.Combine(root, relative));
 		if (!candidate.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase))
 		{
-			throw new InvalidDataException("백업 파일 경로가 복원 폴더 밖을 가리킵니다.");
+			throw Localized(new InvalidDataException("백업 파일 경로가 복원 폴더 밖을 가리킵니다."), "A backup file path points outside the restore folder.");
 		}
 		return candidate;
 	}
@@ -1239,7 +1239,7 @@ internal static partial class Launcher
 		}
 		if (!fullPath.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase))
 		{
-			throw new InvalidDataException("서버 폴더 밖의 파일은 백업할 수 없습니다.");
+			throw Localized(new InvalidDataException("서버 폴더 밖의 파일은 백업할 수 없습니다."), "Files outside the server folder cannot be backed up.");
 		}
 		return fullPath.Substring(fullRoot.Length);
 	}
@@ -1338,7 +1338,7 @@ internal static partial class Launcher
 				return candidate;
 			}
 		}
-		throw new InvalidOperationException("사용 가능한 서버 포트를 찾지 못했습니다.");
+		throw Localized(new InvalidOperationException("사용 가능한 서버 포트를 찾지 못했습니다."), "No available server port was found.");
 	}
 
 	private static void CopyProfileDirectory(string source, string destination)
@@ -1347,7 +1347,7 @@ internal static partial class Launcher
 		string fullDestination = Path.GetFullPath(destination);
 		if (string.Equals(fullSource, fullDestination, StringComparison.OrdinalIgnoreCase) || fullDestination.StartsWith(fullSource.TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
 		{
-			throw new InvalidDataException("서버 폴더 안으로 자기 자신을 복사할 수 없습니다.");
+			throw Localized(new InvalidDataException("서버 폴더 안으로 자기 자신을 복사할 수 없습니다."), "A folder cannot be copied into itself.");
 		}
 		CopyProfileDirectoryRecursive(fullSource, fullDestination, 0);
 	}
@@ -1356,7 +1356,7 @@ internal static partial class Launcher
 	{
 		if (depth > 128)
 		{
-			throw new InvalidDataException("서버 폴더 단계가 지나치게 깊습니다.");
+			throw Localized(new InvalidDataException("서버 폴더 단계가 지나치게 깊습니다."), "The server folder is nested too deeply.");
 		}
 		DirectoryInfo sourceInfo = new DirectoryInfo(source);
 		if ((sourceInfo.Attributes & FileAttributes.ReparsePoint) != 0)
@@ -1422,7 +1422,7 @@ internal static partial class Launcher
 		string fullPath = Path.GetFullPath(path).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
 		if (!fullPath.StartsWith(fullRoot, StringComparison.OrdinalIgnoreCase) || fullPath.Length <= fullRoot.Length)
 		{
-			throw new InvalidDataException("대상 경로가 허용된 서버 폴더 밖을 가리킵니다.");
+			throw Localized(new InvalidDataException("대상 경로가 허용된 서버 폴더 밖을 가리킵니다."), "The destination path points outside the allowed server folder.");
 		}
 	}
 }

@@ -271,7 +271,7 @@ internal static partial class Launcher
 			IPAddress parsed;
 			if (!IPAddress.TryParse(result.PublicIp, out parsed) || IPAddress.IsLoopback(parsed))
 			{
-				throw new InvalidDataException("외부 검사 서버의 공인 IP 응답을 인식할 수 없습니다.");
+				throw Localized(new InvalidDataException("외부 검사 서버의 공인 IP 응답을 인식할 수 없습니다."), "The public IP response from the external check service was not recognized.");
 			}
 			for (int attempt = 1; attempt <= Math.Max(1, attempts); attempt++)
 			{
@@ -283,7 +283,7 @@ internal static partial class Launcher
 				bool reachable;
 				if (!bool.TryParse(response, out reachable))
 				{
-					throw new InvalidDataException("외부 검사 서버의 포트 응답을 인식할 수 없습니다.");
+					throw Localized(new InvalidDataException("외부 검사 서버의 포트 응답을 인식할 수 없습니다."), "The port response from the external check service was not recognized.");
 				}
 				result.CheckCompleted = true;
 				if (reachable)
@@ -311,7 +311,7 @@ internal static partial class Launcher
 		{
 			if (stopped.WaitOne(0))
 			{
-				throw new OperationCanceledException("서버가 종료되어 외부 접속 검사를 중단했습니다.");
+				throw Localized(new OperationCanceledException("서버가 종료되어 외부 접속 검사를 중단했습니다."), "The external access check stopped because the server shut down.");
 			}
 			try
 			{
@@ -325,7 +325,7 @@ internal static partial class Launcher
 					Console.WriteLine("[외부 접속] 검사 서비스 연결 재시도 " + (attempt + 1).ToString(CultureInfo.InvariantCulture) + "/" + attempts.ToString(CultureInfo.InvariantCulture));
 					if (stopped.WaitOne(attempt * 1000))
 					{
-						throw new OperationCanceledException("서버가 종료되어 외부 접속 검사를 중단했습니다.");
+						throw Localized(new OperationCanceledException("서버가 종료되어 외부 접속 검사를 중단했습니다."), "The external access check stopped because the server shut down.");
 					}
 				}
 			}
@@ -721,7 +721,7 @@ internal static partial class Launcher
 				UpnpMappedPort item = tracked[i];
 				if (item.ExternalPort == externalPort && string.Equals(item.Protocol, protocol, StringComparison.OrdinalIgnoreCase) && IsTrackedOwnerAlive(item) && !string.Equals(item.Description, description, StringComparison.Ordinal))
 				{
-					throw new InvalidOperationException("다른 MineHarbor 실행이 같은 UPnP 포트의 소유권을 기록하고 있습니다.");
+					throw Localized(new InvalidOperationException("다른 MineHarbor 실행이 같은 UPnP 포트의 소유권을 기록하고 있습니다."), "Another MineHarbor run holds ownership of the same UPnP port.");
 				}
 			}
 			tracked.RemoveAll(delegate(UpnpMappedPort item)
@@ -1000,7 +1000,7 @@ internal static partial class Launcher
 	{
 		try
 		{
-			if (!upnpTrackerMutex.WaitOne(10000)) throw new TimeoutException("다른 MineHarbor 프로세스가 UPnP 소유권 기록을 사용 중입니다.");
+			if (!upnpTrackerMutex.WaitOne(10000)) throw Localized(new TimeoutException("다른 MineHarbor 프로세스가 UPnP 소유권 기록을 사용 중입니다."), "Another MineHarbor process is using the UPnP ownership record.");
 		}
 		catch (AbandonedMutexException)
 		{

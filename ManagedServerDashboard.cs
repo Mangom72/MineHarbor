@@ -763,7 +763,7 @@ internal static partial class Launcher
 				{
 					if (!process.Start())
 					{
-						throw new InvalidOperationException("관리 서버 프로세스를 시작하지 못했습니다.");
+						throw Localized(new InvalidOperationException("관리 서버 프로세스를 시작하지 못했습니다."), "Could not start the managed server process.");
 					}
 					session.Process = process;
 					TryRecordOperationEvent(

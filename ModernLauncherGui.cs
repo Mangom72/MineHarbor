@@ -1053,7 +1053,7 @@ internal static partial class Launcher
 
 			{
 
-				throw new OperationCanceledException("서버 설정이 취소되었습니다.");
+				throw Localized(new OperationCanceledException("서버 설정이 취소되었습니다."), "Server setup was cancelled.");
 
 			}
 
@@ -4181,7 +4181,7 @@ internal static partial class Launcher
 
 			Form form = factory();
 
-			if (form == null) throw new InvalidOperationException("기능 창을 만들지 못했습니다.");
+			if (form == null) throw Localized(new InvalidOperationException("기능 창을 만들지 못했습니다."), "Could not create the feature window.");
 
 			modelessToolWindows[key] = form;
 
