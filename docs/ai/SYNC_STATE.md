@@ -16,7 +16,7 @@
 - **로컬 검증 통과** (이번이 첫 로컬 세션, .NET SDK 10.0.302): `Prepare-BuildResources.ps1`, `build.ps1`,
   `test.ps1 -LauncherPath artifacts\MineHarbor.exe` → `VERSION_CONSISTENCY_OK`, `PASSED=33`, `PORTABLE_VERSION_OK`,
   `PORTABLE_SMOKE_OK`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`, `BRIDGE_PROTOCOL_PASSED=10`.
-- **남은 정리 대상**: 루트의 `CODEX_CHAT_HISTORY.md`(1.9MB)는 프로젝트 초기 Codex 대화 원문입니다. 사용자 확인 후 삭제 여부를 결정하세요.
+- 루트의 `CODEX_CHAT_HISTORY.md`(1.9MB, 프로젝트 초기 Codex 대화 원문)도 사용자 승인 후 삭제했습니다. 참조하는 곳은 없었습니다.
 ## Claude Exception Localization 4/4 (완료) - 2026-07-27
 
 - **Current Version**: 1.21.0 (build 26.2.45.89)
