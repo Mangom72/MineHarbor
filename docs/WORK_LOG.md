@@ -10,8 +10,9 @@
 - `CLAUDE.md`에 다른 문서에만 있던 규칙을 흡수했습니다: 저장소 밖 파일 수정 금지, 기존 모듈 구조(UI·Network·Bridge·Storage) 유지,
   긴 버튼 이름 대신 툴팁, 백그라운드 기능 경계, `.mineharbor` 스키마 보존, `Task`/`CancellationToken`,
   새 소스 추가 시 `build.ps1`과 `MineHarbor.csproj` 소스 목록 동시 갱신.
-- `docs/ai/SYNC_STATE.md`는 세션 간 인계 기록이므로 남깁니다. 제목만 `AI Agent Synchronization State` → `MineHarbor 작업 기록`으로 바꿨고
-  본문은 그대로입니다(1줄 diff). 이 파일은 UTF-8 BOM + LF이므로 바이트 단위로 편집했습니다.
+- 세션 간 인계 기록은 남기되 `docs/ai/SYNC_STATE.md` → `docs/WORK_LOG.md`로 옮겼습니다(`git mv`, 이력 보존). 여러 에이전트 간 "동기화 상태"가
+  아니라 세션 작업 기록이므로 이름을 맞췄고, `docs/ai/` 폴더는 비어서 없어집니다. 제목도 `AI Agent Synchronization State` → `MineHarbor 작업 기록`.
+  본문 내용은 그대로입니다. 이 파일은 UTF-8 BOM + LF이므로 바이트 단위로 편집했습니다. 과거 항목 안의 `SYNC_STATE.md` 언급은 그 시점 기록이라 두었습니다.
 - `docs/audits/FULL_UI_UX_SECURITY_UPNP_AUDIT.md`가 삭제된 문서를 언급하지만, 그 시점의 감사 기록이라 수정하지 않았습니다.
 - **로컬 검증 통과** (이번이 첫 로컬 세션, .NET SDK 10.0.302): `Prepare-BuildResources.ps1`, `build.ps1`,
   `test.ps1 -LauncherPath artifacts\MineHarbor.exe` → `VERSION_CONSISTENCY_OK`, `PASSED=33`, `PORTABLE_VERSION_OK`,

@@ -3,11 +3,11 @@
 Windows용 Minecraft 서버 런처입니다. C# / WinForms / .NET Framework 4.8, 빌드는 .NET SDK 10.
 
 **이 파일이 이 저장소의 유일한 작업 지침입니다.** 빌드·테스트·릴리스의 세부 절차는 `CONTRIBUTING.md`,
-직전 세션의 작업 내역은 `docs/ai/SYNC_STATE.md`에 있습니다.
+직전 세션의 작업 내역은 `docs/WORK_LOG.md`에 있습니다.
 
 ## 작업 시작 전
 
-1. `docs/ai/SYNC_STATE.md` 맨 위 항목 — 직전 세션이 무엇을 했고 무엇이 남았는지
+1. `docs/WORK_LOG.md` 맨 위 항목 — 직전 세션이 무엇을 했고 무엇이 남았는지
 2. `git status`와 현재 브랜치 — 커밋되지 않은 변경이 있는지
 
 ## 개발 명령 (Windows PowerShell)
@@ -90,7 +90,7 @@ throw Localized(new InvalidDataException("한국어 문구"), "English wording")
 
 ## 작업 종료 시
 
-`docs/ai/SYNC_STATE.md` 맨 위에 이번 작업 내역을 추가합니다.
+`docs/WORK_LOG.md` 맨 위에 이번 작업 내역을 추가합니다.
 무엇을 고쳤는지, 왜 그렇게 했는지, 검증은 어떻게 했는지, 무엇이 남았는지를 다음 세션이 알 수 있게 씁니다.
 
 ## 실제 사용자 자원
