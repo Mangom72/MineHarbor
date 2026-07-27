@@ -342,7 +342,7 @@ internal static partial class Launcher
 			}
 			catch (Exception ex)
 			{
-				ShowLauncherMessage("런처에서 처리하지 못한 오류가 발생했습니다.\r\n\r\n" + ex.Message, true);
+				ShowLauncherMessage("런처에서 처리하지 못한 오류가 발생했습니다.\r\n\r\n" + DescribeException(ex), true);
 				return 1;
 			}
 			finally

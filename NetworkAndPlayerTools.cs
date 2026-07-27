@@ -392,7 +392,7 @@ internal static partial class Launcher
 			catch (Exception exception)
 			{
 				statusLabel.ForeColor = palette.Danger;
-				statusLabel.Text = ToolText("명령 전송 중 오류가 발생했습니다: ", "Could not send the command: ") + exception.Message;
+				statusLabel.Text = ToolText("명령 전송 중 오류가 발생했습니다: ", "Could not send the command: ") + DescribeException(exception);
 			}
 		}
 
@@ -963,7 +963,7 @@ internal static partial class Launcher
 			catch (Exception exception)
 			{
 				statusLabel.ForeColor = palette.Danger;
-				statusLabel.Text = ToolText("주소를 복사하지 못했습니다: ", "Could not copy the address: ") + exception.Message;
+				statusLabel.Text = ToolText("주소를 복사하지 못했습니다: ", "Could not copy the address: ") + DescribeException(exception);
 			}
 		}
 
@@ -984,7 +984,7 @@ internal static partial class Launcher
 			catch (Exception exception)
 			{
 				statusLabel.ForeColor = palette.Danger;
-				statusLabel.Text = ToolText("외부 재검사를 시작하지 못했습니다: ", "Could not start the external recheck: ") + exception.Message;
+				statusLabel.Text = ToolText("외부 재검사를 시작하지 못했습니다: ", "Could not start the external recheck: ") + DescribeException(exception);
 			}
 		}
 
@@ -1015,7 +1015,7 @@ internal static partial class Launcher
 			catch (Exception exception)
 			{
 				statusLabel.ForeColor = palette.Danger;
-				statusLabel.Text = ToolText("페이지를 열지 못했습니다: ", "Could not open the page: ") + exception.Message;
+				statusLabel.Text = ToolText("페이지를 열지 못했습니다: ", "Could not open the page: ") + DescribeException(exception);
 			}
 		}
 

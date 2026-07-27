@@ -62,7 +62,7 @@ internal static partial class Launcher
 				if (!File.Exists(path)) return new WindowsNotificationSettings();
 				FileInfo info = new FileInfo(path);
 				if (info.Length <= 0 || info.Length > WindowsNotificationSettingsMaximumBytes)
-					throw new InvalidDataException("Windows 알림 설정 파일 크기가 올바르지 않습니다.");
+					throw Localized(new InvalidDataException("Windows 알림 설정 파일 크기가 올바르지 않습니다."), "The Windows notification settings file size is invalid.");
 				WindowsNotificationSettings settings;
 				try
 				{
@@ -70,7 +70,7 @@ internal static partial class Launcher
 				}
 				catch (Exception exception)
 				{
-					throw new InvalidDataException("Windows 알림 설정 파일이 손상되었습니다. 원본 파일은 변경하지 않았습니다.", exception);
+					throw Localized(new InvalidDataException("Windows 알림 설정 파일이 손상되었습니다. 원본 파일은 변경하지 않았습니다.", exception), "The Windows notification settings file is damaged. The original file was left unchanged.");
 				}
 				ValidateWindowsNotificationSettings(settings);
 				return settings;
@@ -96,14 +96,14 @@ internal static partial class Launcher
 	private static void ValidateWindowsNotificationSettings(WindowsNotificationSettings settings)
 	{
 		if (settings == null || settings.SchemaVersion != WindowsNotificationSettingsSchemaVersion)
-			throw new InvalidDataException("지원하지 않는 Windows 알림 설정 버전입니다.");
+			throw Localized(new InvalidDataException("지원하지 않는 Windows 알림 설정 버전입니다."), "Unsupported Windows notification settings version.");
 		if (!string.Equals(settings.MinimumSeverity, "info", StringComparison.Ordinal)
 			&& !string.Equals(settings.MinimumSeverity, "warning", StringComparison.Ordinal)
 			&& !string.Equals(settings.MinimumSeverity, "error", StringComparison.Ordinal))
-			throw new InvalidDataException("Windows 알림 최소 중요도가 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("Windows 알림 최소 중요도가 올바르지 않습니다."), "The minimum Windows notification severity is invalid.");
 		if (settings.QuietStartMinutes < 0 || settings.QuietStartMinutes >= 24 * 60
 			|| settings.QuietEndMinutes < 0 || settings.QuietEndMinutes >= 24 * 60)
-			throw new InvalidDataException("Windows 알림 조용한 시간 범위가 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("Windows 알림 조용한 시간 범위가 올바르지 않습니다."), "The Windows notification quiet-hours range is invalid.");
 	}
 
 	private static T WithWindowsNotificationSettingsLock<T>(Func<T> action)
@@ -119,7 +119,7 @@ internal static partial class Launcher
 				{
 					try { entered = mutex.WaitOne(TimeSpan.FromSeconds(5)); }
 					catch (AbandonedMutexException) { entered = true; }
-					if (!entered) throw new IOException("다른 MineHarbor 프로세스가 Windows 알림 설정을 갱신하고 있습니다.");
+					if (!entered) throw Localized(new IOException("다른 MineHarbor 프로세스가 Windows 알림 설정을 갱신하고 있습니다."), "Another MineHarbor process is updating the Windows notification settings.");
 					return action();
 				}
 				finally
@@ -548,7 +548,7 @@ internal static partial class Launcher
 			}
 			catch (Exception exception)
 			{
-				ShowMineHarborDialog(this, (IsManagedKorean() ? "알림 설정을 저장하지 못했습니다: " : "Could not save notification settings: ") + exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				ShowMineHarborDialog(this, (IsManagedKorean() ? "알림 설정을 저장하지 못했습니다: " : "Could not save notification settings: ") + DescribeException(exception), Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
 				return false;
 			}
 		}

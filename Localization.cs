@@ -4,6 +4,40 @@ using System.Globalization;
 
 internal static partial class Launcher
 {
+	// 예외 메시지는 오랫동안 한국어 한 가지만 있어서 영어 UI에서도 한국어 오류가 그대로 표시됐습니다.
+	// 예외 타입을 바꾸면 기존 catch 절이 영향을 받으므로, 타입은 그대로 두고 Data에 영어 문구만 덧붙입니다.
+	// 영어 문구가 없는 예외는 지금까지와 동일하게 원래 메시지를 사용합니다.
+	private const string LocalizedExceptionEnglishKey = "MineHarbor.MessageEn";
+
+	private static T Localized<T>(T exception, string english) where T : Exception
+	{
+		if (exception != null && !string.IsNullOrWhiteSpace(english))
+		{
+			try { exception.Data[LocalizedExceptionEnglishKey] = english; }
+			catch (ArgumentException) { }
+			catch (NotSupportedException) { }
+		}
+		return exception;
+	}
+
+	private static string DescribeException(Exception exception)
+	{
+		if (exception == null) return string.Empty;
+		if (!string.Equals(Localization.CurrentLanguage, Localization.Korean, StringComparison.OrdinalIgnoreCase))
+		{
+			try
+			{
+				if (exception.Data != null && exception.Data.Contains(LocalizedExceptionEnglishKey))
+				{
+					string english = Convert.ToString(exception.Data[LocalizedExceptionEnglishKey]);
+					if (!string.IsNullOrWhiteSpace(english)) return english;
+				}
+			}
+			catch (NotSupportedException) { }
+		}
+		return exception.Message ?? string.Empty;
+	}
+
 	internal static class Localization
 	{
 		public const string Korean = "ko";

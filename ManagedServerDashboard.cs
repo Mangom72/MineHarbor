@@ -1528,7 +1528,7 @@ internal static partial class Launcher
 			}
 			catch (Exception exception)
 			{
-				ShowMineHarborDialog(this, exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				ShowMineHarborDialog(this, DescribeException(exception), Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 	}

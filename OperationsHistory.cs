@@ -50,13 +50,13 @@ internal static partial class Launcher
 		string metadata = Path.Combine(root, ".mineharbor");
 		string path = Path.GetFullPath(Path.Combine(metadata, "operations-history.json"));
 		if (!path.StartsWith(root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase))
-			throw new InvalidDataException("운영 기록 경로가 서버 폴더를 벗어났습니다.");
+			throw Localized(new InvalidDataException("운영 기록 경로가 서버 폴더를 벗어났습니다."), "The operations-history path is outside the server folder.");
 		if (Directory.Exists(root) && (File.GetAttributes(root) & FileAttributes.ReparsePoint) != 0)
-			throw new InvalidDataException("연결 또는 재분석 지점 서버 폴더에는 운영 기록을 저장할 수 없습니다.");
+			throw Localized(new InvalidDataException("연결 또는 재분석 지점 서버 폴더에는 운영 기록을 저장할 수 없습니다."), "Operations history cannot be stored in a junction or reparse-point server folder.");
 		if (Directory.Exists(metadata) && (File.GetAttributes(metadata) & FileAttributes.ReparsePoint) != 0)
-			throw new InvalidDataException("연결 또는 재분석 지점에는 운영 기록을 저장할 수 없습니다.");
+			throw Localized(new InvalidDataException("연결 또는 재분석 지점에는 운영 기록을 저장할 수 없습니다."), "Operations history cannot be stored in a junction or reparse point.");
 		if (File.Exists(path) && (File.GetAttributes(path) & FileAttributes.ReparsePoint) != 0)
-			throw new InvalidDataException("연결 또는 재분석 지점 파일에는 운영 기록을 저장할 수 없습니다.");
+			throw Localized(new InvalidDataException("연결 또는 재분석 지점 파일에는 운영 기록을 저장할 수 없습니다."), "Operations history cannot be stored in a junction or reparse-point file.");
 		return path;
 	}
 
@@ -74,7 +74,7 @@ internal static partial class Launcher
 		if (!File.Exists(path)) return new OperationsHistoryDocument();
 		FileInfo info = new FileInfo(path);
 		if (info.Length <= 0 || info.Length > OperationsHistoryMaximumBytes)
-			throw new InvalidDataException("운영 기록 파일 크기가 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("운영 기록 파일 크기가 올바르지 않습니다."), "The operations-history file size is invalid.");
 		OperationsHistoryDocument document;
 		try
 		{
@@ -82,7 +82,7 @@ internal static partial class Launcher
 		}
 		catch (Exception exception)
 		{
-			throw new InvalidDataException("운영 기록 파일이 손상되었습니다. 원본 파일은 변경하지 않았습니다.", exception);
+			throw Localized(new InvalidDataException("운영 기록 파일이 손상되었습니다. 원본 파일은 변경하지 않았습니다.", exception), "The operations-history file is damaged. The original file was left unchanged.");
 		}
 		ValidateOperationsHistory(document);
 		return document;
@@ -178,7 +178,7 @@ internal static partial class Launcher
 		ValidateOperationsHistory(document);
 		string json = new JavaScriptSerializer { MaxJsonLength = OperationsHistoryMaximumBytes }.Serialize(document);
 		if (Encoding.UTF8.GetByteCount(json) > OperationsHistoryMaximumBytes)
-			throw new InvalidDataException("운영 기록 파일이 허용 크기를 초과했습니다.");
+			throw Localized(new InvalidDataException("운영 기록 파일이 허용 크기를 초과했습니다."), "The operations-history file exceeds the allowed size.");
 		Directory.CreateDirectory(Path.GetDirectoryName(path));
 		string temporary = path + ".준비중";
 		File.WriteAllText(temporary, json, new UTF8Encoding(false));
@@ -188,12 +188,12 @@ internal static partial class Launcher
 	private static void ValidateOperationsHistory(OperationsHistoryDocument document)
 	{
 		if (document == null || document.SchemaVersion != OperationsHistorySchemaVersion)
-			throw new InvalidDataException("지원하지 않는 운영 기록 스키마입니다.");
+			throw Localized(new InvalidDataException("지원하지 않는 운영 기록 스키마입니다."), "Unsupported operations-history schema.");
 		if (document.Entries == null) document.Entries = new List<OperationsHistoryEntry>();
 		if (document.Entries.Count > OperationsHistoryMaximumEntries)
-			throw new InvalidDataException("운영 기록 항목 수가 허용 범위를 초과했습니다.");
+			throw Localized(new InvalidDataException("운영 기록 항목 수가 허용 범위를 초과했습니다."), "The operations-history entry count exceeds the allowed range.");
 		if (!IsOperationHash(document.ChainAnchor, true))
-			throw new InvalidDataException("운영 기록 연결 기준값이 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("운영 기록 연결 기준값이 올바르지 않습니다."), "The operations-history chain anchor is invalid.");
 		string previous = document.ChainAnchor ?? string.Empty;
 		HashSet<string> identifiers = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		DateTime parsed;
@@ -201,20 +201,20 @@ internal static partial class Launcher
 		{
 			OperationsHistoryEntry entry = document.Entries[i];
 			if (entry == null || string.IsNullOrWhiteSpace(entry.Id) || entry.Id.Length > 80 || !identifiers.Add(entry.Id))
-				throw new InvalidDataException("운영 기록 식별자가 없거나 중복되었습니다.");
+				throw Localized(new InvalidDataException("운영 기록 식별자가 없거나 중복되었습니다."), "An operations-history identifier is missing or duplicated.");
 			if (!DateTime.TryParse(entry.CreatedUtc, CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out parsed))
-				throw new InvalidDataException("운영 기록 시각이 올바르지 않습니다.");
+				throw Localized(new InvalidDataException("운영 기록 시각이 올바르지 않습니다."), "An operations-history timestamp is invalid.");
 			if (!string.Equals(entry.Category, NormalizeOperationCategory(entry.Category), StringComparison.Ordinal)
 				|| !string.Equals(entry.Severity, NormalizeOperationSeverity(entry.Severity), StringComparison.Ordinal)
 				|| !string.Equals(entry.Source, NormalizeOperationSource(entry.Source), StringComparison.Ordinal))
-				throw new InvalidDataException("운영 기록 분류가 올바르지 않습니다.");
+				throw Localized(new InvalidDataException("운영 기록 분류가 올바르지 않습니다."), "An operations-history category is invalid.");
 			if (string.IsNullOrWhiteSpace(entry.MessageKo) || string.IsNullOrWhiteSpace(entry.MessageEn)
 				|| entry.MessageKo.Length > 1000 || entry.MessageEn.Length > 1000)
-				throw new InvalidDataException("운영 기록 문구가 올바르지 않습니다.");
+				throw Localized(new InvalidDataException("운영 기록 문구가 올바르지 않습니다."), "An operations-history message is invalid.");
 			if (!string.Equals(entry.PreviousHash ?? string.Empty, previous, StringComparison.OrdinalIgnoreCase)
 				|| !IsOperationHash(entry.Hash, false)
 				|| !string.Equals(entry.Hash, CalculateOperationEntryHash(entry), StringComparison.OrdinalIgnoreCase))
-				throw new InvalidDataException("운영 기록 연속 해시가 일치하지 않습니다. 원본 파일은 변경하지 않았습니다.");
+				throw Localized(new InvalidDataException("운영 기록 연속 해시가 일치하지 않습니다. 원본 파일은 변경하지 않았습니다."), "The operations-history hash chain does not match. The original file was left unchanged.");
 			previous = entry.Hash;
 		}
 	}
@@ -360,7 +360,7 @@ internal static partial class Launcher
 				{
 					try { entered = mutex.WaitOne(TimeSpan.FromSeconds(5)); }
 					catch (AbandonedMutexException) { entered = true; }
-					if (!entered) throw new IOException("다른 MineHarbor 프로세스가 운영 기록을 갱신하고 있습니다.");
+					if (!entered) throw Localized(new IOException("다른 MineHarbor 프로세스가 운영 기록을 갱신하고 있습니다."), "Another MineHarbor process is updating the operations history.");
 					return action();
 				}
 				finally
@@ -554,7 +554,7 @@ internal static partial class Launcher
 				MarkOperationEventRead(reference.ServerDirectory, reference.EntryId, true);
 				ReloadHistory();
 			}
-			catch (Exception exception) { ShowMineHarborDialog(this, exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+			catch (Exception exception) { ShowMineHarborDialog(this, DescribeException(exception), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); }
 		}
 
 		private void MarkAllRead()
@@ -568,7 +568,7 @@ internal static partial class Launcher
 				}
 				ReloadHistory();
 			}
-			catch (Exception exception) { ShowMineHarborDialog(this, exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); }
+			catch (Exception exception) { ShowMineHarborDialog(this, DescribeException(exception), Text, MessageBoxButtons.OK, MessageBoxIcon.Warning); }
 		}
 
 		private void ExportVisibleHistory()

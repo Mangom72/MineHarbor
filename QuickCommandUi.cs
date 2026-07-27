@@ -809,7 +809,7 @@ internal static partial class Launcher
 				RefreshBridgeStatus();
 				ShowMineHarborDialog(this, LauncherUiText("브리지를 설치했습니다. 다음 서버 시작부터 실시간 자동완성을 사용할 수 있습니다.", "Bridge installed. Live suggestions will be available on the next server start."), Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
 			}
-			catch (Exception exception) { ShowMineHarborDialog(this, exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
+			catch (Exception exception) { ShowMineHarborDialog(this, DescribeException(exception), Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
 		}
 
 		private void RemoveBridge(object sender, EventArgs eventArgs)
@@ -823,7 +823,7 @@ internal static partial class Launcher
 				WriteBridgeChoice(serverDirectory, "skip");
 				RefreshBridgeStatus();
 			}
-			catch (Exception exception) { ShowMineHarborDialog(this, exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
+			catch (Exception exception) { ShowMineHarborDialog(this, DescribeException(exception), Text, MessageBoxButtons.OK, MessageBoxIcon.Error); }
 		}
 
 		private void OpenBridgeFolder(object sender, EventArgs eventArgs)

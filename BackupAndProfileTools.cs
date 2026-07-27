@@ -298,7 +298,7 @@ internal static partial class Launcher
 					TryPostToUi(this, (MethodInvoker)delegate
 					{
 						SetBackupBusy(false, (IsBackupKorean() ? "작업 실패: " : "Operation failed: ") + exception.Message);
-						ShowMineHarborDialog(this, exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+						ShowMineHarborDialog(this, DescribeException(exception), Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
 					});
 				}
 			});

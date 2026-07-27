@@ -28,9 +28,9 @@ internal static partial class Launcher
 
 	private static ServerTrashRecord MoveProfileToServerTrash(string serversRoot, ManagedProfileRecord profile, DateTime utcNow)
 	{
-		if (profile == null || !IsValidProfileName(profile.Name)) throw new InvalidDataException("삭제할 서버 프로필 정보가 올바르지 않습니다.");
+		if (profile == null || !IsValidProfileName(profile.Name)) throw Localized(new InvalidDataException("삭제할 서버 프로필 정보가 올바르지 않습니다."), "The server profile to delete is invalid.");
 		EnsureSafeProfilePath(serversRoot, profile.Directory);
-		if (!Directory.Exists(profile.Directory)) throw new DirectoryNotFoundException("삭제할 서버 폴더를 찾을 수 없습니다.");
+		if (!Directory.Exists(profile.Directory)) throw Localized(new DirectoryNotFoundException("삭제할 서버 폴더를 찾을 수 없습니다."), "The server folder to delete was not found.");
 		string trashRoot = GetServerTrashRoot(serversRoot);
 		Directory.CreateDirectory(trashRoot);
 		string folderName = ToSafeDirectoryName(profile.Name) + "-" + utcNow.ToString("yyyyMMdd-HHmmss", CultureInfo.InvariantCulture) + "-" + Guid.NewGuid().ToString("N").Substring(0, 8);
@@ -136,12 +136,12 @@ internal static partial class Launcher
 
 	private static void RestoreServerTrashRecord(string serversRoot, ServerTrashRecord record, string restoreName)
 	{
-		if (record == null || !IsValidProfileName(restoreName)) throw new InvalidDataException("복구할 서버 이름이 올바르지 않습니다.");
+		if (record == null || !IsValidProfileName(restoreName)) throw Localized(new InvalidDataException("복구할 서버 이름이 올바르지 않습니다."), "The server name to restore is invalid.");
 		string trashRoot = GetServerTrashRoot(serversRoot);
 		EnsurePathInsideRoot(trashRoot, record.Directory);
 		string destination = GetProfileDirectory(serversRoot, restoreName);
 		EnsureSafeProfilePath(serversRoot, destination);
-		if (Directory.Exists(destination)) throw new IOException("같은 이름의 서버가 이미 있습니다.");
+		if (Directory.Exists(destination)) throw Localized(new IOException("같은 이름의 서버가 이미 있습니다."), "A server with the same name already exists.");
 		Directory.Move(record.Directory, destination);
 		try
 		{
@@ -167,13 +167,13 @@ internal static partial class Launcher
 		EnsurePathInsideRoot(trashRoot, record.Directory);
 		DirectoryInfo info = new DirectoryInfo(record.Directory);
 		if (!info.Exists) return;
-		if ((info.Attributes & FileAttributes.ReparsePoint) != 0) throw new InvalidDataException("연결된 폴더는 영구 삭제할 수 없습니다.");
+		if ((info.Attributes & FileAttributes.ReparsePoint) != 0) throw Localized(new InvalidDataException("연결된 폴더는 영구 삭제할 수 없습니다."), "A linked folder cannot be permanently deleted.");
 		DeleteDirectoryTreeWithoutFollowingLinks(info, 0);
 	}
 
 	private static void DeleteDirectoryTreeWithoutFollowingLinks(DirectoryInfo directory, int depth)
 	{
-		if (depth > 128) throw new InvalidDataException("삭제할 서버 폴더 단계가 지나치게 깊습니다.");
+		if (depth > 128) throw Localized(new InvalidDataException("삭제할 서버 폴더 단계가 지나치게 깊습니다."), "The server folder to delete is nested too deeply.");
 		FileInfo[] files = directory.GetFiles();
 		for (int i = 0; i < files.Length; i++)
 		{
@@ -363,7 +363,7 @@ internal static partial class Launcher
 			}
 			catch (Exception exception)
 			{
-				ShowMineHarborDialog(this, IsBackupKorean() ? "휴지통 작업을 완료하지 못했습니다: " + exception.Message : "Could not complete the trash operation: " + exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				ShowMineHarborDialog(this, IsBackupKorean() ? "휴지통 작업을 완료하지 못했습니다: " + DescribeException(exception) : "Could not complete the trash operation: " + DescribeException(exception), Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 	}

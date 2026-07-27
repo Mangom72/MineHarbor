@@ -113,7 +113,7 @@ internal static partial class Launcher
 		if (!File.Exists(path)) return new BackgroundAgentSettings();
 		FileInfo info = new FileInfo(path);
 		if (info.Length <= 0 || info.Length > BackgroundAgentSettingsMaximumBytes)
-			throw new InvalidDataException("백그라운드 에이전트 설정 파일 크기가 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("백그라운드 에이전트 설정 파일 크기가 올바르지 않습니다."), "The background agent settings file size is invalid.");
 		BackgroundAgentSettings settings;
 		try
 		{
@@ -121,17 +121,17 @@ internal static partial class Launcher
 		}
 		catch (Exception exception)
 		{
-			throw new InvalidDataException("백그라운드 에이전트 설정 파일이 손상되었습니다. 원본 파일은 변경하지 않았습니다.", exception);
+			throw Localized(new InvalidDataException("백그라운드 에이전트 설정 파일이 손상되었습니다. 원본 파일은 변경하지 않았습니다.", exception), "The background agent settings file is damaged. The original file was left unchanged.");
 		}
 		if (settings == null || settings.SchemaVersion != BackgroundAgentSchemaVersion)
-			throw new InvalidDataException("지원하지 않는 백그라운드 에이전트 설정 버전입니다.");
+			throw Localized(new InvalidDataException("지원하지 않는 백그라운드 에이전트 설정 버전입니다."), "Unsupported background agent settings version.");
 		return settings;
 	}
 
 	private static void WriteBackgroundAgentSettings(BackgroundAgentSettings settings)
 	{
 		if (settings == null || settings.SchemaVersion != BackgroundAgentSchemaVersion)
-			throw new InvalidDataException("지원하지 않는 백그라운드 에이전트 설정 버전입니다.");
+			throw Localized(new InvalidDataException("지원하지 않는 백그라운드 에이전트 설정 버전입니다."), "Unsupported background agent settings version.");
 		lock (BackgroundAgentSettingsLock)
 		{
 			WithBackgroundAgentSettingsLock(delegate
@@ -157,7 +157,7 @@ internal static partial class Launcher
 				{
 					try { entered = mutex.WaitOne(TimeSpan.FromSeconds(5)); }
 					catch (AbandonedMutexException) { entered = true; }
-					if (!entered) throw new IOException("다른 MineHarbor 프로세스가 백그라운드 설정을 갱신하고 있습니다.");
+					if (!entered) throw Localized(new IOException("다른 MineHarbor 프로세스가 백그라운드 설정을 갱신하고 있습니다."), "Another MineHarbor process is updating the background settings.");
 					return action();
 				}
 				finally { if (entered) mutex.ReleaseMutex(); }
@@ -280,7 +280,7 @@ internal static partial class Launcher
 			if (!IsBackgroundAgentRunning()) return;
 			Thread.Sleep(100);
 		}
-		throw new IOException("백그라운드 에이전트를 안전하게 종료하지 못해 런처 업데이트를 중단했습니다.");
+		throw Localized(new IOException("백그라운드 에이전트를 안전하게 종료하지 못해 런처 업데이트를 중단했습니다."), "The launcher update was cancelled because the background agent could not be stopped safely.");
 	}
 
 	private static BackgroundAgentResponse SendBackgroundAgentRequest(string command, string profile, string value, int timeoutMilliseconds)
@@ -296,7 +296,7 @@ internal static partial class Launcher
 				using (StreamWriter writer = new StreamWriter(client, new UTF8Encoding(false), 4096, true) { AutoFlush = true })
 				{
 					string request = new JavaScriptSerializer().Serialize(new BackgroundAgentRequest { Command = command, Profile = profile, Value = value });
-					if (request.Length > 16384) throw new InvalidDataException("백그라운드 요청이 너무 큽니다.");
+					if (request.Length > 16384) throw Localized(new InvalidDataException("백그라운드 요청이 너무 큽니다."), "The background request is too large.");
 					int timeout = Math.Max(100, timeoutMilliseconds);
 					Task writeTask = writer.WriteLineAsync(request);
 					if (!writeTask.Wait(timeout)) return null;
@@ -323,7 +323,7 @@ internal static partial class Launcher
 		}
 		using (RegistryKey key = Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Run"))
 		{
-			if (key == null) throw new InvalidOperationException("Windows 자동 시작 설정을 열지 못했습니다.");
+			if (key == null) throw Localized(new InvalidOperationException("Windows 자동 시작 설정을 열지 못했습니다."), "Could not open the Windows startup settings.");
 			if (enabled) key.SetValue(BackgroundAgentRunValueName, QuoteCommandLineArgument(Path.GetFullPath(executablePath)) + " --background-agent", RegistryValueKind.String);
 			else key.DeleteValue(BackgroundAgentRunValueName, false);
 		}
@@ -417,7 +417,7 @@ internal static partial class Launcher
 			PipeSecurity security = new PipeSecurity();
 			SecurityIdentifier currentUser;
 			using (WindowsIdentity identity = WindowsIdentity.GetCurrent()) currentUser = identity.User;
-			if (currentUser == null) throw new InvalidOperationException("현재 Windows 사용자 SID를 확인하지 못했습니다.");
+			if (currentUser == null) throw Localized(new InvalidOperationException("현재 Windows 사용자 SID를 확인하지 못했습니다."), "Could not determine the current Windows user SID.");
 			security.SetAccessRuleProtection(true, false);
 			security.AddAccessRule(new PipeAccessRule(currentUser, PipeAccessRights.FullControl, AccessControlType.Allow));
 			return new NamedPipeServerStream(GetBackgroundAgentPipeName(), PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 65536, 65536, security);
@@ -430,7 +430,7 @@ internal static partial class Launcher
 			{
 				Task<string> readTask = reader.ReadLineAsync();
 				Task completed = await Task.WhenAny(readTask, Task.Delay(3000, cancellation.Token)).ConfigureAwait(false);
-				if (completed != readTask) throw new IOException("IPC 요청 수신 시간이 초과되었습니다.");
+				if (completed != readTask) throw Localized(new IOException("IPC 요청 수신 시간이 초과되었습니다."), "Timed out while receiving the IPC request.");
 				string line = await readTask.ConfigureAwait(false);
 				BackgroundAgentResponse response;
 				if (string.IsNullOrEmpty(line) || line.Length > 16384)
@@ -571,7 +571,7 @@ internal static partial class Launcher
 						}
 						else if (IsLocalTcpPortListening(profile.Port))
 						{
-							throw new InvalidOperationException("에이전트가 소유하지 않은 실행 중 서버는 안전하게 백업할 수 없습니다.");
+							throw Localized(new InvalidOperationException("에이전트가 소유하지 않은 실행 중 서버는 안전하게 백업할 수 없습니다."), "A running server not owned by the agent cannot be backed up safely.");
 						}
 						string path = await CreateAgentBackupAsync(profile.Directory, configuration, "scheduled", cancellation.Token).ConfigureAwait(false);
 						result = ManagedText("백업 완료: ", "Backup completed: ") + Path.GetFileName(path);
@@ -678,7 +678,7 @@ internal static partial class Launcher
 						SendSessionCommand(session, "save-all flush");
 						await Task.Delay(1000, cancellation.Token).ConfigureAwait(false);
 					}
-					else if (IsLocalTcpPortListening(profile.Port)) throw new InvalidOperationException("에이전트가 소유하지 않은 실행 중 서버는 안전하게 백업할 수 없습니다.");
+					else if (IsLocalTcpPortListening(profile.Port)) throw Localized(new InvalidOperationException("에이전트가 소유하지 않은 실행 중 서버는 안전하게 백업할 수 없습니다."), "A running server not owned by the agent cannot be backed up safely.");
 					string path = await CreateAgentBackupAsync(profile.Directory, configuration, "manual-agent", cancellation.Token).ConfigureAwait(false);
 					TryRecordOperationEvent(profile.Directory, "backup", "info", "백그라운드 에이전트 백업을 완료했습니다.", "Background agent backup completed.", "background-agent", false);
 					return path;
@@ -739,7 +739,7 @@ internal static partial class Launcher
 			{
 				process = Process.GetProcessById(descriptor.ChildProcessId);
 				if (process.StartTime.Ticks != descriptor.ChildProcessStartTicks)
-					throw new InvalidOperationException("관리 서버 프로세스 시작 시간이 바뀌었습니다.");
+					throw Localized(new InvalidOperationException("관리 서버 프로세스 시작 시간이 바뀌었습니다."), "The managed server process start time changed.");
 				int agentProcessId;
 				long agentProcessStartTicks;
 				using (Process current = Process.GetCurrentProcess())
@@ -769,7 +769,7 @@ internal static partial class Launcher
 				{
 					BackgroundAgentSession concurrent;
 					if (sessions.TryGetValue(profile.Name, out concurrent) && IsSessionRunning(concurrent))
-						throw new InvalidOperationException("같은 프로필의 서버가 동시에 등록되었습니다.");
+						throw Localized(new InvalidOperationException("같은 프로필의 서버가 동시에 등록되었습니다."), "A server for the same profile was registered at the same time.");
 					transferResponse = SendManagedChildControlRequest(descriptor.PipeName, transferRequest, 3000);
 					bool transferred = IsManagedChildOwnedBy(
 						transferResponse,
@@ -884,7 +884,7 @@ internal static partial class Launcher
 				process.OutputDataReceived += delegate(object sender, DataReceivedEventArgs eventArgs) { if (eventArgs.Data != null) session.AddLine(eventArgs.Data); };
 				process.ErrorDataReceived += delegate(object sender, DataReceivedEventArgs eventArgs) { if (eventArgs.Data != null) session.AddLine(eventArgs.Data); };
 				process.Exited += delegate { HandleSessionExit(session); };
-				if (!process.Start()) throw new InvalidOperationException("관리 서버 프로세스를 시작하지 못했습니다.");
+				if (!process.Start()) throw Localized(new InvalidOperationException("관리 서버 프로세스를 시작하지 못했습니다."), "Could not start the managed server process.");
 				session.Process = process;
 				session.Status = ManagedText("실행 중", "Running");
 				process.BeginOutputReadLine();
@@ -934,7 +934,7 @@ internal static partial class Launcher
 
 		private static void SendSessionCommand(BackgroundAgentSession session, string command)
 		{
-			if (!IsSessionRunning(session)) throw new InvalidOperationException("서버가 실행 중이 아닙니다.");
+			if (!IsSessionRunning(session)) throw Localized(new InvalidOperationException("서버가 실행 중이 아닙니다."), "The server is not running.");
 			if (!string.IsNullOrWhiteSpace(session.ControlPipeName) && !string.IsNullOrWhiteSpace(session.ControlToken))
 			{
 				ManagedChildControlRequest request = NewManagedChildControlRequest(session.ControlToken, "command", command);
@@ -1349,7 +1349,7 @@ internal static partial class Launcher
 					SetBackgroundAgentStartupRegistration(previous.Enabled && previous.StartWithWindows, AssemblyLocation());
 				}
 				catch { }
-				ShowMineHarborDialog(this, (korean ? "설정을 저장하지 못했습니다: " : "Could not save settings: ") + exception.Message, Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
+				ShowMineHarborDialog(this, (korean ? "설정을 저장하지 못했습니다: " : "Could not save settings: ") + DescribeException(exception), Text, MessageBoxButtons.OK, MessageBoxIcon.Error);
 			}
 		}
 	}

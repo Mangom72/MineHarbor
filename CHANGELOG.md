@@ -4,6 +4,19 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.18.0] - 2026-07-27
+
+### Korean
+
+- **영어 UI의 한국어 오류 메시지 수정**: 영어로 사용해도 오류 대화상자에 한국어 문구가 그대로 나오던 문제를 수정했습니다. 예외 타입은 바꾸지 않고 영어 문구만 함께 담아, 기존 예외 처리 동작에는 영향이 없습니다.
+- **적용 범위**: 운영 기록, 백그라운드 에이전트, 예약 자동화, Discord 원격 제어, Windows 알림, 서버 휴지통, 저장 위치, 관리 서버 인계의 오류 문구 121개를 한국어·영어로 제공합니다.
+- **표시 경로 정리**: 오류를 사용자에게 보여 주는 30곳이 현재 언어에 맞는 문구를 고르도록 했습니다. 아직 영어 문구가 없는 오류는 지금까지와 동일하게 원래 문구를 표시합니다.
+
+### English
+
+- **Korean error text in the English UI fixed**: error dialogs showed Korean text even when the launcher was used in English. Exception types are unchanged — the English wording is carried alongside — so existing exception handling behaves exactly as before.
+- **Coverage**: 121 error messages across operations history, the background agent, scheduled automation, Discord remote control, Windows notifications, the server trash, storage location, and managed-server handoff are now available in both Korean and English.
+- **Display paths updated**: the 30 places that surface errors to users now pick the wording for the current language. Errors that do not yet carry English wording continue to show their original text.
 ## [1.17.0] - 2026-07-26
 
 ### Korean

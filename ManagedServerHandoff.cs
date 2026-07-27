@@ -78,7 +78,7 @@ internal static partial class Launcher
 
 		public ManagedChildControlServer(string profile, string pipe, string secret)
 		{
-			if (!IsValidProfileName(profile)) throw new InvalidDataException("관리 서버 프로필 이름이 올바르지 않습니다.");
+			if (!IsValidProfileName(profile)) throw Localized(new InvalidDataException("관리 서버 프로필 이름이 올바르지 않습니다."), "The managed server profile name is invalid.");
 			ValidateManagedChildControlValues(pipe, secret);
 			profileName = profile;
 			pipeName = pipe;
@@ -121,7 +121,7 @@ internal static partial class Launcher
 			{
 				Task<string> readTask = reader.ReadLineAsync();
 				Task completed = await Task.WhenAny(readTask, Task.Delay(3000, cancellation.Token)).ConfigureAwait(false);
-				if (completed != readTask) throw new IOException("관리 서버 제어 요청 수신 시간이 초과되었습니다.");
+				if (completed != readTask) throw Localized(new IOException("관리 서버 제어 요청 수신 시간이 초과되었습니다."), "Timed out while receiving the managed-server control request.");
 				string line = await readTask.ConfigureAwait(false);
 				ManagedChildControlResponse response;
 				if (string.IsNullOrEmpty(line) || line.Length > ManagedChildControlRequestMaximumCharacters)
@@ -234,8 +234,8 @@ internal static partial class Launcher
 			|| pipeName.Length > 100
 			|| !pipeName.StartsWith(ManagedChildControlPipePrefix, StringComparison.Ordinal)
 			|| !IsLowerHex(pipeName.Substring(ManagedChildControlPipePrefix.Length), 32))
-			throw new InvalidDataException("관리 서버 제어 파이프 이름이 올바르지 않습니다.");
-		if (!IsLowerHex(token, 64)) throw new InvalidDataException("관리 서버 제어 토큰이 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("관리 서버 제어 파이프 이름이 올바르지 않습니다."), "The managed-server control pipe name is invalid.");
+		if (!IsLowerHex(token, 64)) throw Localized(new InvalidDataException("관리 서버 제어 토큰이 올바르지 않습니다."), "The managed-server control token is invalid.");
 	}
 
 	private static bool IsLowerHex(string value, int length)
@@ -276,7 +276,7 @@ internal static partial class Launcher
 		PipeSecurity security = new PipeSecurity();
 		SecurityIdentifier currentUser;
 		using (WindowsIdentity identity = WindowsIdentity.GetCurrent()) currentUser = identity.User;
-		if (currentUser == null) throw new InvalidOperationException("현재 Windows 사용자 SID를 확인하지 못했습니다.");
+		if (currentUser == null) throw Localized(new InvalidOperationException("현재 Windows 사용자 SID를 확인하지 못했습니다."), "Could not determine the current Windows user SID.");
 		security.SetAccessRuleProtection(true, false);
 		security.AddAccessRule(new PipeAccessRule(currentUser, PipeAccessRights.FullControl, AccessControlType.Allow));
 		return new NamedPipeServerStream(pipeName, PipeDirection.InOut, 1, PipeTransmissionMode.Byte, PipeOptions.Asynchronous, 65536, 65536, security);
@@ -385,7 +385,7 @@ internal static partial class Launcher
 	private static void ConfigureManagedChildOwner(int processId, long processStartTicks)
 	{
 		if (processId <= 0 || processStartTicks <= 0 || !IsExactProcessIdentityAlive(processId, processStartTicks))
-			throw new InvalidDataException("관리 서버 부모 프로세스를 확인하지 못했습니다.");
+			throw Localized(new InvalidDataException("관리 서버 부모 프로세스를 확인하지 못했습니다."), "Could not verify the managed server's parent process.");
 		lock (ManagedChildOwnerLock)
 		{
 			ManagedChildOwnerProcessId = processId;
@@ -476,7 +476,7 @@ internal static partial class Launcher
 	private static ManagedChildHandoffDescriptor CreateManagedChildHandoffDescriptor(ManagedServerSession session)
 	{
 		if (session == null || session.Profile == null || session.Process == null)
-			throw new InvalidOperationException("인계할 관리 서버 세션이 없습니다.");
+			throw Localized(new InvalidOperationException("인계할 관리 서버 세션이 없습니다."), "There is no managed-server session to hand off.");
 		ValidateManagedChildControlValues(session.ControlPipeName, session.ControlToken);
 		int ownerProcessId;
 		long ownerProcessStartTicks;
@@ -500,19 +500,19 @@ internal static partial class Launcher
 	private static ManagedChildHandoffDescriptor ParseManagedChildHandoffDescriptor(string serialized, string expectedProfile)
 	{
 		if (string.IsNullOrEmpty(serialized) || serialized.Length > ManagedChildControlRequestMaximumCharacters)
-			throw new InvalidDataException("관리 서버 인계 정보 크기가 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("관리 서버 인계 정보 크기가 올바르지 않습니다."), "The managed-server handoff payload size is invalid.");
 		ManagedChildHandoffDescriptor descriptor;
 		try { descriptor = new JavaScriptSerializer().Deserialize<ManagedChildHandoffDescriptor>(serialized); }
-		catch (Exception exception) { throw new InvalidDataException("관리 서버 인계 정보를 읽지 못했습니다.", exception); }
+		catch (Exception exception) { throw Localized(new InvalidDataException("관리 서버 인계 정보를 읽지 못했습니다.", exception), "Could not read the managed-server handoff payload."); }
 		if (descriptor == null || descriptor.SchemaVersion != ManagedChildControlSchemaVersion)
-			throw new InvalidDataException("지원하지 않는 관리 서버 인계 정보입니다.");
+			throw Localized(new InvalidDataException("지원하지 않는 관리 서버 인계 정보입니다."), "Unsupported managed-server handoff payload.");
 		if (!IsValidProfileName(descriptor.Profile)
 			|| !string.Equals(descriptor.Profile, expectedProfile, StringComparison.OrdinalIgnoreCase))
-			throw new InvalidDataException("관리 서버 인계 프로필이 일치하지 않습니다.");
+			throw Localized(new InvalidDataException("관리 서버 인계 프로필이 일치하지 않습니다."), "The managed-server handoff profile does not match.");
 		ValidateManagedChildControlValues(descriptor.PipeName, descriptor.Token);
 		if (descriptor.ChildProcessId <= 0 || descriptor.ChildProcessStartTicks <= 0
 			|| descriptor.OwnerProcessId <= 0 || descriptor.OwnerProcessStartTicks <= 0)
-			throw new InvalidDataException("관리 서버 인계 프로세스 정보가 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("관리 서버 인계 프로세스 정보가 올바르지 않습니다."), "The managed-server handoff process information is invalid.");
 		return descriptor;
 	}
 

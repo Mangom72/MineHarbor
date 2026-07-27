@@ -269,7 +269,7 @@ internal static partial class Launcher
 				EndContentOperation(IsContentUiKorean() ? values.Count + "개 콘텐츠" : values.Count + " content item(s)");
 			}
 			catch (OperationCanceledException) { EndContentOperation(IsContentUiKorean() ? "작업을 취소했습니다." : "Operation cancelled."); }
-			catch (Exception exception) { EndContentOperation((IsContentUiKorean() ? "콘텐츠 목록 오류: " : "Content list error: ") + exception.Message); }
+			catch (Exception exception) { EndContentOperation((IsContentUiKorean() ? "콘텐츠 목록 오류: " : "Content list error: ") + DescribeException(exception)); }
 		}
 
 		private async Task SearchAsync()
@@ -288,7 +288,7 @@ internal static partial class Launcher
 				EndContentOperation(IsContentUiKorean() ? values.Count + "개를 찾았습니다." : values.Count + " result(s) found.");
 			}
 			catch (OperationCanceledException) { EndContentOperation(IsContentUiKorean() ? "검색을 취소했습니다." : "Search cancelled."); }
-			catch (Exception exception) { EndContentOperation((IsContentUiKorean() ? "검색 오류: " : "Search error: ") + exception.Message); }
+			catch (Exception exception) { EndContentOperation((IsContentUiKorean() ? "검색 오류: " : "Search error: ") + DescribeException(exception)); }
 		}
 
 		private async Task InstallSelectedAsync()
@@ -309,7 +309,7 @@ internal static partial class Launcher
 				await ReloadInstalledAsync();
 			}
 			catch (OperationCanceledException) { EndContentOperation(korean ? "설치를 취소했습니다." : "Installation cancelled."); }
-			catch (Exception exception) { EndContentOperation((korean ? "설치 오류: " : "Installation error: ") + exception.Message); }
+			catch (Exception exception) { EndContentOperation((korean ? "설치 오류: " : "Installation error: ") + DescribeException(exception)); }
 		}
 
 		private async Task InstallLocalAsync()
@@ -328,7 +328,7 @@ internal static partial class Launcher
 					await ReloadInstalledAsync();
 				}
 				catch (OperationCanceledException) { EndContentOperation(IsContentUiKorean() ? "설치를 취소했습니다." : "Installation cancelled."); }
-				catch (Exception exception) { EndContentOperation((IsContentUiKorean() ? "파일 설치 오류: " : "File installation error: ") + exception.Message); }
+				catch (Exception exception) { EndContentOperation((IsContentUiKorean() ? "파일 설치 오류: " : "File installation error: ") + DescribeException(exception)); }
 			}
 		}
 
@@ -341,7 +341,7 @@ internal static partial class Launcher
 				if (closing) return; RenderInstalledItems(); EndContentOperation(IsContentUiKorean() ? "업데이트 가능 " + available + "개" : available + " update(s) available");
 			}
 			catch (OperationCanceledException) { EndContentOperation(IsContentUiKorean() ? "확인을 취소했습니다." : "Check cancelled."); }
-			catch (Exception exception) { EndContentOperation((IsContentUiKorean() ? "업데이트 확인 오류: " : "Update check error: ") + exception.Message); }
+			catch (Exception exception) { EndContentOperation((IsContentUiKorean() ? "업데이트 확인 오류: " : "Update check error: ") + DescribeException(exception)); }
 		}
 
 		private async Task UpdateSelectedAsync(bool all)
@@ -358,7 +358,7 @@ internal static partial class Launcher
 				if (closing) return; EndContentOperation(IsContentUiKorean() ? "업데이트를 완료했습니다." : "Updates completed."); await ReloadInstalledAsync();
 			}
 			catch (OperationCanceledException) { EndContentOperation(IsContentUiKorean() ? "업데이트를 취소했습니다." : "Update cancelled."); }
-			catch (Exception exception) { EndContentOperation((IsContentUiKorean() ? "업데이트 오류: " : "Update error: ") + exception.Message); }
+			catch (Exception exception) { EndContentOperation((IsContentUiKorean() ? "업데이트 오류: " : "Update error: ") + DescribeException(exception)); }
 		}
 
 		private async Task ToggleSelectedAsync()
@@ -366,7 +366,7 @@ internal static partial class Launcher
 			InstalledContentItem item = SelectedInstalledItem(); if (item == null) return;
 			CancellationToken token; if (!BeginContentOperation(IsContentUiKorean() ? "상태를 변경하는 중..." : "Changing state...", out token)) return;
 			try { await Task.Run(delegate { token.ThrowIfCancellationRequested(); SetContentEnabled(options.ServerDirectory, item.Entry, !item.Active); }, token); if (closing) return; EndContentOperation(IsContentUiKorean() ? "상태를 변경했습니다." : "State changed."); await ReloadInstalledAsync(); }
-			catch (Exception exception) { EndContentOperation((IsContentUiKorean() ? "상태 변경 오류: " : "State change error: ") + exception.Message); }
+			catch (Exception exception) { EndContentOperation((IsContentUiKorean() ? "상태 변경 오류: " : "State change error: ") + DescribeException(exception)); }
 		}
 
 		private async Task RemoveSelectedAsync()
@@ -376,7 +376,7 @@ internal static partial class Launcher
 			if (ShowMineHarborDialog(this, korean ? "선택한 콘텐츠를 서버에서 제거할까요? 안전을 위해 .mineharbor/content-trash로 이동합니다." : "Remove the selected content from the server? It will be moved to .mineharbor/content-trash for safety.", Text, MessageBoxButtons.YesNo, MessageBoxIcon.Warning) != DialogResult.Yes) return;
 			CancellationToken token; if (!BeginContentOperation(korean ? "콘텐츠를 제거하는 중..." : "Removing content...", out token)) return;
 			try { await Task.Run(delegate { token.ThrowIfCancellationRequested(); RemoveContentItem(options.ServerDirectory, item.Entry); }, token); if (closing) return; EndContentOperation(korean ? "콘텐츠를 제거했습니다." : "Content removed."); await ReloadInstalledAsync(); }
-			catch (Exception exception) { EndContentOperation((korean ? "제거 오류: " : "Removal error: ") + exception.Message); }
+			catch (Exception exception) { EndContentOperation((korean ? "제거 오류: " : "Removal error: ") + DescribeException(exception)); }
 		}
 
 		private void RenderInstalledItems()
