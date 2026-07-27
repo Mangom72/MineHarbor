@@ -1,5 +1,23 @@
-﻿# AI Agent Synchronization State
+﻿# MineHarbor 작업 기록
 
+## Claude 작업 지침 문서 통합 - 2026-07-28
+
+- **Current Version**: 1.21.0 (build 26.2.45.89) — 제품 코드가 바뀌지 않는 문서 전용 변경이라 버전을 올리지 않았습니다.
+- **Branch**: `claude/docs-consolidation`
+- **Status**: 서로 90% 겹치던 작업 지침 문서 5개를 `CLAUDE.md` 하나로 합치고, Codex·Antigravity 간 교대 작업을 전제로 한 문서를 제거했습니다.
+- 삭제: `AGENTS.md`, `.agents/AGENTS.md`, `docs/ai/CODEX_HANDOFF.md`, `docs/ai/CODEX_INSTRUCTIONS.md`, `docs/ai/ANTIGRAVITY_INSTRUCTIONS.md`.
+  `CODEX_HANDOFF.md`는 v1.15.3에서 멈춰 있어 SYNC_STATE와 6개 버전 어긋난 상태였고, 내용도 SYNC_STATE와 중복이었습니다.
+- `CLAUDE.md`에 다른 문서에만 있던 규칙을 흡수했습니다: 저장소 밖 파일 수정 금지, 기존 모듈 구조(UI·Network·Bridge·Storage) 유지,
+  긴 버튼 이름 대신 툴팁, 백그라운드 기능 경계, `.mineharbor` 스키마 보존, `Task`/`CancellationToken`,
+  새 소스 추가 시 `build.ps1`과 `MineHarbor.csproj` 소스 목록 동시 갱신.
+- 세션 간 인계 기록은 남기되 `docs/ai/SYNC_STATE.md` → `docs/WORK_LOG.md`로 옮겼습니다(`git mv`, 이력 보존). 여러 에이전트 간 "동기화 상태"가
+  아니라 세션 작업 기록이므로 이름을 맞췄고, `docs/ai/` 폴더는 비어서 없어집니다. 제목도 `AI Agent Synchronization State` → `MineHarbor 작업 기록`.
+  본문 내용은 그대로입니다. 이 파일은 UTF-8 BOM + LF이므로 바이트 단위로 편집했습니다. 과거 항목 안의 `SYNC_STATE.md` 언급은 그 시점 기록이라 두었습니다.
+- `docs/audits/FULL_UI_UX_SECURITY_UPNP_AUDIT.md`가 삭제된 문서를 언급하지만, 그 시점의 감사 기록이라 수정하지 않았습니다.
+- **로컬 검증 통과** (이번이 첫 로컬 세션, .NET SDK 10.0.302): `Prepare-BuildResources.ps1`, `build.ps1`,
+  `test.ps1 -LauncherPath artifacts\MineHarbor.exe` → `VERSION_CONSISTENCY_OK`, `PASSED=33`, `PORTABLE_VERSION_OK`,
+  `PORTABLE_SMOKE_OK`, `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`, `BRIDGE_PROTOCOL_PASSED=10`.
+- 루트의 `CODEX_CHAT_HISTORY.md`(1.9MB, 프로젝트 초기 Codex 대화 원문)도 사용자 승인 후 삭제했습니다. 참조하는 곳은 없었습니다.
 ## Claude Exception Localization 4/4 (완료) - 2026-07-27
 
 - **Current Version**: 1.21.0 (build 26.2.45.89)

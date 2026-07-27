@@ -1,23 +1,57 @@
+# 빌드 산출물
 /artifacts/
 /artifacts-*/
 /obj/
 /.build/
-/Minecraft-Servers-Data/
 bin/
+/*.exe
+/*.jar
+/*.zip
+
+# 로컬 실행 데이터와 로그
+/Minecraft-Servers-Data/
 TestResults/
 *.trx
 *.log
 *.cache
+/*.audit.*
+
+# 비밀값 (저장소에 절대 넣지 않는다)
 *.pfx
 *.p12
 *.pem
 *.key
+*.snk
 .env
-/*.exe
-/*.jar
-/*.zip
-/*.audit.*
+
+# 빌드 시 생성되거나 로컬에만 두는 리소스
 /admin-plugin-stubs/
 /embedded-icon-preview.png
 /launcher-icon-source.png
 /launcher-icon.png
+
+# 편집기·IDE 로컬 설정 (.vscode/tasks.json만 공유한다)
+/.vs/
+/.idea/
+/.vscode/*
+!/.vscode/tasks.json
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# AI 도구 로컬 상태
+/.claude/settings.local.json
+
+# 임시 파일과 편집 잔여물
+/.tmp/
+/tmp/
+*.tmp
+*.bak
+*.orig
+*.rej
+
+# Windows 탐색기
+Thumbs.db
+desktop.ini
+$RECYCLE.BIN/
