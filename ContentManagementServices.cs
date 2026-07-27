@@ -83,7 +83,7 @@ internal static partial class Launcher
 		if (!File.Exists(path)) return manifest;
 		FileInfo file = new FileInfo(path);
 		if (file.Length <= 0 || file.Length > MaximumContentManifestBytes)
-			throw new InvalidDataException("콘텐츠 manifest 크기가 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("콘텐츠 manifest 크기가 올바르지 않습니다."), "The content manifest size is invalid.");
 		Dictionary<string, object> root;
 		try
 		{
@@ -91,27 +91,27 @@ internal static partial class Launcher
 		}
 		catch (Exception exception)
 		{
-			throw new InvalidDataException("콘텐츠 manifest가 손상되었습니다. 파일을 덮어쓰지 않았습니다.", exception);
+			throw Localized(new InvalidDataException("콘텐츠 manifest가 손상되었습니다. 파일을 덮어쓰지 않았습니다.", exception), "The content manifest is damaged. The file was not overwritten.");
 		}
 		if (root == null || GetJsonInt(root, "schemaVersion") != ContentManifestSchemaVersion)
-			throw new InvalidDataException("지원하지 않는 콘텐츠 manifest 형식입니다.");
+			throw Localized(new InvalidDataException("지원하지 않는 콘텐츠 manifest 형식입니다."), "Unsupported content manifest format.");
 		manifest.UpdatedUtc = GetJsonString(root, "updatedUtc");
 		object[] items = root.ContainsKey("items") ? root["items"] as object[] : null;
-		if (items == null) throw new InvalidDataException("콘텐츠 manifest 항목 목록이 없습니다.");
-		if (items.Length > 10000) throw new InvalidDataException("콘텐츠 manifest 항목이 지나치게 많습니다.");
+		if (items == null) throw Localized(new InvalidDataException("콘텐츠 manifest 항목 목록이 없습니다."), "The content manifest has no entry list.");
+		if (items.Length > 10000) throw Localized(new InvalidDataException("콘텐츠 manifest 항목이 지나치게 많습니다."), "The content manifest has too many entries.");
 		HashSet<string> ids = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		HashSet<string> paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		HashSet<string> managedProjects = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		for (int i = 0; i < items.Length; i++)
 		{
 			Dictionary<string, object> value = items[i] as Dictionary<string, object>;
-			if (value == null) throw new InvalidDataException("콘텐츠 manifest 항목 형식이 잘못되었습니다.");
+			if (value == null) throw Localized(new InvalidDataException("콘텐츠 manifest 항목 형식이 잘못되었습니다."), "A content manifest entry has an invalid format.");
 			ContentManifestEntry entry = DeserializeContentEntry(value);
 			ValidateContentManifestEntry(serverDirectory, entry);
-			if (!ids.Add(entry.Id)) throw new InvalidDataException("콘텐츠 manifest에 중복 ID가 있습니다: " + entry.Id);
+			if (!ids.Add(entry.Id)) throw Localized(new InvalidDataException("콘텐츠 manifest에 중복 ID가 있습니다: " + entry.Id), "The content manifest contains a duplicate ID: " + entry.Id);
 			string activePath = entry.Active ? entry.RelativePath : entry.DisabledRelativePath;
-			if (!paths.Add(activePath)) throw new InvalidDataException("콘텐츠 manifest에 중복 파일 경로가 있습니다: " + activePath);
-			if (IsManagedModrinthEntry(entry) && !managedProjects.Add(GetContentProjectKey(entry.Kind, entry.WorldName, entry.ProjectId))) throw new InvalidDataException("콘텐츠 manifest에 같은 Modrinth 프로젝트가 중복되어 있습니다: " + entry.ProjectId);
+			if (!paths.Add(activePath)) throw Localized(new InvalidDataException("콘텐츠 manifest에 중복 파일 경로가 있습니다: " + activePath), "The content manifest contains a duplicate file path: " + activePath);
+			if (IsManagedModrinthEntry(entry) && !managedProjects.Add(GetContentProjectKey(entry.Kind, entry.WorldName, entry.ProjectId))) throw Localized(new InvalidDataException("콘텐츠 manifest에 같은 Modrinth 프로젝트가 중복되어 있습니다: " + entry.ProjectId), "The content manifest contains a duplicate Modrinth project: " + entry.ProjectId);
 			manifest.Items.Add(entry);
 		}
 		ValidateContentManifestDependencyGraph(manifest);
@@ -132,16 +132,16 @@ internal static partial class Launcher
 		{
 			ContentManifestEntry entry = manifest.Items[i];
 			ValidateContentManifestEntry(serverDirectory, entry);
-			if (!ids.Add(entry.Id)) throw new InvalidDataException("콘텐츠 manifest에 중복 ID가 있습니다: " + entry.Id);
+			if (!ids.Add(entry.Id)) throw Localized(new InvalidDataException("콘텐츠 manifest에 중복 ID가 있습니다: " + entry.Id), "The content manifest contains a duplicate ID: " + entry.Id);
 			string activePath = entry.Active ? entry.RelativePath : entry.DisabledRelativePath;
-			if (!paths.Add(activePath)) throw new InvalidDataException("콘텐츠 manifest에 중복 파일 경로가 있습니다: " + activePath);
-			if (IsManagedModrinthEntry(entry) && !managedProjects.Add(GetContentProjectKey(entry.Kind, entry.WorldName, entry.ProjectId))) throw new InvalidDataException("콘텐츠 manifest에 같은 Modrinth 프로젝트가 중복되어 있습니다: " + entry.ProjectId);
+			if (!paths.Add(activePath)) throw Localized(new InvalidDataException("콘텐츠 manifest에 중복 파일 경로가 있습니다: " + activePath), "The content manifest contains a duplicate file path: " + activePath);
+			if (IsManagedModrinthEntry(entry) && !managedProjects.Add(GetContentProjectKey(entry.Kind, entry.WorldName, entry.ProjectId))) throw Localized(new InvalidDataException("콘텐츠 manifest에 같은 Modrinth 프로젝트가 중복되어 있습니다: " + entry.ProjectId), "The content manifest contains a duplicate Modrinth project: " + entry.ProjectId);
 			items.Add(SerializeContentEntry(entry));
 		}
 		ValidateContentManifestDependencyGraph(manifest);
 		root["items"] = items.ToArray();
 		string json = new JavaScriptSerializer { MaxJsonLength = MaximumContentManifestBytes }.Serialize(root);
-		if (Encoding.UTF8.GetByteCount(json) > MaximumContentManifestBytes) throw new InvalidDataException("콘텐츠 manifest가 안전 크기 제한을 초과했습니다.");
+		if (Encoding.UTF8.GetByteCount(json) > MaximumContentManifestBytes) throw Localized(new InvalidDataException("콘텐츠 manifest가 안전 크기 제한을 초과했습니다."), "The content manifest exceeds the safe size limit.");
 		string directory = GetContentMetadataDirectory(serverDirectory);
 		Directory.CreateDirectory(directory);
 		string path = GetContentManifestPath(serverDirectory);
@@ -204,19 +204,19 @@ internal static partial class Launcher
 	private static void ValidateContentManifestEntry(string serverDirectory, ContentManifestEntry entry)
 	{
 		if (entry == null || string.IsNullOrWhiteSpace(entry.Id) || entry.Id.Length > 128 || !IsContentKind(entry.Kind))
-			throw new InvalidDataException("콘텐츠 manifest ID 또는 종류가 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("콘텐츠 manifest ID 또는 종류가 올바르지 않습니다."), "The content manifest ID or kind is invalid.");
 		if (string.IsNullOrWhiteSpace(entry.Source) || entry.Source.Length > 32 || string.IsNullOrWhiteSpace(entry.FileName) || Path.GetFileName(entry.FileName) != entry.FileName)
-			throw new InvalidDataException("콘텐츠 manifest 출처 또는 파일명이 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("콘텐츠 manifest 출처 또는 파일명이 올바르지 않습니다."), "The content manifest source or file name is invalid.");
 		entry.RelativePath = NormalizeContentRelativePath(entry.RelativePath);
 		entry.DisabledRelativePath = NormalizeContentRelativePath(entry.DisabledRelativePath);
 		GetSafeContentPath(serverDirectory, entry.RelativePath);
 		GetSafeContentPath(serverDirectory, entry.DisabledRelativePath);
-		if (entry.Dependencies == null || entry.Dependencies.Length > 256) throw new InvalidDataException("콘텐츠 의존성 목록이 올바르지 않습니다.");
+		if (entry.Dependencies == null || entry.Dependencies.Length > 256) throw Localized(new InvalidDataException("콘텐츠 의존성 목록이 올바르지 않습니다."), "The content dependency list is invalid.");
 		HashSet<string> dependencies = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		for (int i = 0; i < entry.Dependencies.Length; i++)
-			if (string.IsNullOrWhiteSpace(entry.Dependencies[i]) || entry.Dependencies[i].Length > 128 || !dependencies.Add(entry.Dependencies[i])) throw new InvalidDataException("콘텐츠 의존성 식별자가 올바르지 않습니다.");
-		if (!string.IsNullOrEmpty(entry.Sha512) && !IsHexString(entry.Sha512, 128)) throw new InvalidDataException("콘텐츠 SHA-512 값이 올바르지 않습니다.");
-		if (!string.IsNullOrEmpty(entry.Sha1) && !IsHexString(entry.Sha1, 40)) throw new InvalidDataException("콘텐츠 SHA-1 값이 올바르지 않습니다.");
+			if (string.IsNullOrWhiteSpace(entry.Dependencies[i]) || entry.Dependencies[i].Length > 128 || !dependencies.Add(entry.Dependencies[i])) throw Localized(new InvalidDataException("콘텐츠 의존성 식별자가 올바르지 않습니다."), "A content dependency identifier is invalid.");
+		if (!string.IsNullOrEmpty(entry.Sha512) && !IsHexString(entry.Sha512, 128)) throw Localized(new InvalidDataException("콘텐츠 SHA-512 값이 올바르지 않습니다."), "The content SHA-512 value is invalid.");
+		if (!string.IsNullOrEmpty(entry.Sha1) && !IsHexString(entry.Sha1, 40)) throw Localized(new InvalidDataException("콘텐츠 SHA-1 값이 올바르지 않습니다."), "The content SHA-1 value is invalid.");
 	}
 
 	private static bool IsContentKind(string value)
@@ -253,13 +253,13 @@ internal static partial class Launcher
 
 	private static string NormalizeContentRelativePath(string value)
 	{
-		if (string.IsNullOrWhiteSpace(value) || value.Length > 1024) throw new InvalidDataException("콘텐츠 상대 경로가 올바르지 않습니다.");
+		if (string.IsNullOrWhiteSpace(value) || value.Length > 1024) throw Localized(new InvalidDataException("콘텐츠 상대 경로가 올바르지 않습니다."), "The relative content path is invalid.");
 		string normalized = value.Replace('\\', '/').Trim('/');
 		if (normalized.Length == 0 || Path.IsPathRooted(normalized) || normalized.IndexOf('\0') >= 0)
-			throw new InvalidDataException("콘텐츠 상대 경로가 올바르지 않습니다.");
+			throw Localized(new InvalidDataException("콘텐츠 상대 경로가 올바르지 않습니다."), "The relative content path is invalid.");
 		string[] parts = normalized.Split('/');
 		for (int i = 0; i < parts.Length; i++)
-			if (parts[i].Length == 0 || parts[i] == "." || parts[i] == "..") throw new InvalidDataException("콘텐츠 상대 경로가 서버 밖을 가리킵니다.");
+			if (parts[i].Length == 0 || parts[i] == "." || parts[i] == "..") throw Localized(new InvalidDataException("콘텐츠 상대 경로가 서버 밖을 가리킵니다."), "The relative content path points outside the server.");
 		return normalized;
 	}
 
@@ -267,7 +267,7 @@ internal static partial class Launcher
 	{
 		string root = Path.GetFullPath(serverDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar) + Path.DirectorySeparatorChar;
 		string path = Path.GetFullPath(Path.Combine(root, NormalizeContentRelativePath(relativePath).Replace('/', Path.DirectorySeparatorChar)));
-		if (!path.StartsWith(root, StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("콘텐츠 경로가 서버 폴더 밖을 가리킵니다.");
+		if (!path.StartsWith(root, StringComparison.OrdinalIgnoreCase)) throw Localized(new InvalidDataException("콘텐츠 경로가 서버 폴더 밖을 가리킵니다."), "The content path points outside the server folder.");
 		return path;
 	}
 
@@ -400,8 +400,8 @@ internal static partial class Launcher
 		if (entry.Active == enabled) return;
 		string source = GetSafeContentPath(serverDirectory, entry.Active ? entry.RelativePath : entry.DisabledRelativePath);
 		string destination = GetSafeContentPath(serverDirectory, enabled ? entry.RelativePath : entry.DisabledRelativePath);
-		if (!File.Exists(source) && !Directory.Exists(source)) throw new FileNotFoundException("콘텐츠 파일을 찾지 못했습니다.", source);
-		if (File.Exists(destination) || Directory.Exists(destination)) throw new IOException("활성화 상태를 바꿀 대상 경로가 이미 존재합니다.");
+		if (!File.Exists(source) && !Directory.Exists(source)) throw Localized(new FileNotFoundException("콘텐츠 파일을 찾지 못했습니다.", source), "The content file was not found.");
+		if (File.Exists(destination) || Directory.Exists(destination)) throw Localized(new IOException("활성화 상태를 바꿀 대상 경로가 이미 존재합니다."), "The destination path for the enable/disable change already exists.");
 		Directory.CreateDirectory(Path.GetDirectoryName(destination));
 		if (File.Exists(source)) File.Move(source, destination); else Directory.Move(source, destination);
 		entry.Active = enabled;
@@ -424,11 +424,11 @@ internal static partial class Launcher
 			{
 				ContentManifestEntry candidate = manifest.Items[i];
 				if (ReferenceEquals(candidate, entry) || !string.Equals(candidate.Kind, entry.Kind, StringComparison.OrdinalIgnoreCase) || !string.Equals(candidate.WorldName ?? string.Empty, entry.WorldName ?? string.Empty, StringComparison.OrdinalIgnoreCase)) continue;
-				if (Array.Exists(candidate.Dependencies ?? new string[0], delegate(string dependency) { return string.Equals(dependency, entry.ProjectId, StringComparison.OrdinalIgnoreCase); })) throw new InvalidOperationException("다른 설치 콘텐츠가 이 필수 의존성을 사용하고 있어 제거할 수 없습니다: " + candidate.FileName);
+				if (Array.Exists(candidate.Dependencies ?? new string[0], delegate(string dependency) { return string.Equals(dependency, entry.ProjectId, StringComparison.OrdinalIgnoreCase); })) throw Localized(new InvalidOperationException("다른 설치 콘텐츠가 이 필수 의존성을 사용하고 있어 제거할 수 없습니다: " + candidate.FileName), "This required dependency cannot be removed because other installed content uses it: " + candidate.FileName);
 			}
 		}
 		string source = GetSafeContentPath(serverDirectory, entry.Active ? entry.RelativePath : entry.DisabledRelativePath);
-		if (!File.Exists(source) && !Directory.Exists(source)) throw new FileNotFoundException("제거할 콘텐츠 파일을 찾지 못했습니다.", source);
+		if (!File.Exists(source) && !Directory.Exists(source)) throw Localized(new FileNotFoundException("제거할 콘텐츠 파일을 찾지 못했습니다.", source), "The content file to remove was not found.");
 		string trashRelative = ".mineharbor/content-trash/" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture) + "/" + entry.Kind + "/" + entry.FileName;
 		string trash = GetSafeContentPath(serverDirectory, trashRelative);
 		Directory.CreateDirectory(Path.GetDirectoryName(trash));
@@ -495,7 +495,7 @@ internal static partial class Launcher
 		string gameJson = new JavaScriptSerializer().Serialize(new string[] { options.MinecraftVersion });
 		string url = "https://api.modrinth.com/v2/project/" + Uri.EscapeDataString(projectId) + "/version?include_changelog=false&loaders=" + Uri.EscapeDataString(loaderJson) + "&game_versions=" + Uri.EscapeDataString(gameJson);
 		object[] versions = new JavaScriptSerializer().DeserializeObject(DownloadModrinthText(url)) as object[];
-		if (versions == null || versions.Length == 0) throw new InvalidDataException("선택한 Minecraft 버전과 로더에 맞는 콘텐츠 파일을 찾지 못했습니다.");
+		if (versions == null || versions.Length == 0) throw Localized(new InvalidDataException("선택한 Minecraft 버전과 로더에 맞는 콘텐츠 파일을 찾지 못했습니다."), "No content file was found for the selected Minecraft version and loader.");
 		Dictionary<string, object> selected = null;
 		for (int pass = 0; pass < 2 && selected == null; pass++)
 		{
@@ -508,7 +508,7 @@ internal static partial class Launcher
 				break;
 			}
 		}
-		if (selected == null) throw new InvalidDataException("설치 가능한 콘텐츠 릴리스를 찾지 못했습니다.");
+		if (selected == null) throw Localized(new InvalidDataException("설치 가능한 콘텐츠 릴리스를 찾지 못했습니다."), "No installable content release was found.");
 		object[] files = selected.ContainsKey("files") ? selected["files"] as object[] : null;
 		Dictionary<string, object> selectedFile = null;
 		if (files != null)
@@ -524,7 +524,7 @@ internal static partial class Launcher
 				if (GetJsonBoolean(candidate, "primary")) { selectedFile = candidate; break; }
 			}
 		}
-		if (selectedFile == null) throw new InvalidDataException("콘텐츠 다운로드 파일을 찾지 못했습니다.");
+		if (selectedFile == null) throw Localized(new InvalidDataException("콘텐츠 다운로드 파일을 찾지 못했습니다."), "The downloaded content file was not found.");
 		ModrinthFileInfo info = new ModrinthFileInfo();
 		info.ProjectId = projectId;
 		info.VersionId = GetJsonString(selected, "id");
@@ -543,20 +543,20 @@ internal static partial class Launcher
 
 	private static void ValidateManagedModrinthFile(ModrinthFileInfo info, string kind)
 	{
-		if (info == null || string.IsNullOrWhiteSpace(info.FileName) || Path.GetFileName(info.FileName) != info.FileName) throw new InvalidDataException("Modrinth가 안전한 파일명을 제공하지 않았습니다.");
+		if (info == null || string.IsNullOrWhiteSpace(info.FileName) || Path.GetFileName(info.FileName) != info.FileName) throw Localized(new InvalidDataException("Modrinth가 안전한 파일명을 제공하지 않았습니다."), "Modrinth did not provide a safe file name.");
 		if (string.Equals(kind, "datapack", StringComparison.OrdinalIgnoreCase))
 		{
-			if (!info.FileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("데이터팩은 ZIP 파일만 설치할 수 있습니다.");
+			if (!info.FileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase)) throw Localized(new InvalidDataException("데이터팩은 ZIP 파일만 설치할 수 있습니다."), "Only ZIP files can be installed as data packs.");
 		}
-		else if (!info.FileName.EndsWith(".jar", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("플러그인과 모드는 JAR 파일만 설치할 수 있습니다.");
+		else if (!info.FileName.EndsWith(".jar", StringComparison.OrdinalIgnoreCase)) throw Localized(new InvalidDataException("플러그인과 모드는 JAR 파일만 설치할 수 있습니다."), "Only JAR files can be installed as plugins or mods.");
 		Uri uri;
-		if (!Uri.TryCreate(info.Url, UriKind.Absolute, out uri) || uri.Scheme != Uri.UriSchemeHttps || !uri.Host.Equals("cdn.modrinth.com", StringComparison.OrdinalIgnoreCase) || !string.IsNullOrEmpty(uri.UserInfo)) throw new InvalidDataException("Modrinth CDN 다운로드 주소를 검증하지 못했습니다.");
-		if (info.Size <= 0 || info.Size > 536870912L || (!IsHexString(info.Sha512, 128) && !IsHexString(info.Sha1, 40))) throw new InvalidDataException("콘텐츠 파일 크기 또는 해시가 올바르지 않습니다.");
+		if (!Uri.TryCreate(info.Url, UriKind.Absolute, out uri) || uri.Scheme != Uri.UriSchemeHttps || !uri.Host.Equals("cdn.modrinth.com", StringComparison.OrdinalIgnoreCase) || !string.IsNullOrEmpty(uri.UserInfo)) throw Localized(new InvalidDataException("Modrinth CDN 다운로드 주소를 검증하지 못했습니다."), "Could not verify the Modrinth CDN download address.");
+		if (info.Size <= 0 || info.Size > 536870912L || (!IsHexString(info.Sha512, 128) && !IsHexString(info.Sha1, 40))) throw Localized(new InvalidDataException("콘텐츠 파일 크기 또는 해시가 올바르지 않습니다."), "The content file size or hash is invalid.");
 	}
 
 	private static string InstallManagedModrinthContent(string projectId, LauncherOptions options, string kind, string worldName, IProgress<ContentOperationProgress> progress, CancellationToken cancellationToken)
 	{
-		if (FindManagedModrinthEntry(options.ServerDirectory, projectId, kind, worldName) != null) throw new InvalidOperationException("같은 Modrinth 프로젝트가 이미 설치되어 있습니다.");
+		if (FindManagedModrinthEntry(options.ServerDirectory, projectId, kind, worldName) != null) throw Localized(new InvalidOperationException("같은 Modrinth 프로젝트가 이미 설치되어 있습니다."), "The same Modrinth project is already installed.");
 		HashSet<string> visiting = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		HashSet<string> complete = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 		return InstallManagedModrinthContentRecursive(projectId, options, kind, worldName, visiting, complete, progress, cancellationToken, 0);
@@ -565,9 +565,9 @@ internal static partial class Launcher
 	private static string InstallManagedModrinthContentRecursive(string projectId, LauncherOptions options, string kind, string worldName, HashSet<string> visiting, HashSet<string> complete, IProgress<ContentOperationProgress> progress, CancellationToken cancellationToken, int depth)
 	{
 		cancellationToken.ThrowIfCancellationRequested();
-		if (depth > 32) throw new InvalidDataException("콘텐츠 의존성 단계가 지나치게 깊습니다.");
+		if (depth > 32) throw Localized(new InvalidDataException("콘텐츠 의존성 단계가 지나치게 깊습니다."), "The content dependency chain is nested too deeply.");
 		if (complete.Contains(projectId)) return string.Empty;
-		if (!visiting.Add(projectId)) throw new InvalidDataException("콘텐츠 의존성 순환을 발견했습니다: " + projectId);
+		if (!visiting.Add(projectId)) throw Localized(new InvalidDataException("콘텐츠 의존성 순환을 발견했습니다: " + projectId), "A content dependency cycle was found: " + projectId);
 		ReportContentProgress(progress, "metadata", 5, projectId);
 		ModrinthFileInfo file = GetCompatibleModrinthFileForKind(projectId, options, kind);
 		List<string> dependencyIds = new List<string>();
@@ -581,7 +581,7 @@ internal static partial class Launcher
 				string dependencyVersion = GetJsonString(dependency, "version_id");
 				if (!string.IsNullOrEmpty(dependencyVersion)) dependencyProject = GetProjectIdForModrinthVersion(dependencyVersion);
 			}
-			if (string.IsNullOrEmpty(dependencyProject)) throw new InvalidDataException("필수 콘텐츠 의존성의 프로젝트를 확인하지 못했습니다.");
+			if (string.IsNullOrEmpty(dependencyProject)) throw Localized(new InvalidDataException("필수 콘텐츠 의존성의 프로젝트를 확인하지 못했습니다."), "Could not resolve the project for a required content dependency.");
 			if (!dependencyIds.Contains(dependencyProject, StringComparer.OrdinalIgnoreCase)) dependencyIds.Add(dependencyProject);
 			InstallManagedModrinthContentRecursive(dependencyProject, options, kind, worldName, visiting, complete, progress, cancellationToken, depth + 1);
 		}
@@ -617,14 +617,14 @@ internal static partial class Launcher
 		ContentManifestEntry existing = null;
 		for (int i = 0; i < manifest.Items.Count; i++)
 			if (string.Equals(manifest.Items[i].ProjectId, file.ProjectId, StringComparison.OrdinalIgnoreCase) && string.Equals(manifest.Items[i].Kind, kind, StringComparison.OrdinalIgnoreCase) && string.Equals(manifest.Items[i].WorldName ?? string.Empty, worldName ?? string.Empty, StringComparison.OrdinalIgnoreCase)) { existing = manifest.Items[i]; break; }
-		if (existing != null && !update) throw new InvalidOperationException("같은 Modrinth 프로젝트가 이미 설치되어 있습니다.");
+		if (existing != null && !update) throw Localized(new InvalidOperationException("같은 Modrinth 프로젝트가 이미 설치되어 있습니다."), "The same Modrinth project is already installed.");
 		string relativeDirectory = GetContentTargetRelativeDirectory(options, kind, worldName);
 		string destinationRelative = NormalizeContentRelativePath(relativeDirectory + "/" + file.FileName);
 		string entryId = existing == null ? "modrinth-" + ComputeStableContentId(kind + ":" + file.ProjectId + ":" + (worldName ?? string.Empty)) : existing.Id;
 		string disabledRelative = NormalizeContentRelativePath(".mineharbor/disabled/" + kind + "/" + entryId + "-" + file.FileName);
 		bool targetActive = existing == null || existing.Active;
 		string destination = GetSafeContentPath(options.ServerDirectory, targetActive ? destinationRelative : disabledRelative);
-		if (existing == null && (File.Exists(destination) || Directory.Exists(destination))) throw new IOException("같은 이름의 콘텐츠 파일이 이미 존재합니다.");
+		if (existing == null && (File.Exists(destination) || Directory.Exists(destination))) throw Localized(new IOException("같은 이름의 콘텐츠 파일이 이미 존재합니다."), "A content file with the same name already exists.");
 		Directory.CreateDirectory(Path.GetDirectoryName(destination));
 		string temporary = destination + ".download-" + Guid.NewGuid().ToString("N");
 		string previous = null;
@@ -634,12 +634,12 @@ internal static partial class Launcher
 		{
 			ReportContentProgress(progress, "download", 10, file.FileName);
 			DownloadModrinthBinaryWithProgress(file.Url, temporary, file.Size, progress, cancellationToken);
-			if (!VerifyContentFileHash(temporary, file.Sha512, file.Sha1)) throw new InvalidDataException("다운로드한 콘텐츠의 무결성 검증에 실패했습니다.");
+			if (!VerifyContentFileHash(temporary, file.Sha512, file.Sha1)) throw Localized(new InvalidDataException("다운로드한 콘텐츠의 무결성 검증에 실패했습니다."), "Integrity verification of the downloaded content failed.");
 			if (string.Equals(kind, "datapack", StringComparison.OrdinalIgnoreCase)) ValidateDatapackArchive(temporary);
 			if (existing != null)
 			{
 				previousOriginalPath = GetSafeContentPath(options.ServerDirectory, existing.Active ? existing.RelativePath : existing.DisabledRelativePath);
-				if (!File.Exists(previousOriginalPath)) throw new FileNotFoundException("업데이트할 기존 콘텐츠 파일을 찾지 못했습니다.", previousOriginalPath);
+				if (!File.Exists(previousOriginalPath)) throw Localized(new FileNotFoundException("업데이트할 기존 콘텐츠 파일을 찾지 못했습니다.", previousOriginalPath), "The existing content file to update was not found.");
 				string backupRelative = ".mineharbor/content-backups/" + DateTime.UtcNow.ToString("yyyyMMdd-HHmmss-fff", CultureInfo.InvariantCulture) + "/" + existing.FileName;
 				previous = GetSafeContentPath(options.ServerDirectory, backupRelative);
 				Directory.CreateDirectory(Path.GetDirectoryName(previous));
@@ -682,13 +682,13 @@ internal static partial class Launcher
 	{
 		if (string.Equals(kind, "datapack", StringComparison.OrdinalIgnoreCase))
 		{
-			if (string.IsNullOrWhiteSpace(worldName) || Path.GetFileName(worldName) != worldName) throw new InvalidDataException("데이터팩을 설치할 월드가 올바르지 않습니다.");
+			if (string.IsNullOrWhiteSpace(worldName) || Path.GetFileName(worldName) != worldName) throw Localized(new InvalidDataException("데이터팩을 설치할 월드가 올바르지 않습니다."), "The world to install the data pack into is invalid.");
 			string world = Path.Combine(options.ServerDirectory, worldName);
-			if (!Directory.Exists(world) || !File.Exists(Path.Combine(world, "level.dat"))) throw new DirectoryNotFoundException("선택한 Minecraft 월드를 찾지 못했습니다.");
+			if (!Directory.Exists(world) || !File.Exists(Path.Combine(world, "level.dat"))) throw Localized(new DirectoryNotFoundException("선택한 Minecraft 월드를 찾지 못했습니다."), "The selected Minecraft world was not found.");
 			return NormalizeContentRelativePath(worldName + "/datapacks");
 		}
 		string folder = GetContentFolderName(options.ServerType);
-		if (string.IsNullOrEmpty(folder)) throw new InvalidOperationException("이 서버 종류는 플러그인 또는 모드 자동 설치를 지원하지 않습니다.");
+		if (string.IsNullOrEmpty(folder)) throw Localized(new InvalidOperationException("이 서버 종류는 플러그인 또는 모드 자동 설치를 지원하지 않습니다."), "This server type does not support automatic plugin or mod installation.");
 		return folder;
 	}
 
@@ -718,11 +718,11 @@ internal static partial class Launcher
 						cancellationToken.ThrowIfCancellationRequested();
 						output.Write(buffer, 0, read);
 						total = checked(total + read);
-						if (total > expectedSize) throw new InvalidDataException("콘텐츠 다운로드 크기가 공식 정보보다 큽니다.");
+						if (total > expectedSize) throw Localized(new InvalidDataException("콘텐츠 다운로드 크기가 공식 정보보다 큽니다."), "The content download is larger than the official metadata states.");
 						ReportContentProgress(progress, "download", 10 + (int)Math.Min(80L, total * 80L / expectedSize), Path.GetFileName(path));
 					}
 					output.Flush(true);
-					if (total != expectedSize) throw new InvalidDataException("콘텐츠 다운로드 크기가 공식 정보와 다릅니다.");
+					if (total != expectedSize) throw Localized(new InvalidDataException("콘텐츠 다운로드 크기가 공식 정보와 다릅니다."), "The content download size differs from the official metadata.");
 				}
 			}
 		}
@@ -745,7 +745,7 @@ internal static partial class Launcher
 
 	private static string UpdateManagedContent(LauncherOptions options, InstalledContentItem item, IProgress<ContentOperationProgress> progress, CancellationToken cancellationToken)
 	{
-		if (item == null || item.Entry == null || !item.Managed || !string.Equals(item.Entry.Source, "modrinth", StringComparison.OrdinalIgnoreCase)) throw new InvalidOperationException("MineHarbor가 설치한 Modrinth 콘텐츠만 자동 업데이트할 수 있습니다.");
+		if (item == null || item.Entry == null || !item.Managed || !string.Equals(item.Entry.Source, "modrinth", StringComparison.OrdinalIgnoreCase)) throw Localized(new InvalidOperationException("MineHarbor가 설치한 Modrinth 콘텐츠만 자동 업데이트할 수 있습니다."), "Only Modrinth content installed by MineHarbor can be updated automatically.");
 		ModrinthFileInfo latest = item.UpdateFile ?? GetCompatibleModrinthFileForKind(item.Entry.ProjectId, options, item.Entry.Kind);
 		if (string.Equals(latest.VersionId, item.Entry.VersionId, StringComparison.OrdinalIgnoreCase)) return item.FullPath;
 		HashSet<string> visiting = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -755,18 +755,18 @@ internal static partial class Launcher
 
 	private static string InstallLocalContentFile(string sourcePath, LauncherOptions options, string kind, string worldName)
 	{
-		if (!File.Exists(sourcePath)) throw new FileNotFoundException("설치 파일을 찾지 못했습니다.", sourcePath);
+		if (!File.Exists(sourcePath)) throw Localized(new FileNotFoundException("설치 파일을 찾지 못했습니다.", sourcePath), "The installation file was not found.");
 		string extension = Path.GetExtension(sourcePath);
 		if (string.Equals(kind, "datapack", StringComparison.OrdinalIgnoreCase))
 		{
-			if (!extension.Equals(".zip", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("데이터팩은 ZIP 파일만 설치할 수 있습니다.");
+			if (!extension.Equals(".zip", StringComparison.OrdinalIgnoreCase)) throw Localized(new InvalidDataException("데이터팩은 ZIP 파일만 설치할 수 있습니다."), "Only ZIP files can be installed as data packs.");
 			ValidateDatapackArchive(sourcePath);
 		}
-		else if (!extension.Equals(".jar", StringComparison.OrdinalIgnoreCase)) throw new InvalidDataException("플러그인과 모드는 JAR 파일만 설치할 수 있습니다.");
+		else if (!extension.Equals(".jar", StringComparison.OrdinalIgnoreCase)) throw Localized(new InvalidDataException("플러그인과 모드는 JAR 파일만 설치할 수 있습니다."), "Only JAR files can be installed as plugins or mods.");
 		string directory = GetContentTargetRelativeDirectory(options, kind, worldName);
 		string relative = NormalizeContentRelativePath(directory + "/" + Path.GetFileName(sourcePath));
 		string destination = GetSafeContentPath(options.ServerDirectory, relative);
-		if (File.Exists(destination) || Directory.Exists(destination)) throw new IOException("같은 이름의 콘텐츠가 이미 설치되어 있습니다.");
+		if (File.Exists(destination) || Directory.Exists(destination)) throw Localized(new IOException("같은 이름의 콘텐츠가 이미 설치되어 있습니다."), "Content with the same name is already installed.");
 		Directory.CreateDirectory(Path.GetDirectoryName(destination));
 		File.Copy(sourcePath, destination, false);
 		ContentManifestModel manifest = LoadContentManifest(options.ServerDirectory);
@@ -834,10 +834,10 @@ internal static partial class Launcher
 	private static void ValidateDatapackArchive(string path)
 	{
 		FileInfo file = new FileInfo(path);
-		if (!file.Exists || file.Length <= 0 || file.Length > 536870912L) throw new InvalidDataException("데이터팩 ZIP 크기가 허용 범위를 벗어났습니다.");
+		if (!file.Exists || file.Length <= 0 || file.Length > 536870912L) throw Localized(new InvalidDataException("데이터팩 ZIP 크기가 허용 범위를 벗어났습니다."), "The data pack ZIP size is outside the allowed range.");
 		using (ZipArchive archive = ZipFile.OpenRead(path))
 		{
-			if (archive.Entries.Count == 0 || archive.Entries.Count > MaximumDatapackEntries) throw new InvalidDataException("데이터팩 ZIP 항목 수가 올바르지 않습니다.");
+			if (archive.Entries.Count == 0 || archive.Entries.Count > MaximumDatapackEntries) throw Localized(new InvalidDataException("데이터팩 ZIP 항목 수가 올바르지 않습니다."), "The data pack ZIP entry count is invalid.");
 			long expanded = 0;
 			ZipArchiveEntry metadata = null;
 			HashSet<string> paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -845,17 +845,17 @@ internal static partial class Launcher
 			{
 				ZipArchiveEntry entry = archive.Entries[i];
 				string name = entry.FullName.Replace('\\', '/');
-				if (!IsSafeDatapackEntryPath(name) || !paths.Add(name)) throw new InvalidDataException("데이터팩 ZIP 경로가 안전하지 않습니다.");
+				if (!IsSafeDatapackEntryPath(name) || !paths.Add(name)) throw Localized(new InvalidDataException("데이터팩 ZIP 경로가 안전하지 않습니다."), "The data pack ZIP path is not safe.");
 				expanded = checked(expanded + entry.Length);
-				if (expanded > MaximumDatapackExpandedBytes) throw new InvalidDataException("데이터팩의 총 해제 크기가 허용 범위를 초과했습니다.");
+				if (expanded > MaximumDatapackExpandedBytes) throw Localized(new InvalidDataException("데이터팩의 총 해제 크기가 허용 범위를 초과했습니다."), "The total expanded size of the data pack exceeds the allowed range.");
 				if (string.Equals(name, "pack.mcmeta", StringComparison.OrdinalIgnoreCase)) metadata = entry;
 			}
-			if (metadata == null || metadata.Length <= 0 || metadata.Length > 1048576L) throw new InvalidDataException("데이터팩 루트에서 pack.mcmeta를 찾지 못했습니다.");
+			if (metadata == null || metadata.Length <= 0 || metadata.Length > 1048576L) throw Localized(new InvalidDataException("데이터팩 루트에서 pack.mcmeta를 찾지 못했습니다."), "pack.mcmeta was not found in the data pack root.");
 			using (StreamReader reader = new StreamReader(metadata.Open(), Encoding.UTF8))
 			{
 				Dictionary<string, object> root = new JavaScriptSerializer().DeserializeObject(reader.ReadToEnd()) as Dictionary<string, object>;
 				Dictionary<string, object> pack = root != null && root.ContainsKey("pack") ? root["pack"] as Dictionary<string, object> : null;
-				if (pack == null || !pack.ContainsKey("pack_format") || Convert.ToInt32(pack["pack_format"], CultureInfo.InvariantCulture) <= 0) throw new InvalidDataException("pack.mcmeta의 pack_format이 올바르지 않습니다.");
+				if (pack == null || !pack.ContainsKey("pack_format") || Convert.ToInt32(pack["pack_format"], CultureInfo.InvariantCulture) <= 0) throw Localized(new InvalidDataException("pack.mcmeta의 pack_format이 올바르지 않습니다."), "The pack_format in pack.mcmeta is invalid.");
 			}
 		}
 	}
@@ -882,7 +882,7 @@ internal static partial class Launcher
 	private static void VisitContentDependency(string node, Dictionary<string, string[]> graph, HashSet<string> complete, HashSet<string> visiting, int depth)
 	{
 		if (complete.Contains(node)) return;
-		if (depth > 64 || !visiting.Add(node)) throw new InvalidDataException("콘텐츠 의존성 순환을 발견했습니다: " + node);
+		if (depth > 64 || !visiting.Add(node)) throw Localized(new InvalidDataException("콘텐츠 의존성 순환을 발견했습니다: " + node), "A content dependency cycle was found: " + node);
 		string[] dependencies;
 		if (graph.TryGetValue(node, out dependencies) && dependencies != null)
 			for (int i = 0; i < dependencies.Length; i++) if (!string.IsNullOrWhiteSpace(dependencies[i])) VisitContentDependency(dependencies[i], graph, complete, visiting, depth + 1);
