@@ -800,9 +800,7 @@ internal static partial class Launcher
 		{
 			string value = (content ?? string.Empty).Replace('\0', ' ').Trim();
 			if (value.Length == 0) value = "-";
-			if (value.Length > DiscordRemoteMaximumResponseCharacters)
-				value = value.Substring(0, DiscordRemoteMaximumResponseCharacters - 3) + "...";
-			return value;
+			return TruncateWithEllipsis(value, DiscordRemoteMaximumResponseCharacters, "...");
 		}
 
 		private static string Text(bool korean, string ko, string en) { return korean ? ko : en; }
@@ -1090,9 +1088,7 @@ internal static partial class Launcher
 
 		private static string TrimDiscordNotification(string content)
 		{
-			string value = (content ?? string.Empty).Replace('\0', ' ').Trim();
-			if (value.Length > DiscordRemoteMaximumNotificationCharacters)
-				value = value.Substring(0, DiscordRemoteMaximumNotificationCharacters - 3) + "...";
+			string value = TruncateWithEllipsis((content ?? string.Empty).Replace('\0', ' ').Trim(), DiscordRemoteMaximumNotificationCharacters, "...");
 			return value.Length == 0 ? "-" : value;
 		}
 
@@ -1535,8 +1531,7 @@ internal static partial class Launcher
 					&& line.IndexOf("exception", StringComparison.OrdinalIgnoreCase) < 0
 					&& line.IndexOf("fatal", StringComparison.OrdinalIgnoreCase) < 0
 					&& line.IndexOf("crash", StringComparison.OrdinalIgnoreCase) < 0) continue;
-				string sanitized = SanitizeOperationMessage(line, profile.Directory);
-				if (sanitized.Length > 260) sanitized = sanitized.Substring(0, 257) + "...";
+				string sanitized = TruncateWithEllipsis(SanitizeOperationMessage(line, profile.Directory), 260, "...");
 				problems.Add("• " + sanitized);
 			}
 			problems.Reverse();

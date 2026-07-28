@@ -317,16 +317,33 @@ internal static partial class Launcher
 			}
 			return "[IP]";
 		});
-		string lower = text.ToLowerInvariant();
+		// 표식이 여러 개 있으면 가장 앞선 위치에서 잘라야 합니다. 먼저 찾은 표식에서 자르면
+		// 그보다 앞에 있는 다른 비밀값(예: "password=..." 뒤에 "token=...")이 그대로 남습니다.
+		int redactFrom = -1;
 		foreach (string secretMarker in new string[] { "discord.com/api/webhooks/", "discordapp.com/api/webhooks/", "token=", "password=", "secret=", "webhook=" })
 		{
-			int index = lower.IndexOf(secretMarker, StringComparison.Ordinal);
+			int index = text.IndexOf(secretMarker, StringComparison.OrdinalIgnoreCase);
 			if (index < 0) continue;
-			text = text.Substring(0, index).TrimEnd() + " [민감 정보 가림 / sensitive value redacted]";
-			break;
+			if (redactFrom < 0 || index < redactFrom) redactFrom = index;
 		}
-		if (text.Length > 1000) text = text.Substring(0, 997) + "...";
+		if (redactFrom >= 0) text = text.Substring(0, redactFrom).TrimEnd() + " [민감 정보 가림 / sensitive value redacted]";
+		text = TruncateWithEllipsis(text, 1000, "...");
 		return string.IsNullOrWhiteSpace(text) ? "-" : text;
+	}
+
+	// 문자열을 자를 때 서로게이트 쌍(이모지 등)이 반으로 갈라지지 않게 합니다.
+	// 반쪽만 남은 서로게이트는 Discord 응답·Windows 알림·운영 기록에서 깨진 문자로 표시됩니다.
+	// 반환 길이는 말줄임표를 포함해 maximumLength를 넘지 않습니다.
+	private static string TruncateWithEllipsis(string value, int maximumLength, string ellipsis)
+	{
+		string text = value ?? string.Empty;
+		if (maximumLength <= 0) return string.Empty;
+		if (text.Length <= maximumLength) return text;
+		string suffix = ellipsis ?? string.Empty;
+		if (suffix.Length >= maximumLength) return suffix.Substring(0, maximumLength);
+		int keep = maximumLength - suffix.Length;
+		if (char.IsHighSurrogate(text[keep - 1]) && char.IsLowSurrogate(text[keep])) keep--;
+		return text.Substring(0, keep) + suffix;
 	}
 
 	private static string ReplaceOperationText(string text, string oldValue, string newValue)

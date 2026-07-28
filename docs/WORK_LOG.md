@@ -1,5 +1,56 @@
 ﻿# MineHarbor 작업 기록
 
+## Claude 비밀값 가림·문자열 자르기 결함 수정 - 2026-07-29
+
+- **Current Version**: 1.21.1 (build 26.2.45.90)
+- **Branch**: `claude/redaction-and-truncation-fixes`
+- **Status**: 지시 없이 진행한 코드 검토에서 결함 2건을 찾아 수정하고 회귀 테스트를 추가했습니다.
+
+### 1. [보안] SanitizeOperationMessage가 앞선 비밀값을 남기던 문제
+
+- 비밀값 표식 배열을 순회하며 **처음 발견한 표식**에서 잘라내고 `break` 했습니다. 배열 순서가
+  `token=`, `password=` 순이라 `"password=hunter2 token=abcdef"`는 `token=` 위치(17)에서 잘려
+  앞의 `password=hunter2`가 그대로 남았습니다.
+- 이제 모든 표식의 위치를 구해 **가장 앞선 위치**에서 자릅니다.
+- 함께 고친 것: 소문자 사본(`ToLowerInvariant`)의 인덱스를 원본에 그대로 적용하던 구조를 없애고
+  `IndexOf(..., OrdinalIgnoreCase)`를 직접 씁니다. 두 문자열 길이가 같다는 가정에 기대지 않습니다.
+- 이 함수는 운영 기록, Windows 알림, Discord `/mineharbor errors` 응답이 모두 지나가는 지점입니다.
+- **검증**: 수정을 되돌린 상태로 빌드·테스트하니 새 테스트가 exit code 1로 실패하는 것을 확인했고,
+  수정을 복원하니 통과했습니다.
+
+### 2. [정확성] 길이 제한으로 자를 때 서로게이트 쌍이 갈라지던 문제
+
+- 이모지처럼 서로게이트 쌍으로 된 문자가 자르는 경계에 걸리면 반쪽만 남아 깨진 글자로 표시됐습니다.
+- `TruncateWithEllipsis(value, maximumLength, ellipsis)` 공용 헬퍼를 `OperationsHistory.cs`에 추가하고
+  6곳에 적용했습니다: 운영 기록(1000자), Discord 응답·채널 알림·오류 목록(260자),
+  Java 런타임 오류 요약(403자), 런처 업데이트 릴리스 노트(3001자).
+- `WindowsNotifications.TrimWindowsNotificationText`는 잘라낸 뒤 공백을 다시 다듬는 동작이 달라
+  같은 검사를 인라인으로 넣었습니다.
+- 반환 길이는 말줄임표를 포함해 상한을 넘지 않습니다.
+
+### 3. bump-version.ps1이 version.json 전체를 다시 쓰던 문제
+
+- `ConvertTo-Json`이 CRLF로 줄을 나누는데 `version.json`은 LF입니다. 버전을 올릴 때마다 4줄짜리
+  파일이 통째로 바뀐 diff(5+/5-)로 나왔습니다. LF로 정규화해 diff가 2줄이 됩니다.
+- 이번 릴리스에서 실제로 확인하고 고쳤습니다.
+
+### 검증
+
+- `Prepare-BuildResources.ps1`, `build.ps1`, `test.ps1 -LauncherPath artifacts\MineHarbor.exe`
+  → `VERSION_CONSISTENCY_OK`, `PASSED=33`, `PORTABLE_VERSION_OK`, `PORTABLE_SMOKE_OK`,
+  `MODERN_DIALOG_SCAN_OK`, `SECURITY_REGRESSION_SCAN_OK`, `BRIDGE_PROTOCOL_PASSED=10`.
+- `decompiled/Launcher.decompiled.cs`는 바이트 단위로 편집했고 CRLF 3550 / CR CR LF 3550 /
+  bare LF 417이 그대로입니다. diff는 1줄입니다.
+- 실제 Discord 자격 증명, 사용자 서버 데이터, 공유기 설정과 UPnP 매핑은 사용하지 않았습니다.
+
+### 다음 담당자에게 남기는 것
+
+- **`scripts/*.ps1` 여러 개가 UTF-8 BOM 없이 저장돼 있습니다**(예: `bump-version.ps1`).
+  CLAUDE.md는 `.ps1`을 BOM과 함께 저장하라고 하며, 이 파일들은 한국어 오류 문구를 담고 있어
+  Windows PowerShell 5.1에서 깨질 수 있습니다. 인코딩만 바꿔도 파일 전체 diff가 나므로 별도 작업으로 다루세요.
+- `RedactDiagnosticText`는 `SanitizeOperationMessage`와 달리 `token=`·`password=` 같은 일반 표식을
+  가리지 않고 server.properties의 특정 키만 가립니다. 진단 번들에는 `logs/latest.log`가 들어가므로
+  범위를 넓힐지 검토할 여지가 있습니다(이번에는 기존 설계를 바꾸지 않았습니다).
 ## Claude 작업 지침 문서 통합 - 2026-07-28
 
 - **Current Version**: 1.21.0 (build 26.2.45.89) — 제품 코드가 바뀌지 않는 문서 전용 변경이라 버전을 올리지 않았습니다.

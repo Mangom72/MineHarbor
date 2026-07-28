@@ -434,7 +434,7 @@ internal static partial class Launcher
 			bool korean = string.Equals(Localization.CurrentLanguage, Localization.Korean, StringComparison.OrdinalIgnoreCase);
 			string selectedNotes = SelectLauncherReleaseNotes(asset, korean);
 			string notes = string.IsNullOrWhiteSpace(selectedNotes) ? (korean ? "변경 사항이 제공되지 않았습니다." : "No release notes were provided.") : selectedNotes.Trim();
-			if (notes.Length > 3000) notes = notes.Substring(0, 3000) + "…";
+			notes = TruncateWithEllipsis(notes, 3001, "…");
 			Version currentProduct;
 			Version minimumProduct;
 			string compatibilityNotice = string.Empty;

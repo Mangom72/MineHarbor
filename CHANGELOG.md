@@ -4,6 +4,19 @@
 
 Product versions follow [Semantic Versioning](https://semver.org/), while `26.2.45.xx` is a separate internal build number.
 
+## [1.21.1] - 2026-07-29
+
+### Korean
+
+- **오류·경고 기록의 비밀값 가림 수정**: 한 줄에 `password=`와 `token=`처럼 비밀값 표식이 둘 이상 있으면 뒤쪽 표식에서 잘려 앞쪽 비밀값이 그대로 남던 문제를 수정했습니다. 이제 가장 앞선 표식부터 가립니다. 이 문구는 운영 기록, Windows 알림, Discord `/mineharbor errors` 응답에 함께 쓰입니다.
+- 대문자로 적힌 표식(`PASSWORD=`)도 같은 기준으로 가립니다.
+- **이모지가 깨지던 문제 수정**: 길이 제한으로 문구를 자를 때 이모지가 반으로 갈라져 깨진 글자로 보이던 문제를 수정했습니다. 운영 기록, Discord 응답과 채널 알림, Windows 알림, 서버 오류 요약, 업데이트 릴리스 노트에 적용됩니다.
+
+### English
+
+- **Secret redaction in error and warning records fixed**: when one line contained more than one secret marker (for example `password=` followed by `token=`), the text was cut at the later marker and the earlier secret was left visible. Redaction now starts at the earliest marker. This text is shared by operations history, Windows notifications, and the Discord `/mineharbor errors` reply.
+- Uppercase markers such as `PASSWORD=` are now redacted on the same basis.
+- **Broken emoji fixed**: truncating text at a length limit could split an emoji in half and render it as a broken character. Operations history, Discord replies and channel notifications, Windows notifications, server error summaries, and update release notes are all covered.
 ## [1.21.0] - 2026-07-27
 
 ### Korean

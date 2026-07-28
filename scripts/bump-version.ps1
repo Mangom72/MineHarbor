@@ -39,7 +39,8 @@ $lastIndex = $buildParts.Length - 1
 $buildParts[$lastIndex] = [int]$buildParts[$lastIndex] + 1
 $json.buildNumber = $buildParts -join '.'
 
-$serialized = ($json | ConvertTo-Json -Depth 5) + "`r`n"
+# ConvertTo-Json은 CRLF로 줄을 나눕니다. version.json은 LF이므로 그대로 쓰면 파일 전체가 가짜 diff로 바뀝니다.
+$serialized = (($json | ConvertTo-Json -Depth 5) -replace "`r`n", "`n") + "`n"
 [IO.File]::WriteAllText($versionFile, $serialized, [Text.UTF8Encoding]::new($false))
 
 Write-Host 'Updated version.json:'
