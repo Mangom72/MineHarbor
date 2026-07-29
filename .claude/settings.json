@@ -1,0 +1,31 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh *)",
+      "Bash(git checkout main)",
+      "Bash(git pull --ff-only)",
+      "Bash(git branch -d *)",
+      "Bash(git tag *)",
+      "Bash(git push origin v*)",
+      "PowerShell(.\\build.ps1*)",
+      "PowerShell(.\\test.ps1*)",
+      "PowerShell(.\\scripts\\Prepare-BuildResources.ps1*)",
+      "PowerShell(.\\scripts\\bump-version.ps1*)"
+    ]
+  },
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Bash(gh *)",
+      "Bash(git checkout main)",
+      "Bash(git pull --ff-only)",
+      "Bash(git branch -d *)",
+      "Bash(git tag *)",
+      "Bash(git push origin v*)",
+      "PowerShell(.\\build.ps1*)",
+      "PowerShell(.\\test.ps1*)",
+      "PowerShell(.\\scripts\\Prepare-BuildResources.ps1*)",
+      "PowerShell(.\\scripts\\bump-version.ps1*)"
+    ]
+  }
+}
