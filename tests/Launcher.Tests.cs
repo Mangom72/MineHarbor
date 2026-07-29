@@ -2573,6 +2573,33 @@ internal static class LauncherTests
 		if (ipv6Sanitized.IndexOf("12:34:56", StringComparison.Ordinal) < 0)
 			throw new InvalidOperationException("운영 기록 로그 시각이 IPv6 가림에 함께 지워졌습니다.");
 
+		// 비밀값 표식이 둘 이상이면 가장 앞선 위치에서 잘라야 합니다.
+		// 배열에서 먼저 만난 표식(token=)에서 자르면 그 앞의 password= 값이 그대로 남습니다.
+		string multiMarker = Convert.ToString(Invoke("SanitizeOperationMessage", new object[] { "password=hunter2 token=abcdef", server }));
+		if (multiMarker.IndexOf("hunter2", StringComparison.OrdinalIgnoreCase) >= 0)
+			throw new InvalidOperationException("앞선 비밀값 표식보다 뒤의 표식에서 잘려 비밀값이 남았습니다.");
+		if (multiMarker.IndexOf("abcdef", StringComparison.OrdinalIgnoreCase) >= 0)
+			throw new InvalidOperationException("운영 기록 비밀값 가림이 적용되지 않았습니다.");
+		// 대문자로 적힌 표식도 같은 기준으로 가려야 합니다.
+		string upperMarker = Convert.ToString(Invoke("SanitizeOperationMessage", new object[] { "PASSWORD=hunter2", server }));
+		if (upperMarker.IndexOf("hunter2", StringComparison.OrdinalIgnoreCase) >= 0)
+			throw new InvalidOperationException("대문자 비밀값 표식이 가려지지 않았습니다.");
+
+		// 길이 제한으로 자를 때 서로게이트 쌍(이모지)이 반으로 갈라지면 안 됩니다.
+		string emojiLine = new string('a', 996) + "\U0001F600" + new string('b', 40);
+		string emojiSanitized = Convert.ToString(Invoke("SanitizeOperationMessage", new object[] { emojiLine, server }));
+		if (emojiSanitized.Length > 1000) throw new InvalidOperationException("운영 기록 길이 상한을 넘었습니다.");
+		if (!emojiSanitized.EndsWith("...", StringComparison.Ordinal)) throw new InvalidOperationException("운영 기록이 잘렸는데 말줄임표가 없습니다.");
+		for (int index = 0; index < emojiSanitized.Length; index++)
+		{
+			if (char.IsHighSurrogate(emojiSanitized[index]) && (index + 1 >= emojiSanitized.Length || !char.IsLowSurrogate(emojiSanitized[index + 1])))
+				throw new InvalidOperationException("운영 기록을 자를 때 서로게이트 쌍이 갈라졌습니다.");
+			if (char.IsLowSurrogate(emojiSanitized[index]) && (index == 0 || !char.IsHighSurrogate(emojiSanitized[index - 1])))
+				throw new InvalidOperationException("운영 기록을 자를 때 서로게이트 쌍이 갈라졌습니다.");
+		}
+		Equal("가나다…", Invoke("TruncateWithEllipsis", new object[] { "가나다라마", 4, "…" }), "말줄임 길이 상한");
+		Equal("ab", Invoke("TruncateWithEllipsis", new object[] { "ab", 4, "…" }), "상한 이하 문자열 유지");
+
 		string historyPath = Convert.ToString(Invoke("GetOperationsHistoryPath", new object[] { server }));
 		string validJson = File.ReadAllText(historyPath, Encoding.UTF8);
 		string tamperedJson = validJson.Replace("서버 시작", "서버 변조");

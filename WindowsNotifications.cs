@@ -173,7 +173,10 @@ internal static partial class Launcher
 	{
 		string text = (value ?? string.Empty).Replace('\r', ' ').Replace('\n', ' ').Replace('\0', ' ').Trim();
 		if (text.Length <= maximumLength) return text;
-		return text.Substring(0, Math.Max(1, maximumLength - 1)).TrimEnd() + "…";
+		// 알림 문구도 서로게이트 쌍(이모지 등)이 반으로 갈라지지 않게 자릅니다.
+		int keep = Math.Max(1, maximumLength - 1);
+		if (char.IsHighSurrogate(text[keep - 1]) && char.IsLowSurrogate(text[keep])) keep--;
+		return text.Substring(0, keep).TrimEnd() + "…";
 	}
 
 	private static void DisplayWindowsNotification(NotifyIcon trayIcon, string title, string message, ToolTipIcon icon)

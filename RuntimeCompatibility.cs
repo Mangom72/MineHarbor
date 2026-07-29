@@ -1404,11 +1404,7 @@ internal static partial class Launcher
 
 	private static string SummarizeRuntimeCompatibilityText(string text)
 	{
-		string normalized = (text ?? string.Empty).Replace('\r', ' ').Replace('\n', ' ').Trim();
-		if (normalized.Length > 400)
-		{
-			normalized = normalized.Substring(0, 400) + "...";
-		}
+		string normalized = TruncateWithEllipsis((text ?? string.Empty).Replace('\r', ' ').Replace('\n', ' ').Trim(), 403, "...");
 		return string.IsNullOrEmpty(normalized) ? "세부 정보 없음" : normalized;
 	}
 }
