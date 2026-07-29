@@ -53,7 +53,6 @@ throw Localized(new InvalidDataException("한국어 문구"), "English wording")
 - Windows 기본 알림창을 쓰지 않고 `ModernDialogs.cs`의 커스텀 대화상자를 씁니다.
 - 둥근 모서리의 현대적 디자인(Toss 앱 스타일)을 유지합니다. 버튼 이름을 길게 늘이는 대신 툴팁을 씁니다.
 - 새 창에는 `AutoScaleMode.Dpi`와 접근성 정보(`AccessibleName`, `AccessibleDescription`)를 지정합니다.
-- 기존 모듈 구조(UI, Network, Bridge, Storage)를 깨지 않습니다.
 - 장시간 작업은 `Task`/`async`와 `CancellationToken`을 쓰고, 닫힌 폼에 완료 콜백을 보내지 않습니다.
 
 `test.ps1`이 소스를 스캔해 `MessageBox.Show`, 기본 `new Button()`, 기본 `new CheckBox()` 사용을 차단합니다.
